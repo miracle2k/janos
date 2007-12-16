@@ -9,7 +9,9 @@ import java.io.IOException;
 
 import net.sbbi.upnp.messages.UPNPResponseException;
 import net.sf.janos.control.SonosController;
+import net.sf.janos.control.ZonePlayer;
 import net.sf.janos.model.TransportInfo.TransportState;
+import net.sf.janos.ui.zonelist.ZoneListSelectionListener;
 
 import org.eclipse.swt.SWT;
 import org.eclipse.swt.events.MouseAdapter;
@@ -27,14 +29,14 @@ import org.eclipse.swt.widgets.Scale;
  * @author David Wheeler
  * 
  */
-public class MusicControlPanel extends Composite {
+public class MusicControlPanel extends Composite implements ZoneListSelectionListener {
 
-  private final SonosController controller;
+  private final ZonePlayer currentZone;
   private Button play;
 
-  public MusicControlPanel(Composite parent, int style, SonosController controller) {
+  public MusicControlPanel(Composite parent, int style, ZonePlayer zone) {
     super(parent, style);
-    this.controller = controller;
+    this.currentZone = zone;
     buildComponents();
   }
 
@@ -82,7 +84,9 @@ public class MusicControlPanel extends Composite {
 
   private boolean isPlaying() {
     try {
-      return controller.getCurrentZonePlayer().getMediaRendererDevice().getAvTransportService().getTransportInfo().getState().equals(TransportState.PLAYING);
+      if (currentZone != null) {
+        return currentZone.getMediaRendererDevice().getAvTransportService().getTransportInfo().getState().equals(TransportState.PLAYING);
+      }
     } catch (IOException e) {
       // TODO Auto-generated catch block
       e.printStackTrace();
@@ -95,7 +99,9 @@ public class MusicControlPanel extends Composite {
 
   protected void previous() {
     try {
-      controller.getCurrentZonePlayer().getMediaRendererDevice().getAvTransportService().previous();
+      if (currentZone != null) {
+        currentZone.getMediaRendererDevice().getAvTransportService().previous();
+      }
     } catch (IOException e) {
       // TODO Auto-generated catch block
       e.printStackTrace();
@@ -109,10 +115,10 @@ public class MusicControlPanel extends Composite {
     try {
       if (play.getText().equals("Pause")) {
         play.setText("Play");
-        controller.getCurrentZonePlayer().getMediaRendererDevice().getAvTransportService().pause();
+        currentZone.getMediaRendererDevice().getAvTransportService().pause();
       } else if (play.getText().equals("Play")) {
         play.setText("Pause");
-        controller.getCurrentZonePlayer().getMediaRendererDevice().getAvTransportService().play();
+        currentZone.getMediaRendererDevice().getAvTransportService().play();
       }
     } catch (UPNPResponseException e) {
       // TODO Auto-generated catch block
@@ -125,7 +131,9 @@ public class MusicControlPanel extends Composite {
 
   protected void next() {
     try {
-      controller.getCurrentZonePlayer().getMediaRendererDevice().getAvTransportService().next();
+      if (currentZone != null) {
+        currentZone.getMediaRendererDevice().getAvTransportService().next();
+      }
     } catch (IOException e) {
       // TODO Auto-generated catch block
       e.printStackTrace();
@@ -137,7 +145,9 @@ public class MusicControlPanel extends Composite {
   
   protected void setVolume(int vol) {
     try {
-      controller.getCurrentZonePlayer().getMediaRendererDevice().getRenderingControlService().setVolume(vol);
+      if (currentZone != null) {
+        currentZone.getMediaRendererDevice().getRenderingControlService().setVolume(vol);
+      }
     } catch (IOException e) {
       // TODO Auto-generated catch block
       e.printStackTrace();
@@ -149,7 +159,9 @@ public class MusicControlPanel extends Composite {
   
   protected int getVolume() {
     try {
-      return controller.getCurrentZonePlayer().getMediaRendererDevice().getRenderingControlService().getVolume();
+      if (currentZone != null) {
+        return currentZone.getMediaRendererDevice().getRenderingControlService().getVolume();
+      }
     } catch (IOException e) {
       // TODO Auto-generated catch block
       e.printStackTrace();
@@ -158,5 +170,10 @@ public class MusicControlPanel extends Composite {
       e.printStackTrace();
     }
     return 0;
+  }
+
+  public void zoneSelectionChangedTo(ZonePlayer newSelection) {
+    // TODO Auto-generated method stub
+    
   }
 }

@@ -9,6 +9,7 @@ import java.util.LinkedList;
 import java.util.List;
 import java.util.ListIterator;
 
+import net.sf.janos.control.SonosController;
 import net.sf.janos.model.Entry;
 
 import org.eclipse.swt.SWT;
@@ -70,7 +71,7 @@ public class MusicLibraryTable extends Composite {
           if (table.getTable() == e.getSource()) {
             int sel = table.getTable().getSelectionIndex();
             Entry entry = table.getModel().getEntryAt(sel + 1); // TODO why +1?
-            controller.getController().getCurrentZonePlayer().enqueueEntry(entry);
+            SonosController.getCoordinatorForZonePlayer(controller.getZoneList().getSelectionZone()).enqueueEntry(entry);
             return;
           }
         }
@@ -106,7 +107,7 @@ public class MusicLibraryTable extends Composite {
         if (selectedTable != null) {
           // TODO multi selection
           Entry entry = selectedTable.getModel().getEntryAt(selectedTable.getTable().getSelectionIndex());
-          final MusicLibrary lib = new MusicLibrary(controller.getController(), entry);
+          final MusicLibrary lib = new MusicLibrary(controller.getZoneList().getSelectionZone(), entry);
           final Table table = new Table(MusicLibraryTable.this, SWT.MULTI |SWT.FULL_SELECTION| SWT.VIRTUAL | SWT.BORDER);
           music.add(new MusicTable(table, lib));
           table.setLinesVisible(true);

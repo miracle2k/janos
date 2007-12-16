@@ -34,14 +34,14 @@ public class ZoneGroupStateHandler extends DefaultHandler {
       groupId = attributes.getValue("ID");
       coordinator = attributes.getValue("Coordinator");
     } else if (qName.equals("ZoneGroupMember")) {
-      currentGroupPlayers.add(controller.getZonePlayerById(attributes.getValue("UUID")));
+      currentGroupPlayers.add(controller.getZonePlayerModel().getById(attributes.getValue("UUID")));
     }
   }
   
   @Override
   public void endElement(String uri, String localName, String qName) throws SAXException {
     if (qName.equals("ZoneGroup")) {
-      groups.add(new ZoneGroup(groupId, controller.getZonePlayerById(coordinator), currentGroupPlayers));
+      groups.add(new ZoneGroup(groupId, controller.getZonePlayerModel().getById(coordinator), currentGroupPlayers));
       currentGroupPlayers.clear();
     }
   }

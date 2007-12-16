@@ -6,13 +6,8 @@
 package net.sf.janos.ui;
 
 import java.io.IOException;
-import java.io.InputStream;
-import java.net.URI;
-import java.net.URL;
 import java.util.List;
 
-import net.sbbi.upnp.devices.UPNPDevice;
-import net.sbbi.upnp.devices.UPNPRootDevice;
 import net.sbbi.upnp.messages.UPNPResponseException;
 import net.sf.janos.Debug;
 import net.sf.janos.control.SonosController;
@@ -20,13 +15,13 @@ import net.sf.janos.control.ZonePlayer;
 import net.sf.janos.model.Entry;
 import net.sf.janos.model.MediaInfo;
 import net.sf.janos.model.PositionInfo;
+import net.sf.janos.ui.zonelist.ZoneListSelectionListener;
 import net.sf.janos.util.ui.ImageUtilities;
 
 import org.eclipse.swt.SWT;
 import org.eclipse.swt.graphics.Color;
 import org.eclipse.swt.graphics.Image;
 import org.eclipse.swt.graphics.ImageData;
-import org.eclipse.swt.graphics.ImageLoader;
 import org.eclipse.swt.graphics.RGB;
 import org.eclipse.swt.layout.GridData;
 import org.eclipse.swt.layout.GridLayout;
@@ -39,7 +34,7 @@ import org.eclipse.swt.widgets.Label;
  * @author David Wheeler
  *
  */
-public class QueueDisplay extends Composite {
+public class QueueDisplay extends Composite implements ZoneListSelectionListener {
   private final Color LABEL_COLOR;
   
   private SonosController controller;
@@ -77,14 +72,11 @@ public class QueueDisplay extends Composite {
     gd.widthHint = 128;
     gd.heightHint = 128;
     artwork.setLayoutData(gd);
-    
-    getNowPlaying();
-    
   }
 
-  private void getNowPlaying() {
-    controller.getExecutor().execute(new NowPlayingFetcher(controller.getCurrentZonePlayer()));
-  }
+//  public void refreshNowPlaying() {
+//    controller.getExecutor().execute(new NowPlayingFetcher(controller.getCurrentZonePlayerController()));
+//  }
   
   protected class NowPlayingFetcher implements Runnable {
     
@@ -93,6 +85,9 @@ public class QueueDisplay extends Composite {
       this.zone = zone;
     }
     public void run() {
+      if (zone == null) {
+        return;
+      }
       try {
         MediaInfo mediaInfo = zone.getMediaRendererDevice().getAvTransportService().getMediaInfo();
         PositionInfo posInfo = zone.getMediaRendererDevice().getAvTransportService().getPositionInfo();
@@ -102,7 +97,7 @@ public class QueueDisplay extends Composite {
         } else if (uri.startsWith("x-rincon-queue:")) {
           ZonePlayer currentZone = null;
           // a queue is playing
-          for (ZonePlayer zp : controller.getAllZonePlayers()) {
+          for (ZonePlayer zp : controller.getZonePlayerModel().getAllZones()) {
             if (uri.substring(15).startsWith(zp.getRootDevice().getUDN().substring(5))) {
               // this is the zoneplayer
               currentZone = zp;
@@ -119,7 +114,7 @@ public class QueueDisplay extends Composite {
         } else if (uri.startsWith("x-rincon:")){
           // We're streaming from another sonos
           String id = uri.substring(9);
-          ZonePlayer zp = controller.getZonePlayerById(id);
+          ZonePlayer zp = controller.getZonePlayerModel().getById(id);
           setQueueEntry(posInfo, zp);
         } // TODO else...
       } catch (IOException e) {
@@ -160,5 +155,9 @@ public class QueueDisplay extends Composite {
         });
       }
     }
+  }
+
+  public void zoneSelectionChangedTo(ZonePlayer newSelection) {
+    controller.getExecutor().execute(new NowPlayingFetcher(newSelection));
   }
 }

@@ -5,13 +5,12 @@
  */
 package net.sf.janos.ui;
 
-import java.util.concurrent.Executor;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ThreadFactory;
-import java.util.concurrent.TimeUnit;
 
 import net.sf.janos.control.SonosController;
+import net.sf.janos.ui.zonelist.ZoneList;
 
 import org.eclipse.swt.SWT;
 import org.eclipse.swt.layout.GridData;
@@ -36,6 +35,7 @@ public class SonosControllerShell {
   private final SonosController controller;
   
   private ZoneList zoneList;
+  private QueueDisplay queue;
 
 	public SonosControllerShell(Display display, SonosController controller) {
 		this.display = display;
@@ -52,23 +52,15 @@ public class SonosControllerShell {
       }
     }
     display.dispose();
-    
-    background.shutdown();
-    try {
-      background.awaitTermination(5, TimeUnit.SECONDS);
-    } catch (InterruptedException e) {
-      // too bad
-      e.printStackTrace();
-      Thread.currentThread().interrupt();
-    }
-    background.shutdownNow();
+    dispose();
+    controller.dispose();
   }
   
 	private void buildComponents() {
     shell.setText("SonosJ");
     shell.setLayout(new GridLayout(3, false));
 		
-    MusicControlPanel controls = new MusicControlPanel(shell, SWT.BORDER, controller);
+    MusicControlPanel controls = new MusicControlPanel(shell, SWT.BORDER, null);
 		GridData controlData = new GridData();
 		controlData.horizontalSpan=3;
 		controls.setLayoutData(controlData);
@@ -78,6 +70,8 @@ public class SonosControllerShell {
 		zoneData.widthHint = 200;
 		zoneData.heightHint= 400;
 		zoneList.setLayoutData(zoneData);
+    zoneList.addSelectionListener(this.controller);
+    zoneList.addSelectionListener(controls);
 		
 		Composite music = new MusicLibraryTable(shell, SWT.NONE, this);
 		GridData musicData = new GridData(SWT.FILL, SWT.FILL, true, true);
@@ -85,18 +79,24 @@ public class SonosControllerShell {
 		musicData.heightHint=400;
 		music.setLayoutData(musicData);
 		
-    Composite queue = new QueueDisplay(shell, SWT.NONE, controller);
+    queue = new QueueDisplay(shell, SWT.NONE, controller);
     GridData nowPlayingData = new GridData(); 
     nowPlayingData.widthHint=200;
     nowPlayingData.verticalAlignment=SWT.TOP;
     queue.setLayoutData(nowPlayingData);
+    zoneList.addSelectionListener(queue);
 	}
 	
-  public Executor getExecutor() {
-    return background;
+  private void dispose() {
+    zoneList.dispose();
+    queue.dispose();
   }
   
   public SonosController getController() {
     return controller;
+  }
+  
+  public ZoneList getZoneList() {
+    return zoneList;
   }
 }

@@ -8,18 +8,19 @@ package net.sf.janos.ui;
 import java.util.List;
 
 import net.sf.janos.control.SonosController;
-import net.sf.janos.control.SonosControllerListener;
 import net.sf.janos.control.ZonePlayer;
 import net.sf.janos.model.Entry;
+import net.sf.janos.model.ZonePlayerModelListener;
 
-public class RootEntryLibrary extends MusicLibrary implements SonosControllerListener {
+// TODO need to implement selection listener?
+public class RootEntryLibrary extends MusicLibrary implements ZonePlayerModelListener {
 
   public RootEntryLibrary(SonosController controller) {
-    super(controller);
-    controller.addControllerListener(this);
+    super(controller.getZonePlayerModel().get(0));
+    controller.getZonePlayerModel().addZonePlayerModelListener(this);
   }
   
-  public synchronized void deviceAdded(ZonePlayer dev) {
+  public synchronized void zonePlayerAdded(ZonePlayer dev) {
     if (!entries.isEmpty()) {
       return;
     }
@@ -39,7 +40,7 @@ public class RootEntryLibrary extends MusicLibrary implements SonosControllerLis
 
   }
 
-  public void deviceRemoved(ZonePlayer dev) {
+  public void zonePlayerRemoved(ZonePlayer dev) {
     // TODO Auto-generated method stub
     
   }

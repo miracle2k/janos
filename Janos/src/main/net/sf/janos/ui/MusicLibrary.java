@@ -8,7 +8,7 @@ package net.sf.janos.ui;
 import java.util.ArrayList;
 import java.util.List;
 
-import net.sf.janos.control.SonosController;
+import net.sf.janos.control.ZonePlayer;
 import net.sf.janos.model.Entry;
 
 /**
@@ -20,13 +20,13 @@ public class MusicLibrary {
   
   protected final List<Entry> entries = new ArrayList<Entry>();
   
-  public MusicLibrary(SonosController controller) {
-    this(controller, null);
+  public MusicLibrary(ZonePlayer zone) {
+    this(zone, null);
   }
   
-  public MusicLibrary(SonosController controller, Entry entry) {
+  public MusicLibrary(ZonePlayer zone, Entry entry) {
     if (entry != null) {
-      entries.addAll(controller.getCurrentZonePlayer().getMediaServerDevice().getContentDirectoryService().getEntries(0, 50, entry.getId()));
+      entries.addAll(zone.getMediaServerDevice().getContentDirectoryService().getEntries(0, 50, entry.getId()));
     }
     // TODO add notification listener
   }

@@ -16,6 +16,8 @@ import net.sbbi.upnp.Discovery;
 import net.sbbi.upnp.devices.UPNPRootDevice;
 import net.sf.janos.Debug;
 import net.sf.janos.model.ZoneGroup;
+import net.sf.janos.model.ZonePlayerModel;
+import net.sf.janos.ui.zonelist.ZoneListSelectionListener;
 
 /**
  * The main controller class that discovers the sonos devices, and provids
@@ -26,7 +28,7 @@ import net.sf.janos.model.ZoneGroup;
  * @author David Wheeler
  * 
  */
-public class SonosController {
+public class SonosController implements ZoneListSelectionListener{
   
   private static SonosController INSTANCE;
 
@@ -40,10 +42,9 @@ public class SonosController {
     }
   });
 
-  /** map of zone players to the group that they are a member of */
-  private List<ZonePlayer> zonePlayers = new ArrayList<ZonePlayer>();
+  private ZonePlayerModel zonePlayers = new ZonePlayerModel();
 
-  private List<SonosControllerListener> listeners = new ArrayList<SonosControllerListener>();
+//  private ZonePlayer currentZonePlayer;
   
   /**
    * @return the singleton instance of SonosController
@@ -89,51 +90,58 @@ public class SonosController {
    */
   private void addZonePlayer(final UPNPRootDevice dev) {
     ZonePlayer sd = new ZonePlayer(dev);
-    zonePlayers.add(sd);
-    for (SonosControllerListener l : listeners) {
-      l.deviceAdded(sd);
-    }
+    zonePlayers.addZonePlayer(sd);
+//    for (SonosControllerListener l : listeners) {
+//      l.deviceAdded(sd);
+//    }
   }
   
-  /**
-   * Adds a listener to be notified of new zone players. Will be notified of
-   * currently known zone players immediately.
-   * 
-   * @param listener
-   */
-  public void addControllerListener(SonosControllerListener listener) {
-    this.listeners.add(listener);
-    for (ZonePlayer dev : zonePlayers) {
-      listener.deviceAdded(dev);
-    }
-  }
+//  /**
+//   * Adds a listener to be notified of new zone players. Will be notified of
+//   * currently known zone players immediately.
+//   * 
+//   * @param listener
+//   */
+//  public void addControllerListener(SonosControllerListener listener) {
+//    this.listeners.add(listener);
+//    for (ZonePlayer dev : zonePlayers.getAllZones()) {
+//      listener.deviceAdded(dev);
+//    }
+//  }
 
-  /**
-   * removes the given listener from the list to be notified of new zone
-   * players.
-   * 
-   * @param listener
-   */
-  public void removeControllerListener(SonosControllerListener listener) {
-    this.listeners.remove(listener);
-  }
+//  /**
+//   * removes the given listener from the list to be notified of new zone
+//   * players.
+//   * 
+//   * @param listener
+//   */
+//  public void removeControllerListener(SonosControllerListener listener) {
+//    this.listeners.remove(listener);
+//  }
 
   /**
    * TODO this should be elsewhere?
    * 
    */
-  public ZonePlayer getCurrentZonePlayer() {
-    // TODO selected zoneplayer's controller
-    return getCoordinatorForZonePlayer(zonePlayers.iterator().next());
-  }
+//  public ZonePlayer getCurrentZonePlayerController() {
+//    return getCoordinatorForZonePlayer(getCurrentZonePlayer());
+//  }
   
+//  public ZonePlayer getCurrentZonePlayer() {
+//    return currentZonePlayer;
+//  }
+  
+  public ZonePlayerModel getZonePlayerModel() {
+    return zonePlayers;
+  }
+
   /**
    * @param zp
    *          a zone player
    * @return the coordinator of the zone player's group, or zp if it could not
    *         be discovered.
    */
-  public ZonePlayer getCoordinatorForZonePlayer(ZonePlayer zp) {
+  public static ZonePlayer getCoordinatorForZonePlayer(ZonePlayer zp) {
     if (zp == null || zp.getZoneGroupTopologyService().getGroupState() == null) {
       return zp;
     }
@@ -146,30 +154,21 @@ public class SonosController {
   }
   
   /**
-   * @return a List of all known zone players.
-   */
-  public List<ZonePlayer> getAllZonePlayers() {
-    return zonePlayers;
-  }
-
-  /**
-   * @param id
-   *          the ID of a zone player (including "UUID:").
-   * @return a zone player matching that id, or null if one could not be found.
-   */
-  public ZonePlayer getZonePlayerById(String id) {
-    for (ZonePlayer zp : zonePlayers) {
-      if (zp.getRootDevice().getUDN().substring(5).equals(id)) {
-        return zp;
-      }
-    }
-    return null;
-  }
-  
-  /**
    * @return an Executor for performing asynchronous activities.
    */
   public Executor getExecutor() {
     return EXECUTOR;
   }
+
+  public void zoneSelectionChangedTo(ZonePlayer newSelection) {
+//    setCurrentZonePlayer(newSelection);
+  }
+  
+  public void dispose() {
+    
+  }
+  
+//  public void setCurrentZonePlayer(ZonePlayer zone) {
+//    this.currentZonePlayer = zone;
+//  }
 }
