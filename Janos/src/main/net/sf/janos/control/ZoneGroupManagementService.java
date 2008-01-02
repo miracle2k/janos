@@ -1,7 +1,17 @@
 /*
- * Created on 21/10/2007
- * By David Wheeler
- * Student ID: 3691615
+   Copyright 2007 David Wheeler
+
+   Licensed under the Apache License, Version 2.0 (the "License");
+   you may not use this file except in compliance with the License.
+   You may obtain a copy of the License at
+
+       http://www.apache.org/licenses/LICENSE-2.0
+
+   Unless required by applicable law or agreed to in writing, software
+   distributed under the License is distributed on an "AS IS" BASIS,
+   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+   See the License for the specific language governing permissions and
+   limitations under the License.
  */
 package net.sf.janos.control;
 
@@ -40,8 +50,10 @@ public class ZoneGroupManagementService extends AbstractService {
       <stateVariable sendEvents="no">
         <name>A_ARG_TYPE_BufferingResultCode</name>
         <dataType>i4</dataType>
-      </stateVariable>
-      <stateVariable sendEvents="yes">
+      </stateVariable> */
+  public void handleStateVariableEvent(String varName, String newValue) {
+    /*
+     *<stateVariable sendEvents="yes">
         <name>GroupCoordinatorIsLocal</name>
         <dataType>boolean</dataType>
       </stateVariable>
@@ -49,7 +61,11 @@ public class ZoneGroupManagementService extends AbstractService {
         <name>LocalGroupUUID</name>
         <dataType>string</dataType>
       </stateVariable>
-    </serviceStateTable>
+      */
+    
+  }
+
+  /*  </serviceStateTable>
     <actionList>
   <action>
     <name>AddMember</name>

@@ -15,17 +15,17 @@
  */
 package net.sf.janos.control;
 
-import net.sbbi.upnp.services.UPNPService;
+/**
+ * Parent interface of all ServiceListener interfaces.
+ * 
+ * This interface does not require any functionality, but implies an interest in
+ * changes to a particular service. Each AbstractService extending class should
+ * also create an interface extending this one to handle events.
+ * 
+ * @author David Wheeler
+ * 
+ */
+public abstract interface ServiceListener {
 
-public class ConnectionManagerService extends AbstractService {
-
-  protected ConnectionManagerService(UPNPService service) {
-    super(service, ZonePlayerConstants.SONOS_SERVICE_CONNECTION_MANAGER);
-  }
   
-  public void handleStateVariableEvent(String varName, String newValue) {
-    // TODO Auto-generated method stub
-    
-  }
-
 }

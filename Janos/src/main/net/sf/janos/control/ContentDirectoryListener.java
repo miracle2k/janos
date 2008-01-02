@@ -15,17 +15,20 @@
  */
 package net.sf.janos.control;
 
-import net.sbbi.upnp.services.UPNPService;
+public interface ContentDirectoryListener extends ServiceListener {
 
-public class ConnectionManagerService extends AbstractService {
-
-  protected ConnectionManagerService(UPNPService service) {
-    super(service, ZonePlayerConstants.SONOS_SERVICE_CONNECTION_MANAGER);
-  }
-  
-  public void handleStateVariableEvent(String varName, String newValue) {
-    // TODO Auto-generated method stub
-    
-  }
-
+  /**
+   * Expected Event Variables:
+   * SystemUpdateID
+   * ContainerUpdateID
+   * ShareListRefreshState [NOTRUN|RUNNING|DONE]
+   * ShareIndexInProgress
+   * ShareIndexLastError
+   * UserRadioUpdateID
+   * MasterRadioUpdateID
+   * SavedQueuesUpdateID
+   * ShareListUpdateID
+   */
+  // TODO implement event
+  public void handleEvent();
 }

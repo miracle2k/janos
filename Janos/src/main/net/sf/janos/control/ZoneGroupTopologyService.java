@@ -1,7 +1,17 @@
 /*
- * Created on 21/10/2007
- * By David Wheeler
- * Student ID: 3691615
+   Copyright 2007 David Wheeler
+
+   Licensed under the Apache License, Version 2.0 (the "License");
+   you may not use this file except in compliance with the License.
+   You may obtain a copy of the License at
+
+       http://www.apache.org/licenses/LICENSE-2.0
+
+   Unless required by applicable law or agreed to in writing, software
+   distributed under the License is distributed on an "AS IS" BASIS,
+   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+   See the License for the specific language governing permissions and
+   limitations under the License.
  */
 package net.sf.janos.control;
 
@@ -10,10 +20,11 @@ import java.io.IOException;
 import net.sbbi.upnp.ServiceEventHandler;
 import net.sbbi.upnp.ServicesEventing;
 import net.sbbi.upnp.services.UPNPService;
-import net.sf.janos.Debug;
 import net.sf.janos.model.ZoneGroupState;
 import net.sf.janos.model.xml.ResultParser;
 
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
 import org.xml.sax.SAXException;
 
 /**
@@ -25,6 +36,9 @@ import org.xml.sax.SAXException;
  *
  */
 public class ZoneGroupTopologyService extends AbstractService implements ServiceEventHandler {
+  
+  private static final Log LOG = LogFactory.getLog(ZoneGroupTopologyService.class);
+
 
   private ZoneGroupState zoneGroup;
   public ZoneGroupTopologyService(UPNPService service) {
@@ -39,7 +53,7 @@ public class ZoneGroupTopologyService extends AbstractService implements Service
 
   // TODO move into sub class to hide from API
   public void handleStateVariableEvent(String varName, String newValue) {
-    Debug.debug(varName + "=" + newValue);
+    LOG.debug(varName + "=" + newValue);
     try {
       if (varName.equals("AvailableSoftwareUpdate")) {
       } else if (varName == "ZoneGroupState") {
@@ -50,9 +64,9 @@ public class ZoneGroupTopologyService extends AbstractService implements Service
 
       }
     } catch (IOException e) {
-      Debug.error("Error handling state var: " + e);
+      LOG.error("Error handling state var: " + e);
     } catch (SAXException e) {
-      Debug.error("Could not parse state var: " + e);
+      LOG.error("Could not parse state var: " + e);
     }
   }
   

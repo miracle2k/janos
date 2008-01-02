@@ -1,5 +1,5 @@
 /*
-   Copyright 2007 David Wheeler
+   Copyright 2008 davidwheeler
 
    Licensed under the Apache License, Version 2.0 (the "License");
    you may not use this file except in compliance with the License.
@@ -15,17 +15,15 @@
  */
 package net.sf.janos.control;
 
-import net.sbbi.upnp.services.UPNPService;
+import java.util.Set;
 
-public class ConnectionManagerService extends AbstractService {
+import net.sf.janos.model.xml.RenderingControlEventHandler.EventType;
 
-  protected ConnectionManagerService(UPNPService service) {
-    super(service, ZonePlayerConstants.SONOS_SERVICE_CONNECTION_MANAGER);
-  }
-  
-  public void handleStateVariableEvent(String varName, String newValue) {
-    // TODO Auto-generated method stub
-    
-  }
+public interface ZonePlayerServiceListener<T extends AbstractService> {
 
+  /**
+   * 
+   * @param events
+   */
+  public void valuesChanged(Set<EventType> events, T source);
 }

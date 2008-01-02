@@ -1,23 +1,35 @@
 /*
- * Created on 21/10/2007
- * By David Wheeler
- * Student ID: 3691615
+   Copyright 2007 David Wheeler
+
+   Licensed under the Apache License, Version 2.0 (the "License");
+   you may not use this file except in compliance with the License.
+   You may obtain a copy of the License at
+
+       http://www.apache.org/licenses/LICENSE-2.0
+
+   Unless required by applicable law or agreed to in writing, software
+   distributed under the License is distributed on an "AS IS" BASIS,
+   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+   See the License for the specific language governing permissions and
+   limitations under the License.
  */
 package net.sf.janos.control;
 
 import java.io.IOException;
 
+import net.sbbi.upnp.ServiceEventHandler;
 import net.sbbi.upnp.messages.ActionMessage;
 import net.sbbi.upnp.messages.ActionResponse;
 import net.sbbi.upnp.messages.UPNPResponseException;
 import net.sbbi.upnp.services.UPNPService;
-import net.sf.janos.Debug;
 import net.sf.janos.model.Entry;
 import net.sf.janos.model.MediaInfo;
 import net.sf.janos.model.PositionInfo;
 import net.sf.janos.model.TransportInfo;
 
 import org.apache.commons.lang.StringEscapeUtils;
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
 
 /**
  * For controlling the audio transport service of a zone player.
@@ -27,7 +39,9 @@ import org.apache.commons.lang.StringEscapeUtils;
  * @author David Wheeler
  *
  */
-public class AVTransportService extends AbstractService {
+public class AVTransportService extends AbstractService implements ServiceEventHandler {
+  
+  private static final Log LOG = LogFactory.getLog(AVTransportService.class);
   
   private static final String SET_AV_TRANSPORT_URI_ACTION = "SetAVTransportURI";
   private static final String PLAY_ACTION = "Play";
@@ -54,6 +68,12 @@ public class AVTransportService extends AbstractService {
 
   protected AVTransportService(UPNPService service) {
     super(service, ZonePlayerConstants.SONOS_SERVICE_AV_TRANSPORT);
+    try {
+      refreshServiceEventing(DEFAULT_EVENT_PERIOD, this);
+      // TODO refresh eventing each ...s
+    } catch (IOException e) {
+      LOG.error("Could not register service eventing: ", e);
+    }
   }
   
   /**
@@ -71,7 +91,7 @@ public class AVTransportService extends AbstractService {
     message.setInputParameter("CurrentURI", entry.getRes());
     String metadata = compileMetadataString(entry);
     message.setInputParameter("CurrentURIMetaData", metadata); 
-    Debug.debug("SetAvTransportURI(0,"+entry.getRes()+"," + metadata + ")");
+    LOG.debug("SetAvTransportURI(0,"+entry.getRes()+"," + metadata + ")");
     message.service();
     // ignore result.
   }
@@ -698,6 +718,334 @@ public class AVTransportService extends AbstractService {
         </action>
 
      */
+  }
+  
+  public void handleStateVariableEvent(String varName, String newValue) {
+    LOG.info("recieved AVTransport notification: " + varName + "=" + newValue);
+    
+    // TODO All we get here is "Last change"
+    /* 
+<stateVariable sendEvents="yes">
+<name>LastChange</name>
+<dataType>string</dataType>
+</stateVariable>
+
+EG. LastChange=
+<Event xmlns="urn:schemas-upnp-org:metadata-1-0/AVT/" xmlns:r="urn:schemas-rinconnetworks-com:metadata-1-0/">
+  <InstanceID val="0">
+    <TransportState val="PLAYING"/>
+    <CurrentPlayMode val="NORMAL"/>
+    <NumberOfTracks val="29"/>
+    <CurrentTrack val="12"/>
+    <CurrentSection val="0"/>
+    <CurrentTrackURI val="x-file-cifs://192.168.1.1/Storage4/Sonos%20Music/Queens%20Of%20The%20Stone%20Age/Lullabies%20To%20Paralyze/Queens%20Of%20The%20Stone%20Age%20-%20Lullabies%20To%20Paralyze%20-%2012%20-%20Broken%20Box.wma"/>
+    <CurrentTrackDuration val="0:03:02"/>
+    <CurrentTrackMetaData val="&lt;DIDL-Lite xmlns:dc=&quot;http://purl.org/dc/elements/1.1/&quot; xmlns:upnp=&quot;urn:schemas-upnp-org:metadata-1-0/upnp/&quot; xmlns:r=&quot;urn:schemas-rinconnetworks-com:metadata-1-0/&quot; xmlns=&quot;urn:schemas-upnp-org:metadata-1-0/DIDL-Lite/&quot;&gt;&lt;item id=&quot;-1&quot; parentID=&quot;-1&quot; restricted=&quot;true&quot;&gt;&lt;res protocolInfo=&quot;x-file-cifs:*:audio/x-ms-wma:*&quot; duration=&quot;0:03:02&quot;&gt;x-file-cifs://192.168.1.1/Storage4/Sonos%20Music/Queens%20Of%20The%20Stone%20Age/Lullabies%20To%20Paralyze/Queens%20Of%20The%20Stone%20Age%20-%20Lullabies%20To%20Paralyze%20-%2012%20-%20Broken%20Box.wma&lt;/res&gt;&lt;r:streamContent&gt;&lt;/r:streamContent&gt;&lt;dc:title&gt;Broken Box&lt;/dc:title&gt;&lt;upnp:class&gt;object.item.audioItem.musicTrack&lt;/upnp:class&gt;&lt;dc:creator&gt;Queens Of The Stone Age&lt;/dc:creator&gt;&lt;upnp:album&gt;Lullabies To Paralyze&lt;/upnp:album&gt;&lt;r:albumArtist&gt;Queens Of The Stone Age&lt;/r:albumArtist&gt;&lt;/item&gt;&lt;/DIDL-Lite&gt;"/><r:NextTrackURI val="x-file-cifs://192.168.1.1/Storage4/Sonos%20Music/Queens%20Of%20The%20Stone%20Age/Lullabies%20To%20Paralyze/Queens%20Of%20The%20Stone%20Age%20-%20Lullabies%20To%20Paralyze%20-%2013%20-%20&apos;&apos;You%20Got%20A%20Killer%20Scene%20There,%20Man...&apos;&apos;.wma"/><r:NextTrackMetaData val="&lt;DIDL-Lite xmlns:dc=&quot;http://purl.org/dc/elements/1.1/&quot; xmlns:upnp=&quot;urn:schemas-upnp-org:metadata-1-0/upnp/&quot; xmlns:r=&quot;urn:schemas-rinconnetworks-com:metadata-1-0/&quot; xmlns=&quot;urn:schemas-upnp-org:metadata-1-0/DIDL-Lite/&quot;&gt;&lt;item id=&quot;-1&quot; parentID=&quot;-1&quot; restricted=&quot;true&quot;&gt;&lt;res protocolInfo=&quot;x-file-cifs:*:audio/x-ms-wma:*&quot; duration=&quot;0:04:56&quot;&gt;x-file-cifs://192.168.1.1/Storage4/Sonos%20Music/Queens%20Of%20The%20Stone%20Age/Lullabies%20To%20Paralyze/Queens%20Of%20The%20Stone%20Age%20-%20Lullabies%20To%20Paralyze%20-%2013%20-%20&amp;apos;&amp;apos;You%20Got%20A%20Killer%20Scene%20There,%20Man...&amp;apos;&amp;apos;.wma&lt;/res&gt;&lt;dc:title&gt;&amp;apos;&amp;apos;You Got A Killer Scene There, Man...&amp;apos;&amp;apos;&lt;/dc:title&gt;&lt;upnp:class&gt;object.item.audioItem.musicTrack&lt;/upnp:class&gt;&lt;dc:creator&gt;Queens Of The Stone Age&lt;/dc:creator&gt;&lt;upnp:album&gt;Lullabies To Paralyze&lt;/upnp:album&gt;&lt;r:albumArtist&gt;Queens Of The Stone Age&lt;/r:albumArtist&gt;&lt;/item&gt;&lt;/DIDL-Lite&gt;"/><r:EnqueuedTransportURI val="x-rincon-playlist:RINCON_000E582126EE01400#A:ALBUMARTIST/Queens%20Of%20The%20Stone%20Age"/><r:EnqueuedTransportURIMetaData val="&lt;DIDL-Lite xmlns:dc=&quot;http://purl.org/dc/elements/1.1/&quot; xmlns:upnp=&quot;urn:schemas-upnp-org:metadata-1-0/upnp/&quot; xmlns:r=&quot;urn:schemas-rinconnetworks-com:metadata-1-0/&quot; xmlns=&quot;urn:schemas-upnp-org:metadata-1-0/DIDL-Lite/&quot;&gt;&lt;item id=&quot;A:ALBUMARTIST/Queens%20Of%20The%20Stone%20Age&quot; parentID=&quot;A:ALBUMARTIST&quot; restricted=&quot;true&quot;&gt;&lt;dc:title&gt;Queens Of The Stone Age&lt;/dc:title&gt;&lt;upnp:class&gt;object.container&lt;/upnp:class&gt;&lt;desc id=&quot;cdudn&quot; nameSpace=&quot;urn:schemas-rinconnetworks-com:metadata-1-0/&quot;&gt;RINCON_AssociatedZPUDN&lt;/desc&gt;&lt;/item&gt;&lt;/DIDL-Lite&gt;"/>
+    <PlaybackStorageMedium val="NETWORK"/>
+    <AVTransportURI val="x-rincon-queue:RINCON_000E5812BC1801400#0"/>
+    <AVTransportURIMetaData val=""/>
+    <CurrentTransportActions val="Play, Stop, Pause, Seek, Next, Previous"/>
+    <TransportStatus val="OK"/>
+    <r:SleepTimerGeneration val="0"/>
+    <r:AlarmRunning val="0"/>
+    <r:SnoozeRunning val="0"/>
+    <r:RestartPending val="0"/>
+    <TransportPlaySpeed val="NOT_IMPLEMENTED"/>
+    <CurrentMediaDuration val="NOT_IMPLEMENTED"/>
+    <RecordStorageMedium val="NOT_IMPLEMENTED"/>
+    <PossiblePlaybackStorageMedia val="NONE, NETWORK"/>
+    <PossibleRecordStorageMedia val="NOT_IMPLEMENTED"/>
+    <RecordMediumWriteStatus val="NOT_IMPLEMENTED"/>
+    <CurrentRecordQualityMode val="NOT_IMPLEMENTED"/>
+    <PossibleRecordQualityModes val="NOT_IMPLEMENTED"/>
+    <NextAVTransportURI val="NOT_IMPLEMENTED"/>
+    <NextAVTransportURIMetaData val="NOT_IMPLEMENTED"/>
+  </InstanceID>
+</Event>
+
+     */
+    
+    /*
+     * <stateVariable sendEvents="no">
+<name>TransportState</name>
+<dataType>string</dataType>
+  <allowedValueList>
+<allowedValue>STOPPED</allowedValue>
+<allowedValue>PLAYING</allowedValue>
+<allowedValue>PAUSED_PLAYING</allowedValue>
+<allowedValue>TRANSITIONING</allowedValue>
+</allowedValueList>
+</stateVariable>
+  <stateVariable sendEvents="no">
+<name>TransportStatus</name>
+<dataType>string</dataType>
+</stateVariable>
+  <stateVariable sendEvents="no">
+<name>TransportErrorDescription</name>
+<dataType>string</dataType>
+</stateVariable>
+  <stateVariable sendEvents="no">
+<name>TransportErrorURI</name>
+<dataType>string</dataType>
+</stateVariable>
+  <stateVariable sendEvents="no">
+<name>PlaybackStorageMedium</name>
+<dataType>string</dataType>
+  <allowedValueList>
+<allowedValue>NONE</allowedValue>
+<allowedValue>NETWORK</allowedValue>
+</allowedValueList>
+</stateVariable>
+  <stateVariable sendEvents="no">
+<name>RecordStorageMedium</name>
+<dataType>string</dataType>
+  <allowedValueList>
+<allowedValue>NONE</allowedValue>
+</allowedValueList>
+</stateVariable>
+  <stateVariable sendEvents="no">
+<name>PossiblePlaybackStorageMedia</name>
+<dataType>string</dataType>
+</stateVariable>
+  <stateVariable sendEvents="no">
+<name>PossibleRecordStorageMedia</name>
+<dataType>string</dataType>
+</stateVariable>
+  <stateVariable sendEvents="no">
+<name>CurrentPlayMode</name>
+<dataType>string</dataType>
+  <allowedValueList>
+<allowedValue>NORMAL</allowedValue>
+<allowedValue>REPEAT_ALL</allowedValue>
+<allowedValue>SHUFFLE_NOREPEAT</allowedValue>
+<allowedValue>SHUFFLE</allowedValue>
+</allowedValueList>
+<defaultValue>NORMAL</defaultValue>
+</stateVariable>
+  <stateVariable sendEvents="no">
+<name>TransportPlaySpeed</name>
+<dataType>string</dataType>
+  <allowedValueList>
+<allowedValue>1</allowedValue>
+</allowedValueList>
+</stateVariable>
+  <stateVariable sendEvents="no">
+<name>RecordMediumWriteStatus</name>
+<dataType>string</dataType>
+</stateVariable>
+  <stateVariable sendEvents="no">
+<name>CurrentRecordQualityMode</name>
+<dataType>string</dataType>
+</stateVariable>
+  <stateVariable sendEvents="no">
+<name>PossibleRecordQualityModes</name>
+<dataType>string</dataType>
+</stateVariable>
+  <stateVariable sendEvents="no">
+<name>NumberOfTracks</name>
+<dataType>ui4</dataType>
+  <allowedValueRange>
+<minimum>0</minimum>
+<maximum>65535</maximum>
+</allowedValueRange>
+</stateVariable>
+  <stateVariable sendEvents="no">
+<name>CurrentTrack</name>
+<dataType>ui4</dataType>
+  <allowedValueRange>
+<minimum>0</minimum>
+<maximum>65535</maximum>
+<step>1</step>
+</allowedValueRange>
+</stateVariable>
+  <stateVariable sendEvents="no">
+<name>CurrentSection</name>
+<dataType>ui4</dataType>
+  <allowedValueRange>
+<minimum>0</minimum>
+<maximum>255</maximum>
+<step>1</step>
+</allowedValueRange>
+</stateVariable>
+  <stateVariable sendEvents="no">
+<name>CurrentTrackDuration</name>
+<dataType>string</dataType>
+</stateVariable>
+  <stateVariable sendEvents="no">
+<name>CurrentMediaDuration</name>
+<dataType>string</dataType>
+</stateVariable>
+  <stateVariable sendEvents="no">
+<name>CurrentTrackMetaData</name>
+<dataType>string</dataType>
+</stateVariable>
+  <stateVariable sendEvents="no">
+<name>CurrentTrackURI</name>
+<dataType>string</dataType>
+</stateVariable>
+  <stateVariable sendEvents="no">
+<name>AVTransportURI</name>
+<dataType>string</dataType>
+</stateVariable>
+  <stateVariable sendEvents="no">
+<name>AVTransportURIMetaData</name>
+<dataType>string</dataType>
+</stateVariable>
+  <stateVariable sendEvents="no">
+<name>NextAVTransportURI</name>
+<dataType>string</dataType>
+</stateVariable>
+  <stateVariable sendEvents="no">
+<name>NextAVTransportURIMetaData</name>
+<dataType>string</dataType>
+</stateVariable>
+  <stateVariable sendEvents="no">
+<name>RelativeTimePosition</name>
+<dataType>string</dataType>
+</stateVariable>
+  <stateVariable sendEvents="no">
+<name>AbsoluteTimePosition</name>
+<dataType>string</dataType>
+</stateVariable>
+  <stateVariable sendEvents="no">
+<name>RelativeCounterPosition</name>
+<dataType>i4</dataType>
+</stateVariable>
+  <stateVariable sendEvents="no">
+<name>AbsoluteCounterPosition</name>
+<dataType>i4</dataType>
+</stateVariable>
+  <stateVariable sendEvents="no">
+<name>CurrentTransportActions</name>
+<dataType>string</dataType>
+</stateVariable>
+  <stateVariable sendEvents="no">
+<name>SleepTimerGeneration</name>
+<dataType>ui4</dataType>
+</stateVariable>
+  <stateVariable sendEvents="no">
+<name>SnoozeRunning</name>
+<dataType>boolean</dataType>
+</stateVariable>
+  <stateVariable sendEvents="no">
+<name>AlarmRunning</name>
+<dataType>boolean</dataType>
+</stateVariable>
+  <stateVariable sendEvents="no">
+<name>AlarmIDRunning</name>
+<dataType>ui4</dataType>
+</stateVariable>
+  <stateVariable sendEvents="no">
+<name>AlarmLoggedStartTime</name>
+<dataType>string</dataType>
+</stateVariable>
+  <stateVariable sendEvents="no">
+<name>RestartPending</name>
+<dataType>boolean</dataType>
+</stateVariable>
+  <stateVariable sendEvents="no">
+<name>A_ARG_TYPE_SeekMode</name>
+<dataType>string</dataType>
+  <allowedValueList>
+<allowedValue>TRACK_NR</allowedValue>
+<allowedValue>REL_TIME</allowedValue>
+<allowedValue>SECTION</allowedValue>
+</allowedValueList>
+</stateVariable>
+  <stateVariable sendEvents="no">
+<name>A_ARG_TYPE_SeekTarget</name>
+<dataType>string</dataType>
+</stateVariable>
+  <stateVariable sendEvents="no">
+<name>A_ARG_TYPE_InstanceID</name>
+<dataType>ui4</dataType>
+</stateVariable>
+  <stateVariable sendEvents="no">
+<name>A_ARG_TYPE_MemberList</name>
+<dataType>string</dataType>
+</stateVariable>
+  <stateVariable sendEvents="no">
+<name>A_ARG_TYPE_TransportSettings</name>
+<dataType>string</dataType>
+</stateVariable>
+  <stateVariable sendEvents="no">
+<name>A_ARG_TYPE_SourceState</name>
+<dataType>string</dataType>
+</stateVariable>
+  <stateVariable sendEvents="no">
+<name>A_ARG_TYPE_Queue</name>
+<dataType>string</dataType>
+</stateVariable>
+  <stateVariable sendEvents="no">
+<name>A_ARG_TYPE_MemberID</name>
+<dataType>string</dataType>
+</stateVariable>
+  <stateVariable sendEvents="no">
+<name>A_ARG_TYPE_URI</name>
+<dataType>string</dataType>
+</stateVariable>
+  <stateVariable sendEvents="no">
+<name>A_ARG_TYPE_URIMetaData</name>
+<dataType>string</dataType>
+</stateVariable>
+  <stateVariable sendEvents="no">
+<name>A_ARG_TYPE_ObjectID</name>
+<dataType>string</dataType>
+</stateVariable>
+  <stateVariable sendEvents="no">
+<name>A_ARG_TYPE_GroupID</name>
+<dataType>string</dataType>
+</stateVariable>
+  <stateVariable sendEvents="no">
+<name>A_ARG_TYPE_TrackNumber</name>
+<dataType>ui4</dataType>
+</stateVariable>
+  <stateVariable sendEvents="no">
+<name>A_ARG_TYPE_NumTracks</name>
+<dataType>ui4</dataType>
+</stateVariable>
+  <stateVariable sendEvents="no">
+<name>A_ARG_TYPE_EnqueueAsNext</name>
+<dataType>boolean</dataType>
+</stateVariable>
+  <stateVariable sendEvents="no">
+<name>A_ARG_TYPE_SavedQueueTitle</name>
+<dataType>string</dataType>
+</stateVariable>
+  <stateVariable sendEvents="no">
+<name>A_ARG_TYPE_ResumePlayback</name>
+<dataType>boolean</dataType>
+</stateVariable>
+  <stateVariable sendEvents="no">
+<name>A_ARG_TYPE_ISO8601Time</name>
+<dataType>string</dataType>
+</stateVariable>
+  <stateVariable sendEvents="no">
+<name>A_ARG_TYPE_AlarmVolume</name>
+<dataType>ui2</dataType>
+</stateVariable>
+  <stateVariable sendEvents="no">
+<name>A_ARG_TYPE_AlarmIncludeLinkedZones</name>
+<dataType>boolean</dataType>
+</stateVariable>
+  <stateVariable sendEvents="no">
+<name>A_ARG_TYPE_SleepTimerState</name>
+<dataType>string</dataType>
+</stateVariable>
+  <stateVariable sendEvents="no">
+<name>A_ARG_TYPE_AlarmState</name>
+<dataType>string</dataType>
+</stateVariable>
+  <stateVariable sendEvents="no">
+<name>A_ARG_TYPE_StreamRestartState</name>
+<dataType>string</dataType>
+</stateVariable>
+     */
+  }
+
+  public void addAvTransportListener(AvTransportListener l) {
+    // TODO Auto-generated method stub
+    
   }
 
 }

@@ -1,7 +1,17 @@
 /*
- * Created on 25/07/2007
- * By David Wheeler
- * Student ID: 3691615
+   Copyright 2007 David Wheeler
+
+   Licensed under the Apache License, Version 2.0 (the "License");
+   you may not use this file except in compliance with the License.
+   You may obtain a copy of the License at
+
+       http://www.apache.org/licenses/LICENSE-2.0
+
+   Unless required by applicable law or agreed to in writing, software
+   distributed under the License is distributed on an "AS IS" BASIS,
+   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+   See the License for the specific language governing permissions and
+   limitations under the License.
  */
 package net.sf.janos.ui;
 
@@ -36,7 +46,8 @@ public class MusicLibraryTable extends Composite {
   
   public MusicLibraryTable(final Composite parent, int style, final SonosControllerShell controller) {
     super(parent, style);
-    final MusicLibrary rootLib = new RootEntryLibrary(controller.getController());
+    // TODO IndexOutOfBounds
+    final MusicLibrary rootLib = new RootEntryLibrary(controller.getController().getZonePlayerModel().get(0));
     setLayout(new FillLayout(SWT.HORIZONTAL));
     final Table typeTable = new Table(this, SWT.MULTI |SWT.FULL_SELECTION| SWT.VIRTUAL | SWT.BORDER);
     music.add(new MusicTable(typeTable, rootLib));
@@ -70,8 +81,8 @@ public class MusicLibraryTable extends Composite {
         for (MusicTable table : music ) {
           if (table.getTable() == e.getSource()) {
             int sel = table.getTable().getSelectionIndex();
-            Entry entry = table.getModel().getEntryAt(sel + 1); // TODO why +1?
-            SonosController.getCoordinatorForZonePlayer(controller.getZoneList().getSelectionZone()).enqueueEntry(entry);
+            Entry entry = table.getModel().getEntryAt(sel);
+            SonosController.getCoordinatorForZonePlayer(controller.getZoneList().getSelectedZone()).enqueueEntry(entry);
             return;
           }
         }
@@ -104,10 +115,10 @@ public class MusicLibraryTable extends Composite {
             table.table.dispose();
           }
         }
-        if (selectedTable != null) {
+        if (selectedTable != null && selectedTable.getTable().getSelectionIndex() >= 0) {
           // TODO multi selection
           Entry entry = selectedTable.getModel().getEntryAt(selectedTable.getTable().getSelectionIndex());
-          final MusicLibrary lib = new MusicLibrary(controller.getZoneList().getSelectionZone(), entry);
+          final MusicLibrary lib = new MusicLibrary(controller.getZoneList().getSelectedZone(), entry);
           final Table table = new Table(MusicLibraryTable.this, SWT.MULTI |SWT.FULL_SELECTION| SWT.VIRTUAL | SWT.BORDER);
           music.add(new MusicTable(table, lib));
           table.setLinesVisible(true);

@@ -1,21 +1,33 @@
 /*
- * Created on 21/10/2007
- * By David Wheeler
- * Student ID: 3691615
+   Copyright 2007 David Wheeler
+
+   Licensed under the Apache License, Version 2.0 (the "License");
+   you may not use this file except in compliance with the License.
+   You may obtain a copy of the License at
+
+       http://www.apache.org/licenses/LICENSE-2.0
+
+   Unless required by applicable law or agreed to in writing, software
+   distributed under the License is distributed on an "AS IS" BASIS,
+   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+   See the License for the specific language governing permissions and
+   limitations under the License.
  */
 package net.sf.janos.control;
 
 import java.io.IOException;
 import java.util.List;
 
+import net.sbbi.upnp.ServiceEventHandler;
 import net.sbbi.upnp.messages.ActionMessage;
 import net.sbbi.upnp.messages.ActionResponse;
 import net.sbbi.upnp.messages.UPNPResponseException;
 import net.sbbi.upnp.services.UPNPService;
-import net.sf.janos.Debug;
 import net.sf.janos.model.Entry;
 import net.sf.janos.model.xml.ResultParser;
 
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
 import org.xml.sax.SAXException;
 
 /**
@@ -24,10 +36,19 @@ import org.xml.sax.SAXException;
  * @author David Wheeler
  *
  */
-public class ContentDirectoryService extends AbstractService {
+public class ContentDirectoryService extends AbstractService implements ServiceEventHandler {
+  
+  private static final Log LOG = LogFactory.getLog(ContentDirectoryService.class);
+
   
   protected ContentDirectoryService(UPNPService service) {
     super(service, ZonePlayerConstants.SONOS_SERVICE_CONTENT_DIRECTORY);
+    try {
+      refreshServiceEventing(DEFAULT_EVENT_PERIOD, this);
+      // TODO refresh periodically
+    } catch (IOException e) {
+      LOG.error("Could not register for events: ", e);
+    }
   }
 
   /**
@@ -98,10 +119,10 @@ public class ContentDirectoryService extends AbstractService {
     ActionResponse response;
     try {
       response = browseAction.service();
-      Debug.debug("response value types: " + response.getOutActionArgumentNames());
-      Debug.info("Returned " + response.getOutActionArgumentValue("NumberReturned") + " of " + response.getOutActionArgumentValue("TotalMatches") + " results.");
+      LOG.debug("response value types: " + response.getOutActionArgumentNames());
+      LOG.info("Returned " + response.getOutActionArgumentValue("NumberReturned") + " of " + response.getOutActionArgumentValue("TotalMatches") + " results.");
       String result = response.getOutActionArgumentValue("Result");
-      Debug.debug(result);
+      LOG.debug(result);
       return ResultParser.getEntriesFromStringResult(result);
     } catch (IOException e) {
       // TODO Auto-generated catch block
@@ -114,5 +135,23 @@ public class ContentDirectoryService extends AbstractService {
       e.printStackTrace();
     }
     return null;
+  }
+
+  public void handleStateVariableEvent(String variable, String value) {
+    LOG.info("ContentDirectory Event: " + variable + "=" + value);
+    /*
+     * Expected Event Variables:
+     * SystemUpdateID
+     * ContainerUpdateID
+     * ShareListRefreshState [NOTRUN|RUNNING|DONE]
+     * ShareIndexInProgress
+     * ShareIndexLastError
+     * UserRadioUpdateID
+     * MasterRadioUpdateID
+     * SavedQueuesUpdateID
+     * ShareListUpdateID
+     */
+    // TODO implement
+    
   }
 }

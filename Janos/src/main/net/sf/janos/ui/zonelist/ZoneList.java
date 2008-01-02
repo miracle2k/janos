@@ -1,7 +1,17 @@
 /*
- * Created on 25/07/2007
- * By David Wheeler
- * Student ID: 3691615
+   Copyright 2007 David Wheeler
+
+   Licensed under the Apache License, Version 2.0 (the "License");
+   you may not use this file except in compliance with the License.
+   You may obtain a copy of the License at
+
+       http://www.apache.org/licenses/LICENSE-2.0
+
+   Unless required by applicable law or agreed to in writing, software
+   distributed under the License is distributed on an "AS IS" BASIS,
+   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+   See the License for the specific language governing permissions and
+   limitations under the License.
  */
 package net.sf.janos.ui.zonelist;
 
@@ -12,12 +22,13 @@ import java.util.ArrayList;
 import java.util.List;
 
 import net.sbbi.upnp.devices.DeviceIcon;
-import net.sf.janos.Debug;
 import net.sf.janos.control.SonosController;
 import net.sf.janos.control.ZonePlayer;
 import net.sf.janos.model.ZonePlayerModel;
 import net.sf.janos.model.ZonePlayerModelListener;
 
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
 import org.eclipse.swt.SWT;
 import org.eclipse.swt.events.SelectionEvent;
 import org.eclipse.swt.events.SelectionListener;
@@ -25,6 +36,8 @@ import org.eclipse.swt.layout.FillLayout;
 import org.eclipse.swt.widgets.Composite;
 
 public class ZoneList extends Composite implements ZonePlayerModelListener {
+  
+  private static final Log LOG = LogFactory.getLog(ZoneList.class);
   
   private final List<ZoneListSelectionListener> selectionListeners = new ArrayList<ZoneListSelectionListener>();
   private final org.eclipse.swt.widgets.List zoneTable;
@@ -49,10 +62,12 @@ public class ZoneList extends Composite implements ZonePlayerModelListener {
       public void widgetSelected(SelectionEvent arg0) {
         int newSel = zoneTable.getSelectionIndex();
         if (newSel != currentSelection) {
+          currentSelection = newSel;
           fireZoneSelectionChanged(model.get(newSel));
         }
       }
     });
+    currentSelection = zoneTable.getSelectionIndex();
     
     controller.getZonePlayerModel().addZonePlayerModelListener(this);
     for (ZonePlayer zp : controller.getZonePlayerModel().getAllZones()) {
@@ -66,10 +81,10 @@ public class ZoneList extends Composite implements ZonePlayerModelListener {
 //        Label deviceLabel = new Label(ZoneList.this, SWT.NONE);
 //        deviceLabel.setText(dev.getRootDevice().getFriendlyName());
         List<DeviceIcon> icons = dev.getRootDevice().getDeviceIcons(); //getChildDevice(SonosController.MEDIA_SERVER_DEVICE_TYPE).getDeviceIcons();
-        Debug.info ("device icons: " + icons);
+        LOG.info ("device icons: " + icons);
         if (icons != null && icons.size() > 0) {
           URL location = icons.get(0).getUrl();
-          Debug.debug("Setting icon to "+ location);
+          LOG.debug("Setting icon to "+ location);
           InputStream stream = null;
           try {
             stream = location.openStream();
@@ -89,7 +104,10 @@ public class ZoneList extends Composite implements ZonePlayerModelListener {
         }
         zoneTable.add(dev.getDevicePropertiesService().getZoneAttributes().getName());
         if (zoneTable.getItemCount() == 1) {
-          zoneTable.setSelection(0);
+          // BUG for some reason, this call doesn't fire selection events. so we have to do it ourselfs!
+          zoneTable.select(0);
+          currentSelection=0;
+          fireZoneSelectionChanged(model.get(currentSelection));
         }
         redraw();
       }
@@ -105,12 +123,15 @@ public class ZoneList extends Composite implements ZonePlayerModelListener {
     });
   }
   
-  public ZonePlayer getSelectionZone() {
+  public ZonePlayer getSelectedZone() {
     return model.get(currentSelection);
   }
 
   public void addSelectionListener(ZoneListSelectionListener l) {
     this.selectionListeners.add(l);
+    if (currentSelection >= 0) {
+      l.zoneSelectionChangedTo(model.get(currentSelection));
+    }
   }
   
   public void removeSelectionListener(ZoneListSelectionListener l) {

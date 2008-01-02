@@ -1,20 +1,28 @@
 /*
- * Created on 17/10/2007
- * By David Wheeler
- * Student ID: 3691615
+   Copyright 2007 David Wheeler
+
+   Licensed under the Apache License, Version 2.0 (the "License");
+   you may not use this file except in compliance with the License.
+   You may obtain a copy of the License at
+
+       http://www.apache.org/licenses/LICENSE-2.0
+
+   Unless required by applicable law or agreed to in writing, software
+   distributed under the License is distributed on an "AS IS" BASIS,
+   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+   See the License for the specific language governing permissions and
+   limitations under the License.
  */
 package net.sf.janos.model;
 
 import java.io.IOException;
-import java.io.InputStream;
 import java.net.URL;
 
-import net.sf.janos.Debug;
 import net.sf.janos.control.ZonePlayer;
 
 import org.apache.commons.lang.StringEscapeUtils;
-import org.eclipse.swt.graphics.ImageData;
-import org.eclipse.swt.graphics.ImageLoader;
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
 
 /**
  * A class representing an entry in a zone players music library. eg. a queue
@@ -24,6 +32,9 @@ import org.eclipse.swt.graphics.ImageLoader;
  * 
  */
 public class Entry {
+  private static final Log LOG = LogFactory.getLog(Entry.class);
+
+  
     private final String id;
     private final String title;
     private final String parentId;
@@ -104,30 +115,17 @@ public class Entry {
     /**
      * @param zp
      *          the zone player from which to retrieve the album art.
-     * @return ImageData array of length 1 containing the album art image.
+     * @return the URL containing the album art image.
      * @throws IOException
      */
-    public ImageData[] getAlbumArt(ZonePlayer zp) throws IOException {
-      InputStream artworkStream = null;
+    public URL getAlbumArtURL(ZonePlayer zp) throws IOException {
       String uri = getAlbumArtUri();
       if (uri.startsWith("/getAA")) {
         // need to use mpath. what does this mean??
-        Debug.info("uri = " + uri);
+        LOG.info("uri = " + uri);
       } 
       
-      try {
-        URL artworkUrl = new URL("http", zp.getIP().getHostAddress(), zp.getPort(), uri);
-        artworkStream = artworkUrl.openStream();
-        return new ImageLoader().load(artworkStream);
-      } finally {
-        if (artworkStream != null) {
-          try {
-            artworkStream.close();
-          } catch (IOException e) {
-            e.printStackTrace();
-          }
-        }
-      }
+      return new URL("http", zp.getIP().getHostAddress(), zp.getPort(), uri);
     }
 
     /**

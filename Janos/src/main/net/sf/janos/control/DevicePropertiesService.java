@@ -1,7 +1,17 @@
 /*
- * Created on 20/10/2007
- * By David Wheeler
- * Student ID: 3691615
+   Copyright 2007 David Wheeler
+
+   Licensed under the Apache License, Version 2.0 (the "License");
+   you may not use this file except in compliance with the License.
+   You may obtain a copy of the License at
+
+       http://www.apache.org/licenses/LICENSE-2.0
+
+   Unless required by applicable law or agreed to in writing, software
+   distributed under the License is distributed on an "AS IS" BASIS,
+   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+   See the License for the specific language governing permissions and
+   limitations under the License.
  */
 package net.sf.janos.control;
 
@@ -57,26 +67,7 @@ public class DevicePropertiesService extends AbstractService {
             <name>HouseholdID</name>
             <dataType>string</dataType>
         </stateVariable>
-        <stateVariable sendEvents="yes">
-            <name>SettingsReplicationState</name>
-            <dataType>string</dataType>
-        </stateVariable>
-        <stateVariable sendEvents="yes">
-            <name>ZoneName</name>
-            <dataType>string</dataType>
-        </stateVariable>
-        <stateVariable sendEvents="yes">
-            <name>Icon</name>
-            <dataType>string</dataType>
-        </stateVariable>
-        <stateVariable sendEvents="yes">
-            <name>Invisible</name>
-            <dataType>boolean</dataType>
-        </stateVariable>
-        <stateVariable sendEvents="yes">
-            <name>IsZoneBridge</name>
-            <dataType>boolean</dataType>
-        </stateVariable>
+
         <stateVariable sendEvents="no">
             <name>LEDState</name>
             <dataType>string</dataType>
@@ -248,4 +239,28 @@ public class DevicePropertiesService extends AbstractService {
 </scpd>
    */
 
+  public void handleStateVariableEvent(String varName, String newValue) {
+    /*
+     *  <stateVariable sendEvents="yes">
+            <name>SettingsReplicationState</name>
+            <dataType>string</dataType>
+        </stateVariable>
+        <stateVariable sendEvents="yes">
+            <name>ZoneName</name>
+            <dataType>string</dataType>
+        </stateVariable>
+        <stateVariable sendEvents="yes">
+            <name>Icon</name>
+            <dataType>string</dataType>
+        </stateVariable>
+        <stateVariable sendEvents="yes">
+            <name>Invisible</name>
+            <dataType>boolean</dataType>
+        </stateVariable>
+        <stateVariable sendEvents="yes">
+            <name>IsZoneBridge</name>
+            <dataType>boolean</dataType>
+        </stateVariable>
+     */
+  }
 }

@@ -1,16 +1,29 @@
 /*
- * Created on 01/11/2007
- * By David Wheeler
- * Student ID: 3691615
+   Copyright 2007 David Wheeler
+
+   Licensed under the Apache License, Version 2.0 (the "License");
+   you may not use this file except in compliance with the License.
+   You may obtain a copy of the License at
+
+       http://www.apache.org/licenses/LICENSE-2.0
+
+   Unless required by applicable law or agreed to in writing, software
+   distributed under the License is distributed on an "AS IS" BASIS,
+   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+   See the License for the specific language governing permissions and
+   limitations under the License.
  */
 package net.sf.janos.ui;
 
 import java.io.IOException;
+import java.util.Set;
 
 import net.sbbi.upnp.messages.UPNPResponseException;
-import net.sf.janos.control.SonosController;
+import net.sf.janos.control.RenderingControlService;
 import net.sf.janos.control.ZonePlayer;
+import net.sf.janos.control.ZonePlayerServiceListener;
 import net.sf.janos.model.TransportInfo.TransportState;
+import net.sf.janos.model.xml.RenderingControlEventHandler.EventType;
 import net.sf.janos.ui.zonelist.ZoneListSelectionListener;
 
 import org.eclipse.swt.SWT;
@@ -29,15 +42,16 @@ import org.eclipse.swt.widgets.Scale;
  * @author David Wheeler
  * 
  */
-public class MusicControlPanel extends Composite implements ZoneListSelectionListener {
+public class MusicControlPanel extends Composite implements ZoneListSelectionListener, ZonePlayerServiceListener<RenderingControlService> {
 
-  private final ZonePlayer currentZone;
+  private ZonePlayer currentZone;
   private Button play;
+  private Scale volume;
 
   public MusicControlPanel(Composite parent, int style, ZonePlayer zone) {
     super(parent, style);
-    this.currentZone = zone;
     buildComponents();
+    zoneSelectionChangedTo(zone);
   }
 
   private void buildComponents() {
@@ -46,10 +60,9 @@ public class MusicControlPanel extends Composite implements ZoneListSelectionLis
     layout.spacing=4;
     setLayout(layout);
     
-    final Scale volume = new Scale(this, SWT.HORIZONTAL);
+    volume = new Scale(this, SWT.HORIZONTAL);
     volume.setMinimum(0);
     volume.setMaximum(100);
-    volume.setSelection(getVolume());
     Button previous = new Button(this, SWT.PUSH);
     previous.setText("<");
     previous.addMouseListener(new MouseAdapter() {
@@ -59,7 +72,6 @@ public class MusicControlPanel extends Composite implements ZoneListSelectionLis
     });
     // TODO initialize play and volume to correct values
     play = new Button(this, SWT.PUSH);
-    play.setText(isPlaying() ? "Pause" : "Play");
     play.addMouseListener(new MouseAdapter() {
       public void mouseUp(MouseEvent e) {
         play();
@@ -96,6 +108,10 @@ public class MusicControlPanel extends Composite implements ZoneListSelectionLis
     }
     return false;
   }
+  
+  private void setIsPlaying(boolean isPlaying) {
+    play.setText(isPlaying ? "Pause" : "Play");
+  }
 
   protected void previous() {
     try {
@@ -114,11 +130,11 @@ public class MusicControlPanel extends Composite implements ZoneListSelectionLis
   protected void play() {
     try {
       if (play.getText().equals("Pause")) {
-        play.setText("Play");
         currentZone.getMediaRendererDevice().getAvTransportService().pause();
+        setIsPlaying(isPlaying());
       } else if (play.getText().equals("Play")) {
-        play.setText("Pause");
         currentZone.getMediaRendererDevice().getAvTransportService().play();
+        setIsPlaying(isPlaying());
       }
     } catch (UPNPResponseException e) {
       // TODO Auto-generated catch block
@@ -173,7 +189,31 @@ public class MusicControlPanel extends Composite implements ZoneListSelectionLis
   }
 
   public void zoneSelectionChangedTo(ZonePlayer newSelection) {
-    // TODO Auto-generated method stub
-    
+    if (currentZone != null) {
+      currentZone.getMediaRendererDevice().getRenderingControlService().removeListener(this);
+    }
+    currentZone = newSelection;
+    if (currentZone != null) {
+      currentZone.getMediaRendererDevice().getRenderingControlService().addListener(this);
+    }
+    volume.setSelection(getVolume());
+    setIsPlaying(isPlaying());
+  }
+
+  public void valuesChanged(Set<EventType> events, RenderingControlService source) {
+    if (events.contains(EventType.VOLUME_MASTER)) {
+      final int newVol = getVolume();
+      getDisplay().asyncExec(new Runnable() {
+        public void run() {
+          volume.setSelection(newVol);
+        }
+      });
+    }
+    // TODO other volumes?
+  }
+  
+  public void dispose() {
+    zoneSelectionChangedTo(null);
+    super.dispose();
   }
 }

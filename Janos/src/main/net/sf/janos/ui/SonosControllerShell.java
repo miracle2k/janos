@@ -1,13 +1,19 @@
 /*
- * Created on 25/07/2007
- * By David Wheeler
- * Student ID: 3691615
+   Copyright 2007 David Wheeler
+
+   Licensed under the Apache License, Version 2.0 (the "License");
+   you may not use this file except in compliance with the License.
+   You may obtain a copy of the License at
+
+       http://www.apache.org/licenses/LICENSE-2.0
+
+   Unless required by applicable law or agreed to in writing, software
+   distributed under the License is distributed on an "AS IS" BASIS,
+   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+   See the License for the specific language governing permissions and
+   limitations under the License.
  */
 package net.sf.janos.ui;
-
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
-import java.util.concurrent.ThreadFactory;
 
 import net.sf.janos.control.SonosController;
 import net.sf.janos.ui.zonelist.ZoneList;
@@ -25,17 +31,11 @@ public class SonosControllerShell {
   
   private final Shell shell;
 	
-  private final ExecutorService background = Executors.newFixedThreadPool(5, new ThreadFactory() {
-    private int i = 0;
-    public Thread newThread(Runnable r) {
-      return new Thread(r, "SonosController BG thread " + i++);
-    }
-  });
-  
   private final SonosController controller;
   
   private ZoneList zoneList;
   private QueueDisplay queue;
+  private MusicControlPanel controls;
 
 	public SonosControllerShell(Display display, SonosController controller) {
 		this.display = display;
@@ -60,7 +60,7 @@ public class SonosControllerShell {
     shell.setText("SonosJ");
     shell.setLayout(new GridLayout(3, false));
 		
-    MusicControlPanel controls = new MusicControlPanel(shell, SWT.BORDER, null);
+    controls = new MusicControlPanel(shell, SWT.BORDER, null);
 		GridData controlData = new GridData();
 		controlData.horizontalSpan=3;
 		controls.setLayoutData(controlData);
@@ -82,12 +82,15 @@ public class SonosControllerShell {
     queue = new QueueDisplay(shell, SWT.NONE, controller);
     GridData nowPlayingData = new GridData(); 
     nowPlayingData.widthHint=200;
-    nowPlayingData.verticalAlignment=SWT.TOP;
+    nowPlayingData.verticalAlignment=GridData.FILL;
+    nowPlayingData.grabExcessVerticalSpace=true;
     queue.setLayoutData(nowPlayingData);
     zoneList.addSelectionListener(queue);
 	}
 	
   private void dispose() {
+    zoneList.removeSelectionListener(this.controller);
+    zoneList.removeSelectionListener(controls);
     zoneList.dispose();
     queue.dispose();
   }
