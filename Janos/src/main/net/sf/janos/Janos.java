@@ -15,7 +15,6 @@
  */
 package net.sf.janos;
 
-import net.sbbi.upnp.ServicesEventing;
 import net.sf.janos.control.SonosController;
 import net.sf.janos.ui.SonosControllerShell;
 
@@ -28,7 +27,6 @@ public class Janos {
    */
   public static void main(String[] args) {
     System.setProperty("net.sbbi.upnp.Discovery.bindPort", "2000");
-    ServicesEventing.getInstance().setDaemonPort(6832);
     
     SonosController controller = SonosController.getInstance();
     SonosControllerShell shell = new SonosControllerShell(new Display(), controller);

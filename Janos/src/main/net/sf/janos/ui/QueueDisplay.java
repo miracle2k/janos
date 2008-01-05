@@ -27,12 +27,12 @@ import net.sbbi.upnp.messages.UPNPResponseException;
 import net.sf.janos.control.AVTransportListener;
 import net.sf.janos.control.AVTransportService;
 import net.sf.janos.control.SonosController;
+import net.sf.janos.control.ZoneListSelectionListener;
 import net.sf.janos.control.ZonePlayer;
 import net.sf.janos.model.Entry;
 import net.sf.janos.model.MediaInfo;
 import net.sf.janos.model.PositionInfo;
 import net.sf.janos.model.xml.AVTransportEventHandler.AVTransportEventType;
-import net.sf.janos.ui.zonelist.ZoneListSelectionListener;
 import net.sf.janos.util.ui.ImageUtilities;
 
 import org.apache.commons.logging.Log;

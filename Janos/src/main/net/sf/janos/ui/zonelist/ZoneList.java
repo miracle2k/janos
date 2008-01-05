@@ -26,6 +26,7 @@ import net.sf.janos.control.SonosController;
 import net.sf.janos.control.ZonePlayer;
 import net.sf.janos.model.ZonePlayerModel;
 import net.sf.janos.model.ZonePlayerModelListener;
+import net.sf.janos.control.ZoneListSelectionListener;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;

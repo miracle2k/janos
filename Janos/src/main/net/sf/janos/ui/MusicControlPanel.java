@@ -21,13 +21,13 @@ import java.util.Set;
 import net.sbbi.upnp.messages.UPNPResponseException;
 import net.sf.janos.control.AVTransportListener;
 import net.sf.janos.control.AVTransportService;
-import net.sf.janos.control.RenderingControlService;
-import net.sf.janos.control.ZonePlayer;
 import net.sf.janos.control.RenderingControlListener;
+import net.sf.janos.control.RenderingControlService;
+import net.sf.janos.control.ZoneListSelectionListener;
+import net.sf.janos.control.ZonePlayer;
 import net.sf.janos.model.TransportInfo.TransportState;
 import net.sf.janos.model.xml.AVTransportEventHandler.AVTransportEventType;
 import net.sf.janos.model.xml.RenderingControlEventHandler.RenderingControlEventType;
-import net.sf.janos.ui.zonelist.ZoneListSelectionListener;
 
 import org.eclipse.swt.SWT;
 import org.eclipse.swt.events.MouseAdapter;
