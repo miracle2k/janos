@@ -60,4 +60,9 @@ public class MediaServerDevice {
   public UPNPDevice getUPNPDevice() {
     return dev;
   }
+
+  public void dispose() {
+    this.contentDirectory.dispose();
+    this.connectionManager.dispose();
+  }
 }

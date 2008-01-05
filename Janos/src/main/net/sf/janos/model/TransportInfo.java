@@ -36,9 +36,12 @@ public class TransportInfo {
   public TransportInfo(String state, String status, String speed) {
     this.state = TransportState.valueOf(state);
     this.status = status;
-    this.speed = Integer.parseInt(speed);
+    this.speed = speed.equals("NOT_IMPLEMENTED") ? -1 : Integer.parseInt(speed);
   }
 
+  /**
+   * @return the speed of playback, or -1 if this functionality is not supported.
+   */
   public int getSpeed() {
     return speed;
   }

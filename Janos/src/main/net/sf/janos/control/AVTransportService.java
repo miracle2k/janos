@@ -16,6 +16,11 @@
 package net.sf.janos.control;
 
 import java.io.IOException;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
 
 import net.sbbi.upnp.ServiceEventHandler;
 import net.sbbi.upnp.messages.ActionMessage;
@@ -26,10 +31,13 @@ import net.sf.janos.model.Entry;
 import net.sf.janos.model.MediaInfo;
 import net.sf.janos.model.PositionInfo;
 import net.sf.janos.model.TransportInfo;
+import net.sf.janos.model.xml.ResultParser;
+import net.sf.janos.model.xml.AVTransportEventHandler.AVTransportEventType;
 
 import org.apache.commons.lang.StringEscapeUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.xml.sax.SAXException;
 
 /**
  * For controlling the audio transport service of a zone player.
@@ -65,15 +73,12 @@ public class AVTransportService extends AbstractService implements ServiceEventH
       "RINCON_AssociatedZPUDN</desc>" +
       "</item></DIDL-Lite>";
 
-
+  private final Map<AVTransportEventType, String> state = new HashMap<AVTransportEventType, String>();
+  private final List<AVTransportListener> listeners = new ArrayList<AVTransportListener>();
+  
   protected AVTransportService(UPNPService service) {
     super(service, ZonePlayerConstants.SONOS_SERVICE_AV_TRANSPORT);
-    try {
-      refreshServiceEventing(DEFAULT_EVENT_PERIOD, this);
-      // TODO refresh eventing each ...s
-    } catch (IOException e) {
-      LOG.error("Could not register service eventing: ", e);
-    }
+    registerServiceEventing(this);
   }
   
   /**
@@ -191,18 +196,37 @@ public class AVTransportService extends AbstractService implements ServiceEventH
    * @throws UPNPResponseException
    */
   public MediaInfo getMediaInfo() throws IOException, UPNPResponseException {
-    ActionMessage message = messageFactory.getMessage("GetMediaInfo");
-    message.setInputParameter("InstanceID", 0);
-    ActionResponse resp = message.service();
-    return new MediaInfo(resp.getOutActionArgumentValue("NrTracks"), 
-        resp.getOutActionArgumentValue("MediaDuration"),
-        resp.getOutActionArgumentValue("CurrentURI"), 
-        resp.getOutActionArgumentValue("CurrentURIMetaData"),
-        resp.getOutActionArgumentValue("NextURI"),
-        resp.getOutActionArgumentValue("NextURIMetaData"),
-        resp.getOutActionArgumentValue("PlayMedium"),
-        resp.getOutActionArgumentValue("RecordMedium"),
-        resp.getOutActionArgumentValue("WriteStatus"));
+    if (!(state.containsKey(AVTransportEventType.NumberOfTracks) 
+        && state.containsKey(AVTransportEventType.CurrentTrackDuration) 
+        && state.containsKey(AVTransportEventType.CurrentTrackURI)
+        && state.containsKey(AVTransportEventType.CurrentTrackMetaData)
+        && state.containsKey(AVTransportEventType.NextAVTransportURI)
+        && state.containsKey(AVTransportEventType.NextAVTransportURIMetaData)
+        && state.containsKey(AVTransportEventType.PlaybackStorageMedium)
+        && state.containsKey(AVTransportEventType.RecordStorageMedium)
+        && state.containsKey(AVTransportEventType.RecordMediumWriteStatus))) {
+      ActionMessage message = messageFactory.getMessage("GetMediaInfo");
+      message.setInputParameter("InstanceID", 0);
+      ActionResponse resp = message.service();
+      state.put(AVTransportEventType.NumberOfTracks, resp.getOutActionArgumentValue("NrTracks"));
+      state.put(AVTransportEventType.CurrentTrackDuration, resp.getOutActionArgumentValue("MediaDuration"));
+      state.put(AVTransportEventType.CurrentTrackURI, resp.getOutActionArgumentValue("CurrentURI"));
+      state.put(AVTransportEventType.CurrentTrackMetaData, resp.getOutActionArgumentValue("CurrentURIMetaData"));
+      state.put(AVTransportEventType.NextAVTransportURI, resp.getOutActionArgumentValue("NextURI"));
+      state.put(AVTransportEventType.NextAVTransportURIMetaData, resp.getOutActionArgumentValue("NextURIMetaData"));
+      state.put(AVTransportEventType.PlaybackStorageMedium, resp.getOutActionArgumentValue("PlayMedium"));
+      state.put(AVTransportEventType.RecordStorageMedium, resp.getOutActionArgumentValue("RecordMedium"));
+      state.put(AVTransportEventType.RecordMediumWriteStatus, resp.getOutActionArgumentValue("WriteStatus"));
+    }
+    return new MediaInfo(state.get(AVTransportEventType.NumberOfTracks), 
+        state.get(AVTransportEventType.CurrentTrackDuration),
+        state.get(AVTransportEventType.CurrentTrackURI), 
+        state.get(AVTransportEventType.CurrentTrackMetaData),
+        state.get(AVTransportEventType.NextAVTransportURI),
+        state.get(AVTransportEventType.NextAVTransportURIMetaData),
+        state.get(AVTransportEventType.PlaybackStorageMedium),
+        state.get(AVTransportEventType.RecordStorageMedium),
+        state.get(AVTransportEventType.RecordMediumWriteStatus));
   }
   
   /**
@@ -211,12 +235,19 @@ public class AVTransportService extends AbstractService implements ServiceEventH
    * @throws UPNPResponseException
    */
   public TransportInfo getTransportInfo() throws IOException, UPNPResponseException {
-    ActionMessage message = messageFactory.getMessage("GetTransportInfo");
-    message.setInputParameter("InstanceID", 0);
-    ActionResponse resp = message.service();
-    return new TransportInfo(resp.getOutActionArgumentValue("CurrentTransportState"), 
-        resp.getOutActionArgumentValue("CurrentTransportStatus"), 
-        resp.getOutActionArgumentValue("CurrentSpeed"));
+    if (!(state.containsKey(AVTransportEventType.TransportState) 
+        && state.containsKey(AVTransportEventType.TransportStatus) 
+        && state.containsKey(AVTransportEventType.TransportPlaySpeed))) {
+      ActionMessage message = messageFactory.getMessage("GetTransportInfo");
+      message.setInputParameter("InstanceID", 0);
+      ActionResponse resp = message.service();
+      state.put(AVTransportEventType.TransportState, resp.getOutActionArgumentValue("CurrentTransportState"));
+      state.put(AVTransportEventType.TransportStatus, resp.getOutActionArgumentValue("CurrentTransportStatus"));
+      state.put(AVTransportEventType.TransportPlaySpeed, resp.getOutActionArgumentValue("CurrentSpeed"));
+    }
+    return new TransportInfo(state.get(AVTransportEventType.TransportState), 
+        state.get(AVTransportEventType.TransportStatus), 
+        state.get(AVTransportEventType.TransportPlaySpeed));
   }
   
   /**
@@ -228,10 +259,14 @@ public class AVTransportService extends AbstractService implements ServiceEventH
     ActionMessage message = messageFactory.getMessage("GetPositionInfo");
     message.setInputParameter("InstanceID", 0);
     ActionResponse resp = message.service();
-    return new PositionInfo(resp.getOutActionArgumentValue("Track"), 
-        resp.getOutActionArgumentValue("TrackDuration"), 
-        resp.getOutActionArgumentValue("TrackMetaData"), 
-        resp.getOutActionArgumentValue("TrackURI"),
+    state.put(AVTransportEventType.CurrentTrack, resp.getOutActionArgumentValue("Track"));
+    state.put(AVTransportEventType.CurrentTrackDuration, resp.getOutActionArgumentValue("TrackDuration"));
+    state.put(AVTransportEventType.CurrentTrackMetaData, resp.getOutActionArgumentValue("TrackMetaData"));
+    state.put(AVTransportEventType.CurrentTrackURI, resp.getOutActionArgumentValue("TrackURI"));
+    return new PositionInfo(state.get(AVTransportEventType.CurrentTrack), 
+        state.get(AVTransportEventType.CurrentTrackDuration), 
+        state.get(AVTransportEventType.CurrentTrackMetaData), 
+        state.get(AVTransportEventType.CurrentTrackURI),
         resp.getOutActionArgumentValue("RelTime"),
         resp.getOutActionArgumentValue("AbsTime"),
         resp.getOutActionArgumentValue("RelCount"),
@@ -722,330 +757,42 @@ public class AVTransportService extends AbstractService implements ServiceEventH
   
   public void handleStateVariableEvent(String varName, String newValue) {
     LOG.info("recieved AVTransport notification: " + varName + "=" + newValue);
-    
-    // TODO All we get here is "Last change"
-    /* 
-<stateVariable sendEvents="yes">
-<name>LastChange</name>
-<dataType>string</dataType>
-</stateVariable>
-
-EG. LastChange=
-<Event xmlns="urn:schemas-upnp-org:metadata-1-0/AVT/" xmlns:r="urn:schemas-rinconnetworks-com:metadata-1-0/">
-  <InstanceID val="0">
-    <TransportState val="PLAYING"/>
-    <CurrentPlayMode val="NORMAL"/>
-    <NumberOfTracks val="29"/>
-    <CurrentTrack val="12"/>
-    <CurrentSection val="0"/>
-    <CurrentTrackURI val="x-file-cifs://192.168.1.1/Storage4/Sonos%20Music/Queens%20Of%20The%20Stone%20Age/Lullabies%20To%20Paralyze/Queens%20Of%20The%20Stone%20Age%20-%20Lullabies%20To%20Paralyze%20-%2012%20-%20Broken%20Box.wma"/>
-    <CurrentTrackDuration val="0:03:02"/>
-    <CurrentTrackMetaData val="&lt;DIDL-Lite xmlns:dc=&quot;http://purl.org/dc/elements/1.1/&quot; xmlns:upnp=&quot;urn:schemas-upnp-org:metadata-1-0/upnp/&quot; xmlns:r=&quot;urn:schemas-rinconnetworks-com:metadata-1-0/&quot; xmlns=&quot;urn:schemas-upnp-org:metadata-1-0/DIDL-Lite/&quot;&gt;&lt;item id=&quot;-1&quot; parentID=&quot;-1&quot; restricted=&quot;true&quot;&gt;&lt;res protocolInfo=&quot;x-file-cifs:*:audio/x-ms-wma:*&quot; duration=&quot;0:03:02&quot;&gt;x-file-cifs://192.168.1.1/Storage4/Sonos%20Music/Queens%20Of%20The%20Stone%20Age/Lullabies%20To%20Paralyze/Queens%20Of%20The%20Stone%20Age%20-%20Lullabies%20To%20Paralyze%20-%2012%20-%20Broken%20Box.wma&lt;/res&gt;&lt;r:streamContent&gt;&lt;/r:streamContent&gt;&lt;dc:title&gt;Broken Box&lt;/dc:title&gt;&lt;upnp:class&gt;object.item.audioItem.musicTrack&lt;/upnp:class&gt;&lt;dc:creator&gt;Queens Of The Stone Age&lt;/dc:creator&gt;&lt;upnp:album&gt;Lullabies To Paralyze&lt;/upnp:album&gt;&lt;r:albumArtist&gt;Queens Of The Stone Age&lt;/r:albumArtist&gt;&lt;/item&gt;&lt;/DIDL-Lite&gt;"/><r:NextTrackURI val="x-file-cifs://192.168.1.1/Storage4/Sonos%20Music/Queens%20Of%20The%20Stone%20Age/Lullabies%20To%20Paralyze/Queens%20Of%20The%20Stone%20Age%20-%20Lullabies%20To%20Paralyze%20-%2013%20-%20&apos;&apos;You%20Got%20A%20Killer%20Scene%20There,%20Man...&apos;&apos;.wma"/><r:NextTrackMetaData val="&lt;DIDL-Lite xmlns:dc=&quot;http://purl.org/dc/elements/1.1/&quot; xmlns:upnp=&quot;urn:schemas-upnp-org:metadata-1-0/upnp/&quot; xmlns:r=&quot;urn:schemas-rinconnetworks-com:metadata-1-0/&quot; xmlns=&quot;urn:schemas-upnp-org:metadata-1-0/DIDL-Lite/&quot;&gt;&lt;item id=&quot;-1&quot; parentID=&quot;-1&quot; restricted=&quot;true&quot;&gt;&lt;res protocolInfo=&quot;x-file-cifs:*:audio/x-ms-wma:*&quot; duration=&quot;0:04:56&quot;&gt;x-file-cifs://192.168.1.1/Storage4/Sonos%20Music/Queens%20Of%20The%20Stone%20Age/Lullabies%20To%20Paralyze/Queens%20Of%20The%20Stone%20Age%20-%20Lullabies%20To%20Paralyze%20-%2013%20-%20&amp;apos;&amp;apos;You%20Got%20A%20Killer%20Scene%20There,%20Man...&amp;apos;&amp;apos;.wma&lt;/res&gt;&lt;dc:title&gt;&amp;apos;&amp;apos;You Got A Killer Scene There, Man...&amp;apos;&amp;apos;&lt;/dc:title&gt;&lt;upnp:class&gt;object.item.audioItem.musicTrack&lt;/upnp:class&gt;&lt;dc:creator&gt;Queens Of The Stone Age&lt;/dc:creator&gt;&lt;upnp:album&gt;Lullabies To Paralyze&lt;/upnp:album&gt;&lt;r:albumArtist&gt;Queens Of The Stone Age&lt;/r:albumArtist&gt;&lt;/item&gt;&lt;/DIDL-Lite&gt;"/><r:EnqueuedTransportURI val="x-rincon-playlist:RINCON_000E582126EE01400#A:ALBUMARTIST/Queens%20Of%20The%20Stone%20Age"/><r:EnqueuedTransportURIMetaData val="&lt;DIDL-Lite xmlns:dc=&quot;http://purl.org/dc/elements/1.1/&quot; xmlns:upnp=&quot;urn:schemas-upnp-org:metadata-1-0/upnp/&quot; xmlns:r=&quot;urn:schemas-rinconnetworks-com:metadata-1-0/&quot; xmlns=&quot;urn:schemas-upnp-org:metadata-1-0/DIDL-Lite/&quot;&gt;&lt;item id=&quot;A:ALBUMARTIST/Queens%20Of%20The%20Stone%20Age&quot; parentID=&quot;A:ALBUMARTIST&quot; restricted=&quot;true&quot;&gt;&lt;dc:title&gt;Queens Of The Stone Age&lt;/dc:title&gt;&lt;upnp:class&gt;object.container&lt;/upnp:class&gt;&lt;desc id=&quot;cdudn&quot; nameSpace=&quot;urn:schemas-rinconnetworks-com:metadata-1-0/&quot;&gt;RINCON_AssociatedZPUDN&lt;/desc&gt;&lt;/item&gt;&lt;/DIDL-Lite&gt;"/>
-    <PlaybackStorageMedium val="NETWORK"/>
-    <AVTransportURI val="x-rincon-queue:RINCON_000E5812BC1801400#0"/>
-    <AVTransportURIMetaData val=""/>
-    <CurrentTransportActions val="Play, Stop, Pause, Seek, Next, Previous"/>
-    <TransportStatus val="OK"/>
-    <r:SleepTimerGeneration val="0"/>
-    <r:AlarmRunning val="0"/>
-    <r:SnoozeRunning val="0"/>
-    <r:RestartPending val="0"/>
-    <TransportPlaySpeed val="NOT_IMPLEMENTED"/>
-    <CurrentMediaDuration val="NOT_IMPLEMENTED"/>
-    <RecordStorageMedium val="NOT_IMPLEMENTED"/>
-    <PossiblePlaybackStorageMedia val="NONE, NETWORK"/>
-    <PossibleRecordStorageMedia val="NOT_IMPLEMENTED"/>
-    <RecordMediumWriteStatus val="NOT_IMPLEMENTED"/>
-    <CurrentRecordQualityMode val="NOT_IMPLEMENTED"/>
-    <PossibleRecordQualityModes val="NOT_IMPLEMENTED"/>
-    <NextAVTransportURI val="NOT_IMPLEMENTED"/>
-    <NextAVTransportURIMetaData val="NOT_IMPLEMENTED"/>
-  </InstanceID>
-</Event>
-
-     */
-    
-    /*
-     * <stateVariable sendEvents="no">
-<name>TransportState</name>
-<dataType>string</dataType>
-  <allowedValueList>
-<allowedValue>STOPPED</allowedValue>
-<allowedValue>PLAYING</allowedValue>
-<allowedValue>PAUSED_PLAYING</allowedValue>
-<allowedValue>TRANSITIONING</allowedValue>
-</allowedValueList>
-</stateVariable>
-  <stateVariable sendEvents="no">
-<name>TransportStatus</name>
-<dataType>string</dataType>
-</stateVariable>
-  <stateVariable sendEvents="no">
-<name>TransportErrorDescription</name>
-<dataType>string</dataType>
-</stateVariable>
-  <stateVariable sendEvents="no">
-<name>TransportErrorURI</name>
-<dataType>string</dataType>
-</stateVariable>
-  <stateVariable sendEvents="no">
-<name>PlaybackStorageMedium</name>
-<dataType>string</dataType>
-  <allowedValueList>
-<allowedValue>NONE</allowedValue>
-<allowedValue>NETWORK</allowedValue>
-</allowedValueList>
-</stateVariable>
-  <stateVariable sendEvents="no">
-<name>RecordStorageMedium</name>
-<dataType>string</dataType>
-  <allowedValueList>
-<allowedValue>NONE</allowedValue>
-</allowedValueList>
-</stateVariable>
-  <stateVariable sendEvents="no">
-<name>PossiblePlaybackStorageMedia</name>
-<dataType>string</dataType>
-</stateVariable>
-  <stateVariable sendEvents="no">
-<name>PossibleRecordStorageMedia</name>
-<dataType>string</dataType>
-</stateVariable>
-  <stateVariable sendEvents="no">
-<name>CurrentPlayMode</name>
-<dataType>string</dataType>
-  <allowedValueList>
-<allowedValue>NORMAL</allowedValue>
-<allowedValue>REPEAT_ALL</allowedValue>
-<allowedValue>SHUFFLE_NOREPEAT</allowedValue>
-<allowedValue>SHUFFLE</allowedValue>
-</allowedValueList>
-<defaultValue>NORMAL</defaultValue>
-</stateVariable>
-  <stateVariable sendEvents="no">
-<name>TransportPlaySpeed</name>
-<dataType>string</dataType>
-  <allowedValueList>
-<allowedValue>1</allowedValue>
-</allowedValueList>
-</stateVariable>
-  <stateVariable sendEvents="no">
-<name>RecordMediumWriteStatus</name>
-<dataType>string</dataType>
-</stateVariable>
-  <stateVariable sendEvents="no">
-<name>CurrentRecordQualityMode</name>
-<dataType>string</dataType>
-</stateVariable>
-  <stateVariable sendEvents="no">
-<name>PossibleRecordQualityModes</name>
-<dataType>string</dataType>
-</stateVariable>
-  <stateVariable sendEvents="no">
-<name>NumberOfTracks</name>
-<dataType>ui4</dataType>
-  <allowedValueRange>
-<minimum>0</minimum>
-<maximum>65535</maximum>
-</allowedValueRange>
-</stateVariable>
-  <stateVariable sendEvents="no">
-<name>CurrentTrack</name>
-<dataType>ui4</dataType>
-  <allowedValueRange>
-<minimum>0</minimum>
-<maximum>65535</maximum>
-<step>1</step>
-</allowedValueRange>
-</stateVariable>
-  <stateVariable sendEvents="no">
-<name>CurrentSection</name>
-<dataType>ui4</dataType>
-  <allowedValueRange>
-<minimum>0</minimum>
-<maximum>255</maximum>
-<step>1</step>
-</allowedValueRange>
-</stateVariable>
-  <stateVariable sendEvents="no">
-<name>CurrentTrackDuration</name>
-<dataType>string</dataType>
-</stateVariable>
-  <stateVariable sendEvents="no">
-<name>CurrentMediaDuration</name>
-<dataType>string</dataType>
-</stateVariable>
-  <stateVariable sendEvents="no">
-<name>CurrentTrackMetaData</name>
-<dataType>string</dataType>
-</stateVariable>
-  <stateVariable sendEvents="no">
-<name>CurrentTrackURI</name>
-<dataType>string</dataType>
-</stateVariable>
-  <stateVariable sendEvents="no">
-<name>AVTransportURI</name>
-<dataType>string</dataType>
-</stateVariable>
-  <stateVariable sendEvents="no">
-<name>AVTransportURIMetaData</name>
-<dataType>string</dataType>
-</stateVariable>
-  <stateVariable sendEvents="no">
-<name>NextAVTransportURI</name>
-<dataType>string</dataType>
-</stateVariable>
-  <stateVariable sendEvents="no">
-<name>NextAVTransportURIMetaData</name>
-<dataType>string</dataType>
-</stateVariable>
-  <stateVariable sendEvents="no">
-<name>RelativeTimePosition</name>
-<dataType>string</dataType>
-</stateVariable>
-  <stateVariable sendEvents="no">
-<name>AbsoluteTimePosition</name>
-<dataType>string</dataType>
-</stateVariable>
-  <stateVariable sendEvents="no">
-<name>RelativeCounterPosition</name>
-<dataType>i4</dataType>
-</stateVariable>
-  <stateVariable sendEvents="no">
-<name>AbsoluteCounterPosition</name>
-<dataType>i4</dataType>
-</stateVariable>
-  <stateVariable sendEvents="no">
-<name>CurrentTransportActions</name>
-<dataType>string</dataType>
-</stateVariable>
-  <stateVariable sendEvents="no">
-<name>SleepTimerGeneration</name>
-<dataType>ui4</dataType>
-</stateVariable>
-  <stateVariable sendEvents="no">
-<name>SnoozeRunning</name>
-<dataType>boolean</dataType>
-</stateVariable>
-  <stateVariable sendEvents="no">
-<name>AlarmRunning</name>
-<dataType>boolean</dataType>
-</stateVariable>
-  <stateVariable sendEvents="no">
-<name>AlarmIDRunning</name>
-<dataType>ui4</dataType>
-</stateVariable>
-  <stateVariable sendEvents="no">
-<name>AlarmLoggedStartTime</name>
-<dataType>string</dataType>
-</stateVariable>
-  <stateVariable sendEvents="no">
-<name>RestartPending</name>
-<dataType>boolean</dataType>
-</stateVariable>
-  <stateVariable sendEvents="no">
-<name>A_ARG_TYPE_SeekMode</name>
-<dataType>string</dataType>
-  <allowedValueList>
-<allowedValue>TRACK_NR</allowedValue>
-<allowedValue>REL_TIME</allowedValue>
-<allowedValue>SECTION</allowedValue>
-</allowedValueList>
-</stateVariable>
-  <stateVariable sendEvents="no">
-<name>A_ARG_TYPE_SeekTarget</name>
-<dataType>string</dataType>
-</stateVariable>
-  <stateVariable sendEvents="no">
-<name>A_ARG_TYPE_InstanceID</name>
-<dataType>ui4</dataType>
-</stateVariable>
-  <stateVariable sendEvents="no">
-<name>A_ARG_TYPE_MemberList</name>
-<dataType>string</dataType>
-</stateVariable>
-  <stateVariable sendEvents="no">
-<name>A_ARG_TYPE_TransportSettings</name>
-<dataType>string</dataType>
-</stateVariable>
-  <stateVariable sendEvents="no">
-<name>A_ARG_TYPE_SourceState</name>
-<dataType>string</dataType>
-</stateVariable>
-  <stateVariable sendEvents="no">
-<name>A_ARG_TYPE_Queue</name>
-<dataType>string</dataType>
-</stateVariable>
-  <stateVariable sendEvents="no">
-<name>A_ARG_TYPE_MemberID</name>
-<dataType>string</dataType>
-</stateVariable>
-  <stateVariable sendEvents="no">
-<name>A_ARG_TYPE_URI</name>
-<dataType>string</dataType>
-</stateVariable>
-  <stateVariable sendEvents="no">
-<name>A_ARG_TYPE_URIMetaData</name>
-<dataType>string</dataType>
-</stateVariable>
-  <stateVariable sendEvents="no">
-<name>A_ARG_TYPE_ObjectID</name>
-<dataType>string</dataType>
-</stateVariable>
-  <stateVariable sendEvents="no">
-<name>A_ARG_TYPE_GroupID</name>
-<dataType>string</dataType>
-</stateVariable>
-  <stateVariable sendEvents="no">
-<name>A_ARG_TYPE_TrackNumber</name>
-<dataType>ui4</dataType>
-</stateVariable>
-  <stateVariable sendEvents="no">
-<name>A_ARG_TYPE_NumTracks</name>
-<dataType>ui4</dataType>
-</stateVariable>
-  <stateVariable sendEvents="no">
-<name>A_ARG_TYPE_EnqueueAsNext</name>
-<dataType>boolean</dataType>
-</stateVariable>
-  <stateVariable sendEvents="no">
-<name>A_ARG_TYPE_SavedQueueTitle</name>
-<dataType>string</dataType>
-</stateVariable>
-  <stateVariable sendEvents="no">
-<name>A_ARG_TYPE_ResumePlayback</name>
-<dataType>boolean</dataType>
-</stateVariable>
-  <stateVariable sendEvents="no">
-<name>A_ARG_TYPE_ISO8601Time</name>
-<dataType>string</dataType>
-</stateVariable>
-  <stateVariable sendEvents="no">
-<name>A_ARG_TYPE_AlarmVolume</name>
-<dataType>ui2</dataType>
-</stateVariable>
-  <stateVariable sendEvents="no">
-<name>A_ARG_TYPE_AlarmIncludeLinkedZones</name>
-<dataType>boolean</dataType>
-</stateVariable>
-  <stateVariable sendEvents="no">
-<name>A_ARG_TYPE_SleepTimerState</name>
-<dataType>string</dataType>
-</stateVariable>
-  <stateVariable sendEvents="no">
-<name>A_ARG_TYPE_AlarmState</name>
-<dataType>string</dataType>
-</stateVariable>
-  <stateVariable sendEvents="no">
-<name>A_ARG_TYPE_StreamRestartState</name>
-<dataType>string</dataType>
-</stateVariable>
-     */
+    try {
+      Map<AVTransportEventType, String> changes = ResultParser.parseAVTransportEvent(newValue);
+      state.putAll(changes);
+      // TODO only fire real changes - currently the changes variable contains everything. 
+      fireStateChanged(changes.keySet());
+    } catch (SAXException e) {
+      LOG.error("Could not parse change event: ", e);
+    }
   }
 
-  public void addAvTransportListener(AvTransportListener l) {
-    // TODO Auto-generated method stub
-    
+  private void fireStateChanged(Set<AVTransportEventType> name) {
+    synchronized (listeners) {
+      for (AVTransportListener l : listeners) {
+        l.valuesChanged(name, this);
+      }
+    }
+  }
+
+  /**
+   * registers the given listener to be notified of changes to the state of the AVTransportService. 
+   * @param l
+   */
+  public void addAvTransportListener(AVTransportListener l) {
+    synchronized (listeners) {
+      listeners.add(l);
+    }
+  }
+  
+  /**
+   * unregisters the given listener: no further notifications shall be recieved.
+   * @param l
+   */
+  public void removeAvTransportListener(AVTransportListener l) {
+    synchronized (listeners) {
+      listeners.remove(l);
+    }
   }
 
 }

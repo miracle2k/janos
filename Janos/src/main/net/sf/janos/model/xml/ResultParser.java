@@ -24,6 +24,8 @@ import net.sf.janos.control.SonosController;
 import net.sf.janos.model.Entry;
 import net.sf.janos.model.ZoneGroupState;
 
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
 import org.xml.sax.InputSource;
 import org.xml.sax.SAXException;
 import org.xml.sax.XMLReader;
@@ -35,6 +37,7 @@ import org.xml.sax.helpers.XMLReaderFactory;
  *
  */
 public class ResultParser {
+  private static final Log LOG = LogFactory.getLog(ResultParser.class);
 
   /**
    * @param xml
@@ -42,12 +45,17 @@ public class ResultParser {
    * @throws IOException
    * @throws SAXException
    */
-  public static List<Entry> getEntriesFromStringResult(String xml) throws IOException, SAXException {
+  public static List<Entry> getEntriesFromStringResult(String xml) throws SAXException {
     // TODO this is very slow - is there a faster way?
     XMLReader reader = XMLReaderFactory.createXMLReader();
     EntryHandler handler = new EntryHandler();
     reader.setContentHandler(handler);
-    reader.parse(new InputSource(new StringReader(xml)));
+    try {
+      reader.parse(new InputSource(new StringReader(xml)));
+    } catch (IOException e) {
+      // This should never happen - we're not performing I/O!
+      LOG.error("Could not parse entries: ", e);
+    }
     return handler.getArtists();
   }
 
@@ -58,21 +66,44 @@ public class ResultParser {
    * @throws IOException
    * @throws SAXException
    */
-  public static ZoneGroupState getGroupStateFromResult(SonosController controller, String xml) throws IOException, SAXException {
+  public static ZoneGroupState getGroupStateFromResult(SonosController controller, String xml) throws SAXException {
     XMLReader reader = XMLReaderFactory.createXMLReader();
     ZoneGroupStateHandler handler = new ZoneGroupStateHandler(controller);
     reader.setContentHandler(handler);
-    reader.parse(new InputSource(new StringReader(xml)));
+    try {
+      reader.parse(new InputSource(new StringReader(xml)));
+    } catch (IOException e) {
+      // This should never happen - we're not performing I/O!
+      LOG.error("Could not parse group state: ", e);
+    }
 
     return new ZoneGroupState(handler.getGroups());
     
   }
 
-  public static Map<RenderingControlEventHandler.EventType, String> parseRenderingControlEvent(String xml) throws SAXException, IOException {
+  public static Map<RenderingControlEventHandler.RenderingControlEventType, String> parseRenderingControlEvent(String xml) throws SAXException {
     XMLReader reader = XMLReaderFactory.createXMLReader();
     RenderingControlEventHandler handler = new RenderingControlEventHandler();
     reader.setContentHandler(handler);
-    reader.parse(new InputSource(new StringReader(xml)));
+    try {
+      reader.parse(new InputSource(new StringReader(xml)));
+    } catch (IOException e) {
+      // This should never happen - we're not performing I/O!
+      LOG.error("Could not parse Rendering Control event: ", e);
+    }
+    return handler.getChanges();
+  }
+  
+  public static Map<AVTransportEventHandler.AVTransportEventType, String> parseAVTransportEvent(String xml) throws SAXException {
+    XMLReader reader = XMLReaderFactory.createXMLReader();
+    AVTransportEventHandler handler = new AVTransportEventHandler();
+    reader.setContentHandler(handler);
+    try {
+      reader.parse(new InputSource(new StringReader(xml)));
+    } catch (IOException e) {
+      // This should never happen - we're not performing I/O!
+      LOG.error("Could not parse AV Transport Event: ", e);
+    }
     return handler.getChanges();
   }
 }

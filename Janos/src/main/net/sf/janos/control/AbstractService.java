@@ -16,6 +16,11 @@
 package net.sf.janos.control;
 
 import java.io.IOException;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.ListIterator;
+import java.util.Timer;
+import java.util.TimerTask;
 
 import net.sbbi.upnp.ServiceEventHandler;
 import net.sbbi.upnp.ServicesEventing;
@@ -36,10 +41,15 @@ public abstract class AbstractService {
   
   private static final Log LOG = LogFactory.getLog(AbstractService.class);
   
+  /**
+   * The length of time in seconds to register events for.
+   */
   protected static final int DEFAULT_EVENT_PERIOD = 600; // 10 mins
   
   protected final UPNPService service;
   protected final UPNPMessageFactory messageFactory;
+  private static final Timer timer = new Timer("ServiceEventRefresher", true);
+  private final List<EventingRefreshTask> tasks = new ArrayList<EventingRefreshTask>();
   
   public AbstractService(UPNPService service, String type) {
     if (!service.getServiceType().equals(type)) {
@@ -48,6 +58,13 @@ public abstract class AbstractService {
     
     this.service = service;
     this.messageFactory = UPNPMessageFactory.getNewInstance(service);
+  }
+  
+  public void dispose() {
+    List<EventingRefreshTask> tasksCopy = new ArrayList<EventingRefreshTask>(tasks);
+    for (EventingRefreshTask task : tasksCopy) {
+      unregisterServiceEventing(task.handler);
+    }
   }
   
   /**
@@ -69,11 +86,34 @@ public abstract class AbstractService {
    * @throws IOException
    *           if the device could not be contacted for some reason.
    */
-  protected int refreshServiceEventing(int duration, ServiceEventHandler handler) throws IOException {
+  private int refreshServiceEventing(int duration, ServiceEventHandler handler) throws IOException {
     ServicesEventing eventing = ServicesEventing.getInstance();
     int i = eventing.register(service, handler, duration);
     LOG.info("Registered " + getClass() + " for eventing for " + i + "s");
     return i;
+  }
+  
+  /**
+   * Registers this service as a ServiceEventListener on its UPNPService. This
+   * should be cleaned up by calling unregisterServiceEventing()
+   * 
+   * @param handler
+   * @return true if the registration process completed successfully. if false
+   *         is returned, registration will still be attempted periodically
+   *         until unregisterServiceEventing() is called.
+   */
+  protected boolean registerServiceEventing(final ServiceEventHandler handler) {
+    try {
+      refreshServiceEventing(DEFAULT_EVENT_PERIOD, handler);
+      EventingRefreshTask task = new EventingRefreshTask(handler);
+      tasks.add(task);
+      // schedule to refresh half of the event period (in milis, not seconds)
+      timer.schedule(task, DEFAULT_EVENT_PERIOD * 500, DEFAULT_EVENT_PERIOD * 500);
+      return true;
+    } catch (IOException e) {
+      LOG.warn("Could not register service eventing: ", e);
+      return false;
+    }
   }
   
   /**
@@ -83,8 +123,38 @@ public abstract class AbstractService {
    * @param handler
    * @throws IOException
    */
-  protected void unregisterServiceEventing(ServiceEventHandler handler) throws IOException {
+  protected void unregisterServiceEventing(ServiceEventHandler handler) {
+    for (ListIterator<EventingRefreshTask> i= tasks.listIterator(); i.hasNext(); ) {
+      EventingRefreshTask task = i.next();
+      if (task.handler == handler) {
+        task.cancel();
+        i.remove();
+      }
+    }
     ServicesEventing eventing = ServicesEventing.getInstance();
-    eventing.unRegister(service, handler);
+    try {
+      eventing.unRegister(service, handler);
+    } catch (IOException e) {
+      LOG.error("Could not unregister eventing from " + service, e);
+    }
+  }
+  
+  
+  
+  private class EventingRefreshTask extends TimerTask {
+    private final ServiceEventHandler handler;
+    
+    protected EventingRefreshTask(ServiceEventHandler handler) {
+      this.handler=handler;
+    }
+    
+    @Override
+    public void run() {
+      try {
+        refreshServiceEventing(DEFAULT_EVENT_PERIOD, handler);
+      } catch (IOException e) {
+        LOG.warn("Could not refresh eventing: ", e);
+      }
+    }
   }
 }

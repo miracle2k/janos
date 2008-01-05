@@ -263,4 +263,5 @@ public class DevicePropertiesService extends AbstractService {
         </stateVariable>
      */
   }
+
 }

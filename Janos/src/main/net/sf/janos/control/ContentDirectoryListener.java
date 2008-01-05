@@ -15,7 +15,7 @@
  */
 package net.sf.janos.control;
 
-public interface ContentDirectoryListener extends ServiceListener {
+public interface ContentDirectoryListener {
 
   /**
    * Expected Event Variables:

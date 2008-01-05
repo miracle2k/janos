@@ -19,11 +19,14 @@ import java.io.IOException;
 import java.util.Set;
 
 import net.sbbi.upnp.messages.UPNPResponseException;
+import net.sf.janos.control.AVTransportListener;
+import net.sf.janos.control.AVTransportService;
 import net.sf.janos.control.RenderingControlService;
 import net.sf.janos.control.ZonePlayer;
-import net.sf.janos.control.ZonePlayerServiceListener;
+import net.sf.janos.control.RenderingControlListener;
 import net.sf.janos.model.TransportInfo.TransportState;
-import net.sf.janos.model.xml.RenderingControlEventHandler.EventType;
+import net.sf.janos.model.xml.AVTransportEventHandler.AVTransportEventType;
+import net.sf.janos.model.xml.RenderingControlEventHandler.RenderingControlEventType;
 import net.sf.janos.ui.zonelist.ZoneListSelectionListener;
 
 import org.eclipse.swt.SWT;
@@ -42,7 +45,7 @@ import org.eclipse.swt.widgets.Scale;
  * @author David Wheeler
  * 
  */
-public class MusicControlPanel extends Composite implements ZoneListSelectionListener, ZonePlayerServiceListener<RenderingControlService> {
+public class MusicControlPanel extends Composite implements ZoneListSelectionListener, RenderingControlListener, AVTransportListener {
 
   private ZonePlayer currentZone;
   private Button play;
@@ -66,6 +69,7 @@ public class MusicControlPanel extends Composite implements ZoneListSelectionLis
     Button previous = new Button(this, SWT.PUSH);
     previous.setText("<");
     previous.addMouseListener(new MouseAdapter() {
+      @Override
       public void mouseUp(MouseEvent e) {
         previous();
       }
@@ -73,6 +77,7 @@ public class MusicControlPanel extends Composite implements ZoneListSelectionLis
     // TODO initialize play and volume to correct values
     play = new Button(this, SWT.PUSH);
     play.addMouseListener(new MouseAdapter() {
+      @Override
       public void mouseUp(MouseEvent e) {
         play();
       }
@@ -80,6 +85,7 @@ public class MusicControlPanel extends Composite implements ZoneListSelectionLis
     Button next = new Button(this, SWT.PUSH);
     next.setText(">");
     next.addMouseListener(new MouseAdapter() {
+      @Override
       public void mouseUp(MouseEvent e) {
         next();
       }
@@ -191,17 +197,19 @@ public class MusicControlPanel extends Composite implements ZoneListSelectionLis
   public void zoneSelectionChangedTo(ZonePlayer newSelection) {
     if (currentZone != null) {
       currentZone.getMediaRendererDevice().getRenderingControlService().removeListener(this);
+      currentZone.getMediaRendererDevice().getAvTransportService().removeAvTransportListener(this);
     }
     currentZone = newSelection;
     if (currentZone != null) {
       currentZone.getMediaRendererDevice().getRenderingControlService().addListener(this);
+      currentZone.getMediaRendererDevice().getAvTransportService().addAvTransportListener(this);
     }
     volume.setSelection(getVolume());
     setIsPlaying(isPlaying());
   }
 
-  public void valuesChanged(Set<EventType> events, RenderingControlService source) {
-    if (events.contains(EventType.VOLUME_MASTER)) {
+  public void valuesChanged(Set<RenderingControlEventType> events, RenderingControlService source) {
+    if (events.contains(RenderingControlEventType.VOLUME_MASTER)) {
       final int newVol = getVolume();
       getDisplay().asyncExec(new Runnable() {
         public void run() {
@@ -212,8 +220,20 @@ public class MusicControlPanel extends Composite implements ZoneListSelectionLis
     // TODO other volumes?
   }
   
+  @Override
   public void dispose() {
     zoneSelectionChangedTo(null);
     super.dispose();
+  }
+
+  public void valuesChanged(Set<AVTransportEventType> events, AVTransportService source) {
+    if (source == currentZone.getMediaRendererDevice().getAvTransportService() 
+        && events.contains(AVTransportEventType.TransportState)) {
+      getDisplay().asyncExec(new Runnable() {
+        public void run() {
+          setIsPlaying(isPlaying());
+        }
+      });
+    }
   }
 }

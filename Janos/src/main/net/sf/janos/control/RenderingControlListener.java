@@ -17,13 +17,13 @@ package net.sf.janos.control;
 
 import java.util.Set;
 
-import net.sf.janos.model.xml.RenderingControlEventHandler.EventType;
+import net.sf.janos.model.xml.RenderingControlEventHandler.RenderingControlEventType;
 
-public interface ZonePlayerServiceListener<T extends AbstractService> {
+public interface RenderingControlListener {
 
   /**
    * 
    * @param events
    */
-  public void valuesChanged(Set<EventType> events, T source);
+  public void valuesChanged(Set<RenderingControlEventType> events, RenderingControlService source);
 }

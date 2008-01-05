@@ -78,6 +78,17 @@ public class ZonePlayer {
         .getService(ZonePlayerConstants.SONOS_SERVICE_ZONE_GROUP_MANAGEMENT));
   }
   
+  public void dispose() {
+    this.mediaServer.dispose();
+    this.mediaRenderer.dispose();
+    this.alarm.dispose();
+    this.audioIn.dispose();
+    this.deviceProperties.dispose();
+    this.systemProperties.dispose();
+    this.zoneGroupTopology.dispose();
+    this.zoneGroupManagement.dispose();
+  }
+  
   /**
    * @return the UPNPRootDevice around which this object has been created.
    */

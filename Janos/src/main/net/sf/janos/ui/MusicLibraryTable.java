@@ -21,6 +21,7 @@ import java.util.ListIterator;
 
 import net.sf.janos.control.SonosController;
 import net.sf.janos.model.Entry;
+import net.sf.janos.model.MusicLibrary;
 
 import org.eclipse.swt.SWT;
 import org.eclipse.swt.events.MouseEvent;

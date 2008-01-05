@@ -33,10 +33,6 @@ public class Janos {
     SonosController controller = SonosController.getInstance();
     SonosControllerShell shell = new SonosControllerShell(new Display(), controller);
     shell.start();
-    
-    // shell has been disposed, clean up
-//    controller.dispose();
-    
   }
 
 }

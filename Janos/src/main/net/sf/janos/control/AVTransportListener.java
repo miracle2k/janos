@@ -1,5 +1,5 @@
 /*
-   Copyright 2007 David Wheeler
+   Copyright 2008 davidwheeler
 
    Licensed under the Apache License, Version 2.0 (the "License");
    you may not use this file except in compliance with the License.
@@ -15,17 +15,15 @@
  */
 package net.sf.janos.control;
 
-/**
- * Parent interface of all ServiceListener interfaces.
- * 
- * This interface does not require any functionality, but implies an interest in
- * changes to a particular service. Each AbstractService extending class should
- * also create an interface extending this one to handle events.
- * 
- * @author David Wheeler
- * 
- */
-public abstract interface ServiceListener {
+import java.util.Set;
 
-  
+import net.sf.janos.model.xml.AVTransportEventHandler.AVTransportEventType;
+
+public interface AVTransportListener {
+
+  /**
+   * 
+   * @param events
+   */
+  public void valuesChanged(Set<AVTransportEventType> events, AVTransportService source);
 }

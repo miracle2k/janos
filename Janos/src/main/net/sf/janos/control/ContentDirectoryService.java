@@ -43,12 +43,7 @@ public class ContentDirectoryService extends AbstractService implements ServiceE
   
   protected ContentDirectoryService(UPNPService service) {
     super(service, ZonePlayerConstants.SONOS_SERVICE_CONTENT_DIRECTORY);
-    try {
-      refreshServiceEventing(DEFAULT_EVENT_PERIOD, this);
-      // TODO refresh periodically
-    } catch (IOException e) {
-      LOG.error("Could not register for events: ", e);
-    }
+    registerServiceEventing(this);
   }
 
   /**

@@ -15,10 +15,7 @@
  */
 package net.sf.janos.control;
 
-import java.io.IOException;
-
 import net.sbbi.upnp.ServiceEventHandler;
-import net.sbbi.upnp.ServicesEventing;
 import net.sbbi.upnp.services.UPNPService;
 import net.sf.janos.model.ZoneGroupState;
 import net.sf.janos.model.xml.ResultParser;
@@ -43,12 +40,7 @@ public class ZoneGroupTopologyService extends AbstractService implements Service
   private ZoneGroupState zoneGroup;
   public ZoneGroupTopologyService(UPNPService service) {
     super(service, ZonePlayerConstants.SONOS_SERVICE_ZONE_GROUP_TOPOLOGY);
-    try {
-      ServicesEventing.getInstance().register(service, this, 60000);
-    } catch (IOException e) {
-      // TODO Auto-generated catch block
-      e.printStackTrace();
-    }
+    registerServiceEventing(this);
   }
 
   // TODO move into sub class to hide from API
@@ -63,8 +55,6 @@ public class ZoneGroupTopologyService extends AbstractService implements Service
       } else if (varName == "AlarmRunSequence") {
 
       }
-    } catch (IOException e) {
-      LOG.error("Error handling state var: " + e);
     } catch (SAXException e) {
       LOG.error("Could not parse state var: " + e);
     }

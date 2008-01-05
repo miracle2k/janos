@@ -19,6 +19,7 @@ import java.util.List;
 
 import net.sf.janos.control.ZonePlayer;
 import net.sf.janos.model.Entry;
+import net.sf.janos.model.MusicLibrary;
 
 // TODO need to implement selection listener?
 public class RootEntryLibrary extends MusicLibrary {

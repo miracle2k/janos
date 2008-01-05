@@ -28,7 +28,7 @@ import net.sbbi.upnp.messages.ActionResponse;
 import net.sbbi.upnp.messages.UPNPResponseException;
 import net.sbbi.upnp.services.UPNPService;
 import net.sf.janos.model.xml.ResultParser;
-import net.sf.janos.model.xml.RenderingControlEventHandler.EventType;
+import net.sf.janos.model.xml.RenderingControlEventHandler.RenderingControlEventType;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -49,21 +49,16 @@ public class RenderingControlService extends AbstractService implements ServiceE
   /**
    * The known state of the ZonePlayer rendering control service.
    */
-  private final Map<EventType, String> state = new HashMap<EventType, String>();
+  private final Map<RenderingControlEventType, String> state = new HashMap<RenderingControlEventType, String>();
 
   /**
    * The listeners to be notified when the state changes.
    */
-  private final List<ZonePlayerServiceListener<RenderingControlService>> listeners = new ArrayList<ZonePlayerServiceListener<RenderingControlService>>();
+  private final List<RenderingControlListener> listeners = new ArrayList<RenderingControlListener>();
   
   protected RenderingControlService(UPNPService service) {
     super(service, ZonePlayerConstants.SONOS_SERVICE_RENDERING_CONTROL);
-    try {
-      refreshServiceEventing(DEFAULT_EVENT_PERIOD, this);
-      // TODO refresh eventing each ...s
-    } catch (IOException e) {
-      LOG.error("Could not register service eventing: ", e);
-    }
+    registerServiceEventing(this);
   }
   
 //  public boolean getMute() {
@@ -93,15 +88,15 @@ public class RenderingControlService extends AbstractService implements ServiceE
    * @throws UPNPResponseException
    */
   public int getVolume() throws IOException, UPNPResponseException {
-    String volume_master = state.get(EventType.VOLUME_MASTER);
+    String volume_master = state.get(RenderingControlEventType.VOLUME_MASTER);
     if (volume_master == null) {
       ActionMessage message = messageFactory.getMessage("GetVolume");
       message.setInputParameter("InstanceID", 0);
       message.setInputParameter("Channel", "Master"); // can also be LF or RF
       ActionResponse resp = message.service();
-      state.put(EventType.VOLUME_MASTER, resp.getOutActionArgumentValue("CurrentVolume"));
+      state.put(RenderingControlEventType.VOLUME_MASTER, resp.getOutActionArgumentValue("CurrentVolume"));
     }
-    return Integer.parseInt(state.get(EventType.VOLUME_MASTER));
+    return Integer.parseInt(state.get(RenderingControlEventType.VOLUME_MASTER));
   }
   
   public void handleStateVariableEvent(String varName, String newValue) {
@@ -125,21 +120,19 @@ public class RenderingControlService extends AbstractService implements ServiceE
      */
     LOG.debug("received event " + varName + ": " + newValue);
     try {
-      Map<EventType, String> changes = ResultParser.parseRenderingControlEvent(newValue);
+      Map<RenderingControlEventType, String> changes = ResultParser.parseRenderingControlEvent(newValue);
       state.putAll(changes);
       fireChangeEvent(changes.keySet());
     } catch (SAXException e) {
-      // TODO Auto-generated catch block
-      e.printStackTrace();
-    } catch (IOException e) {
-      // TODO Auto-generated catch block
-      e.printStackTrace();
+      LOG.error("Ignored event due to SAX parsing error: ", e);
     }
   }
 
-  private void fireChangeEvent(Set<EventType> events) {
-    for (ZonePlayerServiceListener<RenderingControlService> l : listeners) {
-      l.valuesChanged(events, this);
+  private void fireChangeEvent(Set<RenderingControlEventType> events) {
+    synchronized (listeners) {
+      for (RenderingControlListener l : listeners) {
+        l.valuesChanged(events, this);
+      } 
     }
   }
   
@@ -147,16 +140,20 @@ public class RenderingControlService extends AbstractService implements ServiceE
    * Adds a listener to be notified when notifications are received from the ZonePlayer.
    * @param l
    */
-  public void addListener(ZonePlayerServiceListener<RenderingControlService> l) {
-    listeners.add(l);
+  public void addListener(RenderingControlListener l) {
+    synchronized (listeners) {
+      listeners.add(l);
+    }
   }
   
   /**
    * Removes a listener.
    * @param l
    */
-  public void removeListener(ZonePlayerServiceListener<RenderingControlService> l) {
-    listeners.remove(l);
+  public void removeListener(RenderingControlListener l) {
+    synchronized (listeners) {
+      listeners.remove(l);
+    }
   }
 
 }

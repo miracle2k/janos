@@ -43,6 +43,12 @@ public class MediaRendererDevice {
     this.avTransport = new AVTransportService(dev.getService(ZonePlayerConstants.SONOS_SERVICE_AV_TRANSPORT));
   }
   
+  public void dispose() {
+    this.renderingControl.dispose();
+    this.connectionManager.dispose();
+    this.avTransport.dispose();
+  }
+  
   /**
    * @return the wrapped UPNPDevice.
    */

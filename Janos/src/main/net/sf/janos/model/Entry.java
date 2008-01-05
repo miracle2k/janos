@@ -59,6 +59,7 @@ public class Entry {
     /**
      * @return the title of the entry.
      */
+    @Override
     public String toString() {
       return title;
     }

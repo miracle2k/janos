@@ -13,13 +13,13 @@
    See the License for the specific language governing permissions and
    limitations under the License.
  */
-package net.sf.janos.ui;
+package net.sf.janos.model;
 
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.List;
 
 import net.sf.janos.control.ZonePlayer;
-import net.sf.janos.model.Entry;
 
 /**
  * A table model for a list of entries. eg queue.
@@ -36,7 +36,18 @@ public class MusicLibrary {
   
   public MusicLibrary(ZonePlayer zone, Entry entry) {
     if (entry != null) {
-      entries.addAll(zone.getMediaServerDevice().getContentDirectoryService().getEntries(0, 50, entry.getId()));
+      // get them in small groups to speed it up
+      int startAt = 0;
+      int length = 100;
+      Collection<Entry> newEntries = zone.getMediaServerDevice().getContentDirectoryService().getEntries(startAt, length, entry.getId());
+      while (newEntries != null && newEntries.size() >= length) {
+        entries.addAll(newEntries);
+        startAt += length;
+        newEntries = zone.getMediaServerDevice().getContentDirectoryService().getEntries(startAt, length, entry.getId());
+      }
+      if (newEntries != null) {
+        entries.addAll(newEntries);
+      }
     }
     // TODO add notification listener
   }

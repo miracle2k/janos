@@ -21,14 +21,17 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.net.URL;
 import java.util.List;
+import java.util.Set;
 
 import net.sbbi.upnp.messages.UPNPResponseException;
-import net.sf.janos.control.AvTransportListener;
+import net.sf.janos.control.AVTransportListener;
+import net.sf.janos.control.AVTransportService;
 import net.sf.janos.control.SonosController;
 import net.sf.janos.control.ZonePlayer;
 import net.sf.janos.model.Entry;
 import net.sf.janos.model.MediaInfo;
 import net.sf.janos.model.PositionInfo;
+import net.sf.janos.model.xml.AVTransportEventHandler.AVTransportEventType;
 import net.sf.janos.ui.zonelist.ZoneListSelectionListener;
 import net.sf.janos.util.ui.ImageUtilities;
 
@@ -51,7 +54,7 @@ import org.eclipse.swt.widgets.Label;
  * @author David Wheeler
  *
  */
-public class QueueDisplay extends Composite implements ZoneListSelectionListener, AvTransportListener {
+public class QueueDisplay extends Composite implements ZoneListSelectionListener, AVTransportListener {
   private static final Log LOG = LogFactory.getLog(QueueDisplay.class);
   public static final int QUEUE_LENGTH = 20;
   private final Color LABEL_COLOR;
@@ -63,6 +66,7 @@ public class QueueDisplay extends Composite implements ZoneListSelectionListener
   private final Label artwork;
   
   private final org.eclipse.swt.widgets.List queue;
+  private ZonePlayer currentZone;
 
   public QueueDisplay(Composite parent, int style, SonosController controller) {
     super(parent, style);
@@ -223,13 +227,31 @@ public class QueueDisplay extends Composite implements ZoneListSelectionListener
     showNowPlayingForZone(newSelection);
   }
   
+  @Override
+  public void dispose() {
+    showNowPlayingForZone(null);  
+    super.dispose();
+  }
+  
   /**
    * Reloads the now-playing and queue to be that from the given zone.
    * @param zone
    */
   public void showNowPlayingForZone(ZonePlayer zone) {
-    zone.getMediaRendererDevice().getAvTransportService().addAvTransportListener(this);
+    if (currentZone != null) {
+      currentZone.getMediaRendererDevice().getAvTransportService().removeAvTransportListener(this);
+    }
+    currentZone = zone;
+    if (zone != null) {
+      zone.getMediaRendererDevice().getAvTransportService().addAvTransportListener(this);
+    }
     controller.getExecutor().execute(new NowPlayingFetcher(zone));
+  }
+
+  public void valuesChanged(Set<AVTransportEventType> events, AVTransportService source) {
+    if (source == currentZone.getMediaRendererDevice().getAvTransportService()) {
+      controller.getExecutor().execute(new NowPlayingFetcher(currentZone));
+    }
   }
   
 }
