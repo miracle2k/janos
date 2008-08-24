@@ -15,7 +15,13 @@
  */
 package net.sf.janos.control;
 
+import java.io.IOException;
+
+import net.sbbi.upnp.messages.ActionMessage;
+import net.sbbi.upnp.messages.ActionResponse;
+import net.sbbi.upnp.messages.UPNPResponseException;
 import net.sbbi.upnp.services.UPNPService;
+import net.sf.janos.model.GroupJoinResponse;
 
 /**
  * Provides management of the zone player's group.
@@ -65,54 +71,45 @@ public class ZoneGroupManagementService extends AbstractService {
     
   }
 
-  /*  </serviceStateTable>
-    <actionList>
-  <action>
-    <name>AddMember</name>
-    <argumentList>
-        <argument>
-      <name>MemberID</name>
-      <direction>in</direction>
-      <relatedStateVariable>A_ARG_TYPE_MemberID</relatedStateVariable>
-        </argument>
-        <argument>
-      <name>CurrentTransportSettings</name>
-      <direction>out</direction>
-      <relatedStateVariable>A_ARG_TYPE_TransportSettings</relatedStateVariable>
-        </argument>
-        <argument>
-      <name>GroupUUIDJoined</name>
-      <direction>out</direction>
-      <relatedStateVariable>LocalGroupUUID</relatedStateVariable>
-        </argument>
-    </argumentList>
-        </action>
-  <action>
-    <name>RemoveMember</name>
-    <argumentList>
-        <argument>
-      <name>MemberID</name>
-      <direction>in</direction>
-      <relatedStateVariable>A_ARG_TYPE_MemberID</relatedStateVariable>
-        </argument>
-    </argumentList>
-        </action>
-  <action>
-    <name>ReportTrackBufferingResult</name>
-    <argumentList>
-        <argument>
-      <name>MemberID</name>
-      <direction>in</direction>
-      <relatedStateVariable>A_ARG_TYPE_MemberID</relatedStateVariable>
-        </argument>
-        <argument>
-      <name>ResultCode</name>
-      <direction>in</direction>
-      <relatedStateVariable>A_ARG_TYPE_BufferingResultCode</relatedStateVariable>
-        </argument>
-    </argumentList>
-        </action>
-    </actionList>
-</scpd>
+
+  /**
+   * Adds the Zone Player with the given member ID TODO to what?
+   * @param memberId
+   * @return
+   * @throws IOException
+   * @throws UPNPResponseException
    */
+  public GroupJoinResponse addMember(String memberId) throws IOException, UPNPResponseException {
+    ActionMessage message = messageFactory.getMessage("AddMember");
+    message.setInputParameter("MemberID", memberId);
+    ActionResponse response = message.service();
+    return new GroupJoinResponse(response.getOutActionArgumentValue("CurrentTransportSettings"), 
+        response.getOutActionArgumentValue("GroupUUIDJoined"));
+  }
+  
+  /**
+   * Removes the given member
+   * @param memberId
+   * @throws IOException
+   * @throws UPNPResponseException
+   */
+  public void removeMember(String memberId) throws IOException, UPNPResponseException {
+    ActionMessage message = messageFactory.getMessage("RemoveMember");
+    message.setInputParameter("MemberID", memberId);
+    message.service();
+  }
+  
+  /**
+   * 
+   * @param memberId
+   * @param resultCode
+   * @throws IOException
+   * @throws UPNPResponseException
+   */
+  public void reportTrackBufferingResult(String memberId, int resultCode) throws IOException, UPNPResponseException {
+    ActionMessage message = messageFactory.getMessage("ReportTrackBufferingResult");
+    message.setInputParameter("MemberID", memberId);
+    message.setInputParameter("ResultCode", resultCode);
+    message.service();
+  }
 }

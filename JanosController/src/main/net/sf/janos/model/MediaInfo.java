@@ -17,7 +17,7 @@ package net.sf.janos.model;
 
 
 /**
- * A class representing information about media.
+ * An immutable data transfer object representing information about media.
  * 
  * @author David Wheeler
  * 
@@ -25,9 +25,9 @@ package net.sf.janos.model;
 public class MediaInfo {
 
   private final int numTracks;
-  private final String mediaDuration;
+  private final long mediaDuration;
   private final String currentURI;
-  private final String currentURIMetaData;
+  private final TrackMetaData currentURIMetaData;
   private final String nextURI;
   private final String nextURIMetaData;
   private final String playMedium;
@@ -38,27 +38,13 @@ public class MediaInfo {
    * This only seems to be useful for num tracks and current URI - even
    * currentURIMetadata seems to return garbage.
    */
-  public MediaInfo(String numTracks, String mediaDuration, 
-      String currentURI, String currentURIMetaData, 
+  public MediaInfo(String numTracks, long mediaDuration, 
+      String currentURI, TrackMetaData currentURIMetaData, 
       String nextURI, String nextURIMetaData, 
       String playMedium, String recordMedium, 
       String writeStatus) {
     this.numTracks = Integer.parseInt(numTracks);
     this.mediaDuration = mediaDuration;
-    /* TODO Duration of the current track, specified as a string of the following form:  
-     * H+:MM:SS[.F+] or H+:MM:SS[.F0/F1]  
-     *                         where : 
-     *                         ¥ H+ means one or more digits to indicate elapsed hours  
-     *                         ¥ MM means exactly 2 digits to indicate minutes (00 to 59) 
-     *                         ¥ SS means exactly 2 digits to indicate seconds (00 to 59) 
-     *                         ¥ [.F+] means optionally a dot followed by one or more digits to indicate fractions of seconds 
-     *                         ¥ [.F0/F1] means optionally a dot followed by a fraction, with F0 and F1 at least one digit long, and F0 < 
-     *                         F1 
-     *                         The string may be preceded by an optional + or Ð  sign, and  the decimal point itself may be omitted if 
-     *                         there are no fractional second digits. This variable does not apply to Tuners. If the service implementation 
-     *                         doesnÕt support track duration information then this state variable must be set to value 
-     *                         ÒNOT_IMPLEMENTEDÓ. 
-     */
     this.currentURI = currentURI;
     this.nextURI = nextURI;
     this.currentURIMetaData = currentURIMetaData;
@@ -72,11 +58,14 @@ public class MediaInfo {
     return currentURI;
   }
 
-  public String getCurrentURIMetaData() {
+  public TrackMetaData getCurrentURIMetaData() {
     return currentURIMetaData;
   }
 
-  public String getMediaDuration() {
+  /**
+   * @return the duration of the media, or -1 if this is not implemented.
+   */
+  public long getMediaDuration() {
     return mediaDuration;
   }
 

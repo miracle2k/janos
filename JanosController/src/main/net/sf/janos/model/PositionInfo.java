@@ -16,29 +16,33 @@
 package net.sf.janos.model;
 
 /**
- * Information regarding the position of a zone player.
+ * An immutable data transfer object containing information regarding the
+ * position of a zone player.
+ * 
  * @author David Wheeler
- *
+ * 
  */
 public class PositionInfo {
 
   private final int trackNum;
+  private final long trackDuration;
   private final String trackMetaData;
   private final String trackURI;
+  private final long relTime;
+  private final long absTime;
   private final int relCount;
   private final int absCount;
 
-  public PositionInfo(String trackNum, String trackDuration, String trackMetaData, 
-      String trackURI, String relTime, String absTime, String relCount, String absCount) {
-    this.trackNum = Integer.parseInt(trackNum);
-    // TODO need a time converter
-//    this.trackDuration = convertToDuration(trackDuration);
+  public PositionInfo(int trackNum, long trackDuration, String trackMetaData, 
+      String trackURI, long relTime, long absTime, int relCount, int absCount) {
+    this.trackNum = trackNum;
+    this.trackDuration = trackDuration;
     this.trackMetaData = trackMetaData;
     this.trackURI = trackURI;
-//    this.relTime = convertToDuration(relTime);
-//    this.absTime = convertToDuration(absTime);
-    this.relCount = Integer.parseInt(relCount);
-    this.absCount = Integer.parseInt(absCount);
+    this.relTime = relTime;
+    this.absTime = absTime;
+    this.relCount = relCount;
+    this.absCount = absCount;
   }
 
   public int getAbsCount() {
@@ -59,6 +63,18 @@ public class PositionInfo {
 
   public String getTrackURI() {
     return trackURI;
+  }
+
+  public long getAbsTime() {
+    return absTime;
+  }
+
+  public long getRelTime() {
+    return relTime;
+  }
+
+  public long getTrackDuration() {
+    return trackDuration;
   }
 
 }

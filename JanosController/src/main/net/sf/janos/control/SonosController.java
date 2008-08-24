@@ -16,11 +16,21 @@
 package net.sf.janos.control;
 
 import java.io.IOException;
+import java.net.Inet4Address;
+import java.net.InetAddress;
+import java.net.MalformedURLException;
+import java.net.NetworkInterface;
+import java.net.URL;
+import java.util.Enumeration;
 import java.util.concurrent.Executor;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ThreadFactory;
 
 import net.sbbi.upnp.Discovery;
+import net.sbbi.upnp.DiscoveryAdvertisement;
+import net.sbbi.upnp.DiscoveryEventHandler;
+import net.sbbi.upnp.DiscoveryListener;
+import net.sbbi.upnp.DiscoveryResultsHandler;
 import net.sbbi.upnp.devices.UPNPRootDevice;
 import net.sf.janos.model.ZoneGroup;
 import net.sf.janos.model.ZonePlayerModel;
@@ -43,7 +53,7 @@ public class SonosController implements ZoneListSelectionListener{
 
   
   private static SonosController INSTANCE;
-
+  
   private final Executor EXECUTOR = Executors.newFixedThreadPool(3, new ThreadFactory() {
     // yes, this i isn't threadsafe, but who cares?
     private int i=0;
@@ -53,11 +63,43 @@ public class SonosController implements ZoneListSelectionListener{
       return t;
     }
   });
+  
+  /**
+   * A class to  handle both types of discovery events.
+   * @author David Wheeler
+   *
+   */
+  private class DiscoveryHandler implements DiscoveryEventHandler, DiscoveryResultsHandler {
+    public void eventSSDPAlive(String usn, String udn, String nt, String maxAge, URL location) {
+      try {
+        addZonePlayer(new UPNPRootDevice(location, maxAge));
+        LOG.info("Discovered device " + usn);
+      } catch (MalformedURLException e) {
+        LOG.warn("Discovered device " + usn + " with invalid URL: " + location);
+      } catch (IllegalStateException e) {
+        LOG.warn("Discovered device of a too-recent version.");
+      }
+    }
+    public void eventSSDPByeBye(String usn, String udn, String nt) {
+      removeZonePlayer(udn);
+      LOG.info("Bye bye from " + usn);
+    }
+    public void discoveredDevice(String usn, String udn, String nt, String maxAge, URL location, String firmware) {
+      try {
+        addZonePlayer(new UPNPRootDevice(location, maxAge, firmware));
+        LOG.info("Discovered device " + usn);
+      } catch (MalformedURLException e) {
+        LOG.warn("Discovered device " + usn + " with invalid URL: " + location);
+      } catch (IllegalStateException e) {
+        LOG.warn("Discovered device of a too-recent version.");
+      }
+    }
+  };
+  
+  private final DiscoveryHandler discoveryHandler = new DiscoveryHandler();
 
   private ZonePlayerModel zonePlayers = new ZonePlayerModel();
 
-//  private ZonePlayer currentZonePlayer;
-  
   /**
    * @return the singleton instance of SonosController
    */
@@ -70,79 +112,98 @@ public class SonosController implements ZoneListSelectionListener{
   }
   
   private SonosController() {
-    searchForZones();
-  }
-  
-  /**
-   * performs a search for zone player devices, adding the results using
-   * {@link #addZonePlayer(UPNPRootDevice)}.
-   * 
-   */
-  private void searchForZones() {
-    UPNPRootDevice[] devices;
     try {
-      devices = Discovery.discover(ZonePlayerConstants.SONOS_DEVICE_TYPE);
-      if (devices != null) {
-        for (UPNPRootDevice device : devices) {
-          LOG.info("Device found: " + device.getFriendlyName());
-          addZonePlayer(device);
-        }
-      } else {
-        LOG.warn("No devices found");
-      }
+      // These first two listen for broadcast advertisements, while the 3rd
+      // listens for responses to a search request.
+      DiscoveryAdvertisement.getInstance().registerEvent(
+          DiscoveryAdvertisement.EVENT_SSDP_ALIVE, 
+          ZonePlayerConstants.SONOS_DEVICE_TYPE, 
+          discoveryHandler);
+      DiscoveryAdvertisement.getInstance().registerEvent(
+          DiscoveryAdvertisement.EVENT_SSDP_BYE_BYE, 
+          ZonePlayerConstants.SONOS_DEVICE_TYPE, 
+          discoveryHandler);
+      DiscoveryListener.getInstance().registerResultsHandler(
+          discoveryHandler, 
+          ZonePlayerConstants.SONOS_DEVICE_TYPE);
+      sendSearchPacket(ZonePlayerConstants.SONOS_DEVICE_TYPE);
     } catch (IOException e) {
-      // TODO Auto-generated catch block
-      e.printStackTrace();
+      LOG.error("Could not search for devices.", e);
     }
   }
   
-  /**
-   * Creates a new ZonePlayer and adds it to our list.
-   * @param dev
-   */
-  private void addZonePlayer(final UPNPRootDevice dev) {
-    ZonePlayer sd = new ZonePlayer(dev);
-    zonePlayers.addZonePlayer(sd);
-//    for (SonosControllerListener l : listeners) {
-//      l.deviceAdded(sd);
+//  /**
+//   * performs a search for zone player devices, adding the results using
+//   * {@link #addZonePlayer(UPNPRootDevice)}.
+//   * 
+//   */
+//  private void searchForZones() {
+//    UPNPRootDevice[] devices;
+//    try {
+//      devices = Discovery.discover(DISCOVERY_TIMEOUT, ZonePlayerConstants.SONOS_DEVICE_TYPE);
+//      if (devices != null) {
+//        for (UPNPRootDevice device : devices) {
+//          LOG.info("Device found: " + device.getFriendlyName());
+//          addZonePlayer(device);
+//        }
+//      } else {
+//        LOG.warn("No devices found");
+//      }
+//    } catch (IOException e) {
+//      // TODO Auto-generated catch block
+//      e.printStackTrace();
 //    }
+//  }
+  
+  /**
+   * Broadcasts a search packet on all nextwork interfaces. This method should
+   * really be a part of the Discovery class, but that's not my code...
+   * 
+   * @param searchTarget
+   * @throws IOException 
+   */
+  private void sendSearchPacket(String searchTarget) throws IOException {
+    for ( Enumeration e = NetworkInterface.getNetworkInterfaces(); e.hasMoreElements(); ) {
+      NetworkInterface intf = (NetworkInterface)e.nextElement();
+      for ( Enumeration adrs = intf.getInetAddresses(); adrs.hasMoreElements(); ) {
+        InetAddress adr = (InetAddress)adrs.nextElement();
+        if ( adr instanceof Inet4Address && !adr.isLoopbackAddress()  ) {
+          Discovery.sendSearchMessage( adr, Discovery.DEFAULT_TTL, Discovery.DEFAULT_MX, searchTarget );
+        }
+      }
+    }
+
   }
   
-//  /**
-//   * Adds a listener to be notified of new zone players. Will be notified of
-//   * currently known zone players immediately.
-//   * 
-//   * @param listener
-//   */
-//  public void addControllerListener(SonosControllerListener listener) {
-//    this.listeners.add(listener);
-//    for (ZonePlayer dev : zonePlayers.getAllZones()) {
-//      listener.deviceAdded(dev);
-//    }
-//  }
-
-//  /**
-//   * removes the given listener from the list to be notified of new zone
-//   * players.
-//   * 
-//   * @param listener
-//   */
-//  public void removeControllerListener(SonosControllerListener listener) {
-//    this.listeners.remove(listener);
-//  }
-
   /**
-   * TODO this should be elsewhere?
-   * 
+   * Creates a new ZonePlayer from the given device and adds it to our list.
+   * @param dev
+   * @throws IllegalArgumentException if <code>dev</code> is not a sonos device
    */
-//  public ZonePlayer getCurrentZonePlayerController() {
-//    return getCoordinatorForZonePlayer(getCurrentZonePlayer());
-//  }
+  private void addZonePlayer(final UPNPRootDevice dev) {
+    // Check if we've already got this zone player
+    for (ZonePlayer zone : zonePlayers.getAllZones()) {
+      if (zone.getRootDevice().getUDN().equals(dev.getUDN())) {
+        // we have a dup
+        LOG.info("Ignoring duplicate zone " + dev);
+        return;
+      }
+    }
+    ZonePlayer sd = new ZonePlayer(dev);
+    zonePlayers.addZonePlayer(sd);
+  }
   
-//  public ZonePlayer getCurrentZonePlayer() {
-//    return currentZonePlayer;
-//  }
+  /**
+   * Removes a zone player if it has the specified UDN.
+   * @param udn
+   */
+  private void removeZonePlayer(final String udn) {
+    zonePlayers.remove(zonePlayers.getById(udn));
+  }
   
+  /**
+   * @return the ZonePlayerModel
+   */
   public ZonePlayerModel getZonePlayerModel() {
     return zonePlayers;
   }
@@ -177,10 +238,8 @@ public class SonosController implements ZoneListSelectionListener{
   }
   
   public void dispose() {
-    
+    DiscoveryAdvertisement.getInstance().unRegisterEvent(DiscoveryAdvertisement.EVENT_SSDP_ALIVE, ZonePlayerConstants.SONOS_DEVICE_TYPE, discoveryHandler);
+    DiscoveryAdvertisement.getInstance().unRegisterEvent(DiscoveryAdvertisement.EVENT_SSDP_BYE_BYE, ZonePlayerConstants.SONOS_DEVICE_TYPE, discoveryHandler);
+    DiscoveryListener.getInstance().unRegisterResultsHandler(discoveryHandler, ZonePlayerConstants.SONOS_DEVICE_TYPE);
   }
-  
-//  public void setCurrentZonePlayer(ZonePlayer zone) {
-//    this.currentZonePlayer = zone;
-//  }
 }

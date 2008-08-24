@@ -30,6 +30,12 @@ public class MediaServerDevice {
   private final ContentDirectoryService contentDirectory;
   private final ConnectionManagerService connectionManager;
   
+  /**
+   * Creates a new MediaServerDevice from the given UPNPDevice which must be of
+   * type {@link ZonePlayerConstants#MEDIA_SERVER_DEVICE_TYPE}.
+   * 
+   * @param dev
+   */
   protected MediaServerDevice(UPNPDevice dev) {
     if (!dev.getDeviceType().equals(ZonePlayerConstants.MEDIA_SERVER_DEVICE_TYPE)) {
       throw new IllegalArgumentException("Device must be media server, not " + dev.getDeviceType());

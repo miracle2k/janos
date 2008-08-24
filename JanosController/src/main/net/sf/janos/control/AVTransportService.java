@@ -17,6 +17,7 @@ package net.sf.janos.control;
 
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -27,12 +28,21 @@ import net.sbbi.upnp.messages.ActionMessage;
 import net.sbbi.upnp.messages.ActionResponse;
 import net.sbbi.upnp.messages.UPNPResponseException;
 import net.sbbi.upnp.services.UPNPService;
+import net.sf.janos.model.AlarmProperties;
+import net.sf.janos.model.DeviceCapabilities;
 import net.sf.janos.model.Entry;
 import net.sf.janos.model.MediaInfo;
+import net.sf.janos.model.PlayMode;
 import net.sf.janos.model.PositionInfo;
+import net.sf.janos.model.SeekTarget;
+import net.sf.janos.model.SeekTargetFactory;
+import net.sf.janos.model.TrackMetaData;
+import net.sf.janos.model.TransportAction;
 import net.sf.janos.model.TransportInfo;
+import net.sf.janos.model.TransportSettings;
 import net.sf.janos.model.xml.ResultParser;
 import net.sf.janos.model.xml.AVTransportEventHandler.AVTransportEventType;
+import net.sf.janos.util.TimeUtilities;
 
 import org.apache.commons.lang.StringEscapeUtils;
 import org.apache.commons.logging.Log;
@@ -54,7 +64,7 @@ public class AVTransportService extends AbstractService implements ServiceEventH
   private static final String SET_AV_TRANSPORT_URI_ACTION = "SetAVTransportURI";
   private static final String PLAY_ACTION = "Play";
     
-  // TODO I know there's a better way to do this...
+  // TODO here's a lazy hack
   private static final String METADATA1 = 
       "<DIDL-Lite xmlns:dc=\"http://purl.org/dc/elements/1.1/\" " +
       "xmlns:upnp=\"urn:schemas-upnp-org:metadata-1-0/upnp/\" " +
@@ -194,12 +204,13 @@ public class AVTransportService extends AbstractService implements ServiceEventH
    * @return Information about the currently playing media.
    * @throws IOException
    * @throws UPNPResponseException
+   * @throws SAXException 
    */
-  public MediaInfo getMediaInfo() throws IOException, UPNPResponseException {
+  public MediaInfo getMediaInfo() throws IOException, UPNPResponseException, SAXException {
     if (!(state.containsKey(AVTransportEventType.NumberOfTracks) 
         && state.containsKey(AVTransportEventType.CurrentTrackDuration) 
-        && state.containsKey(AVTransportEventType.CurrentTrackURI)
-        && state.containsKey(AVTransportEventType.CurrentTrackMetaData)
+        && state.containsKey(AVTransportEventType.AVTransportURI)
+        && state.containsKey(AVTransportEventType.AVTransportURIMetaData)
         && state.containsKey(AVTransportEventType.NextAVTransportURI)
         && state.containsKey(AVTransportEventType.NextAVTransportURIMetaData)
         && state.containsKey(AVTransportEventType.PlaybackStorageMedium)
@@ -210,18 +221,20 @@ public class AVTransportService extends AbstractService implements ServiceEventH
       ActionResponse resp = message.service();
       state.put(AVTransportEventType.NumberOfTracks, resp.getOutActionArgumentValue("NrTracks"));
       state.put(AVTransportEventType.CurrentTrackDuration, resp.getOutActionArgumentValue("MediaDuration"));
-      state.put(AVTransportEventType.CurrentTrackURI, resp.getOutActionArgumentValue("CurrentURI"));
-      state.put(AVTransportEventType.CurrentTrackMetaData, resp.getOutActionArgumentValue("CurrentURIMetaData"));
+      state.put(AVTransportEventType.AVTransportURI, resp.getOutActionArgumentValue("CurrentURI"));
+      state.put(AVTransportEventType.AVTransportURIMetaData, resp.getOutActionArgumentValue("CurrentURIMetaData"));
       state.put(AVTransportEventType.NextAVTransportURI, resp.getOutActionArgumentValue("NextURI"));
       state.put(AVTransportEventType.NextAVTransportURIMetaData, resp.getOutActionArgumentValue("NextURIMetaData"));
       state.put(AVTransportEventType.PlaybackStorageMedium, resp.getOutActionArgumentValue("PlayMedium"));
       state.put(AVTransportEventType.RecordStorageMedium, resp.getOutActionArgumentValue("RecordMedium"));
       state.put(AVTransportEventType.RecordMediumWriteStatus, resp.getOutActionArgumentValue("WriteStatus"));
     }
+    String metaDataString = state.get(AVTransportEventType.AVTransportURIMetaData);
+    TrackMetaData trackMetaData = metaDataString.isEmpty() ? null : ResultParser.parseTrackMetaData(metaDataString);
     return new MediaInfo(state.get(AVTransportEventType.NumberOfTracks), 
-        state.get(AVTransportEventType.CurrentTrackDuration),
-        state.get(AVTransportEventType.CurrentTrackURI), 
-        state.get(AVTransportEventType.CurrentTrackMetaData),
+        TimeUtilities.convertDurationToLong(state.get(AVTransportEventType.CurrentTrackDuration)),
+        state.get(AVTransportEventType.AVTransportURI), 
+        trackMetaData,
         state.get(AVTransportEventType.NextAVTransportURI),
         state.get(AVTransportEventType.NextAVTransportURIMetaData),
         state.get(AVTransportEventType.PlaybackStorageMedium),
@@ -263,70 +276,43 @@ public class AVTransportService extends AbstractService implements ServiceEventH
     state.put(AVTransportEventType.CurrentTrackDuration, resp.getOutActionArgumentValue("TrackDuration"));
     state.put(AVTransportEventType.CurrentTrackMetaData, resp.getOutActionArgumentValue("TrackMetaData"));
     state.put(AVTransportEventType.CurrentTrackURI, resp.getOutActionArgumentValue("TrackURI"));
-    return new PositionInfo(state.get(AVTransportEventType.CurrentTrack), 
-        state.get(AVTransportEventType.CurrentTrackDuration), 
+    return new PositionInfo(Integer.parseInt(state.get(AVTransportEventType.CurrentTrack)), 
+        TimeUtilities.convertDurationToLong(state.get(AVTransportEventType.CurrentTrackDuration)), 
         state.get(AVTransportEventType.CurrentTrackMetaData), 
         state.get(AVTransportEventType.CurrentTrackURI),
-        resp.getOutActionArgumentValue("RelTime"),
-        resp.getOutActionArgumentValue("AbsTime"),
-        resp.getOutActionArgumentValue("RelCount"),
-        resp.getOutActionArgumentValue("AbsCount"));
+        TimeUtilities.convertDurationToLong(resp.getOutActionArgumentValue("RelTime")),
+        TimeUtilities.convertDurationToLong(resp.getOutActionArgumentValue("AbsTime")),
+        Integer.parseInt(resp.getOutActionArgumentValue("RelCount")),
+        Integer.parseInt(resp.getOutActionArgumentValue("AbsCount")));
   }
   
   /**
-   * NOT IMPLEMENTED
+   * @return a DeviceCapabilities object expressing the capabilities of this AVTransportService.
+   * @throws UPNPResponseException 
+   * @throws IOException 
    *
    */
-  public void getDeviceCapabilities() {
-    /* TODO 
-     *         <action>
-            <name>GetDeviceCapabilities</name>
-            <argumentList>
-                <argument>
-                    <name>InstanceID</name>
-                    <direction>in</direction>                    <relatedStateVariable>A_ARG_TYPE_InstanceID</relatedStateVariable>
-                </argument>
-                <argument>
-                    <name>PlayMedia</name>
-                    <direction>out</direction>                    <relatedStateVariable>PossiblePlaybackStorageMedia</relatedStateVariable>
-                </argument>
-                <argument>
-                    <name>RecMedia</name>
-                    <direction>out</direction>                    <relatedStateVariable>PossibleRecordStorageMedia</relatedStateVariable>
-                </argument>
-                <argument>
-                    <name>RecQualityModes</name>
-                    <direction>out</direction>                    <relatedStateVariable>PossibleRecordQualityModes</relatedStateVariable>
-                </argument>
-            </argumentList>
-        </action>
-     */
+  public DeviceCapabilities getDeviceCapabilities() throws IOException, UPNPResponseException {
+    ActionMessage message = messageFactory.getMessage("GetDeviceCapabilities");
+    message.setInputParameter("InstanceID", 0);
+    ActionResponse response = message.service();
+    return new DeviceCapabilities(response.getOutActionArgumentValue("PlayMedia"), 
+        response.getOutActionArgumentValue("RecMedia"), 
+        response.getOutActionArgumentValue("RecQualityModes"));
   }
   
   /**
-   * NOT IMPLEMENTED
+   * @return the current transport settings for the service.
+   * @throws UPNPResponseException 
+   * @throws IOException 
    *
    */
-  public void getTransportSettings() {
-    /* TODO
-     *         <action>
-            <name>GetTransportSettings</name>
-            <argumentList>
-                <argument>
-                    <name>InstanceID</name>
-                    <direction>in</direction>                    <relatedStateVariable>A_ARG_TYPE_InstanceID</relatedStateVariable>
-                </argument>
-                <argument>
-                    <name>PlayMode</name>
-                    <direction>out</direction>                    <relatedStateVariable>CurrentPlayMode</relatedStateVariable>
-                </argument>
-                <argument>
-                    <name>RecQualityMode</name>
-                    <direction>out</direction>                 <relatedStateVariable>CurrentRecordQualityMode</relatedStateVariable>
-                </argument>
-            </argumentList>
-        </action>
-     */
+  public TransportSettings getTransportSettings() throws IOException, UPNPResponseException {
+    ActionMessage message = messageFactory.getMessage("GetTransportSettings");
+    message.setInputParameter("InstanceID", 0);
+    ActionResponse response = message.service();
+    return new TransportSettings(response.getOutActionArgumentValue("PlayMode"), 
+        response.getOutActionArgumentValue("RecQualityMode"));
   }
   
   /**
@@ -354,7 +340,6 @@ public class AVTransportService extends AbstractService implements ServiceEventH
   
   /**
    * Pauses playback
-   * TODO this is returning error 701 (invalid name?)
    * @throws IOException
    * @throws UPNPResponseException
    */
@@ -366,33 +351,34 @@ public class AVTransportService extends AbstractService implements ServiceEventH
   
   /**
    * NOT IMPLEMENTED
+   * 
    * @throws IOException
    * @throws UPNPResponseException
+   *           will contain a detail error code as one of the following
+   *           <ul>
+   *           <li>402 Invalid Args: Could be any of the following: not enough
+   *           in args, too many in args, no in arg by that name, one or more in
+   *           args are of the wrong data type. </li>
+   *           <li>701 Transition not available: The immediate transition from
+   *           current transport state to desired transport state is not
+   *           supported by this device. </li>
+   *           <li>705 Transport is locked: The transport is “hold locked”.
+   *           <li>710 Seek mode not supported: The specified seek mode is not
+   *           supported by the device. </li>
+   *           <li>711 Illegal seek target: The specified seek target is not
+   *           specified in terms of the seek mode, or is not present on the
+   *           media. </li>
+   *           <li>718 Invalid InstanceID: The specified instanceID is invalid
+   *           for this AVTransport.</li>
+   *           </ul>
+   * @see SeekTargetFactory
    */
-  public void seek() throws IOException, UPNPResponseException {
-//    ActionMessage message = messageFactory.getMessage("Seek");
-//    message.setInputParameter("InstanceID", 0);
-//    message.service();
-    /* TODO this one's a bit tricky?
-     *         <action>
-            <name>Seek</name>
-            <argumentList>
-                <argument>
-                    <name>InstanceID</name>
-                    <direction>in</direction>                    <relatedStateVariable>A_ARG_TYPE_InstanceID</relatedStateVariable>
-                </argument>
-                <argument>
-                    <name>Unit</name>
-                    <direction>in</direction>                    <relatedStateVariable>A_ARG_TYPE_SeekMode</relatedStateVariable>
-                </argument>
-                <argument>
-                    <name>Target</name>
-                    <direction>in</direction>                    <relatedStateVariable>A_ARG_TYPE_SeekTarget</relatedStateVariable>
-                </argument>
-            </argumentList>
-        </action>
-
-     */
+  public void seek(SeekTarget target) throws IOException, UPNPResponseException {
+    ActionMessage message = messageFactory.getMessage("Seek");
+    message.setInputParameter("InstanceID", 0);
+    message.setInputParameter("Unit", target.getSeekMode());
+    message.setInputParameter("Target", target.getTarget());
+    message.service();
   }
   
   /**
@@ -440,45 +426,36 @@ public class AVTransportService extends AbstractService implements ServiceEventH
   }
   
   /**
-   * NOT IMPLEMENTED
+   * Applies the new play mode. 
+   * @throws UPNPResponseException 
+   * @throws IOException 
    *
    */
-  public void setPlayMode(/*playmode*/)  {
-    /* TODO
-     *         <action>
-            <name>SetPlayMode</name>
-            <argumentList>
-                <argument>
-                    <name>InstanceID</name>
-                    <direction>in</direction>                    <relatedStateVariable>A_ARG_TYPE_InstanceID</relatedStateVariable>
-                </argument>
-                <argument>
-                    <name>NewPlayMode</name>
-                    <direction>in</direction>                    <relatedStateVariable>CurrentPlayMode</relatedStateVariable>
-                </argument>
-            </argumentList>
-        </action>
-     */
+  public void setPlayMode(PlayMode mode) throws IOException, UPNPResponseException  {
+    ActionMessage message = messageFactory.getMessage("SetPlayMode");
+    message.setInputParameter("InstanceID", 0);
+    message.setInputParameter("NewPlayMode", mode.toString());
+    message.service();
   }
   
   /**
-   * NOT IMPLEMENTED
+   * @return A Collection of TransportActions representing the available
+   *         actions.
+   * @throws UPNPResponseException
+   * @throws IOException
    */
-  public void getCurrentTransportActions() {
-    /* TODO
-     *             <name>GetCurrentTransportActions</name>
-            <argumentList>
-                <argument>
-                    <name>InstanceID</name>
-                    <direction>in</direction>                    <relatedStateVariable>A_ARG_TYPE_InstanceID</relatedStateVariable>
-                </argument>
-                <argument>
-                    <name>Actions</name>
-                    <direction>out</direction>                    <relatedStateVariable>CurrentTransportActions</relatedStateVariable>
-                </argument>
-            </argumentList>
-        </action>
-     */
+  public Collection<TransportAction> getCurrentTransportActions() throws IOException, UPNPResponseException {
+    ActionMessage message = messageFactory.getMessage("GetCurrentTransportActions");
+    message.setInputParameter("InstanceID", 0);
+    ActionResponse response = message.service();
+    String actionList = response.getOutActionArgumentValue("Actions");
+    ArrayList<TransportAction> actions = new ArrayList<TransportAction>();
+    for (TransportAction action : TransportAction.values()) {
+      if (actionList.contains(action.toString())) {
+        actions.add(action);
+      }
+    }
+    return actions;
   }
 
   /**
@@ -614,7 +591,7 @@ public class AVTransportService extends AbstractService implements ServiceEventH
   }
   
   /**
-   * Sets the new sleep timer duration
+   * Sets the new sleep timer duration.
    * @param newSleepTimerDuration
    * @throws IOException
    * @throws UPNPResponseException
@@ -622,137 +599,76 @@ public class AVTransportService extends AbstractService implements ServiceEventH
   public void configureSleepTimer(int newSleepTimerDuration) throws IOException, UPNPResponseException {
     ActionMessage message = messageFactory.getMessage("ConfigureSleepTimer");
     message.setInputParameter("InstanceID", 0); 
-    // TODO what is ISO8601Time?
-    message.setInputParameter("NewSleepTimerDuration", newSleepTimerDuration); 
+    // ISO8601 Time - this uses joda time, but could use java.util.time.
+    message.setInputParameter("NewSleepTimerDuration", 
+        TimeUtilities.convertLongToDuration(newSleepTimerDuration)); 
     message.service();
   }
   
   /**
-   * NOT IMPLEMENTED
+   * Returns the number of milliseconds until the sleep timer goes off.
+   * 
+   * @throws UPNPResponseException
+   * @throws IOException
    */
-  public int getRemainingSleepTimerDuration() {
-    /*
-    ActionMessage message = messageFactory.getMessage("ConfigureSleepTimer");
+  public long getRemainingSleepTimerDuration() throws IOException, UPNPResponseException {
+    // TODO verify these strings.
+    ActionMessage message = messageFactory.getMessage("GetRemainingSleepTimerDuration");
     message.setInputParameter("InstanceID", 0); 
-    // TODO what is ISO8601Time?
+    ActionResponse response = message.service();
+    // ISO8601 Time - difficult to implement with java.util.calendar
+    return TimeUtilities.convertDurationToLong(
+        response.getOutActionArgumentValue("RemainingSleepTimerDuration"));
+  }
+  
+  /**
+   * TODO what does this method do? 
+   * @throws UPNPResponseException 
+   * @throws IOException 
+   *
+   */
+  public void runAlarm(int alarmId, long loggedStartTime, long duration, 
+      String programUri, String programMetadata, PlayMode playMode, 
+      int volume, boolean includeLinkedZones) throws IOException, UPNPResponseException {
+    ActionMessage message = messageFactory.getMessage("RunAlarm");
+    message.setInputParameter("InstanceID", 0); 
+    message.setInputParameter("AlarmID", alarmId); 
+    message.setInputParameter("LoggedStartTime", TimeUtilities.convertLongToISO8601Date(loggedStartTime)); // TODO is this ISO9601 time?
+    message.setInputParameter("Duration", duration); 
+    message.setInputParameter("ProgramURI", programUri); 
+    message.setInputParameter("ProgramMetaData", programMetadata); 
+    message.setInputParameter("PlayMode", playMode); 
+    message.setInputParameter("Volume", volume); 
+    message.setInputParameter("IncludeLinkedZones", includeLinkedZones); 
     message.service();
-    */
-    return -1;
   }
   
   /**
-   * NOT IMPLEMENTED
-   *
+   * @return the properties of the alarm service.
+   * @throws UPNPResponseException
+   * @throws IOException
+   * 
    */
-  public void runAlarm() {
-    /* TODO
-     *         <action>
-            <name>RunAlarm</name>
-            <argumentList>
-                <argument>
-                    <name>InstanceID</name>
-                    <direction>in</direction>                    <relatedStateVariable>A_ARG_TYPE_InstanceID</relatedStateVariable>
-                </argument>
-                <argument>
-                    <name>AlarmID</name>
-                    <direction>in</direction>
-                    <relatedStateVariable>AlarmIDRunning</relatedStateVariable>
-                </argument>
-                <argument>
-                    <name>LoggedStartTime</name>
-                    <direction>in</direction>
-                    <relatedStateVariable>AlarmLoggedStartTime</relatedStateVariable>
-                </argument>
-                <argument>
-                    <name>Duration</name>
-                    <direction>in</direction>
-                    <relatedStateVariable>A_ARG_TYPE_ISO8601Time</relatedStateVariable>
-                </argument>
-                <argument>
-                    <name>ProgramURI</name>
-                    <direction>in</direction>
-                    <relatedStateVariable>AVTransportURI</relatedStateVariable>
-                </argument>
-                <argument>
-                    <name>ProgramMetaData</name>
-                    <direction>in</direction>
-                    <relatedStateVariable>AVTransportURIMetaData</relatedStateVariable>
-                </argument>
-                <argument>
-                    <name>PlayMode</name>
-                    <direction>in</direction>
-                    <relatedStateVariable>CurrentPlayMode</relatedStateVariable>
-                </argument>
-                <argument>
-                    <name>Volume</name>
-                    <direction>in</direction>
-                    <relatedStateVariable>A_ARG_TYPE_AlarmVolume</relatedStateVariable>
-                </argument>
-                <argument>
-                    <name>IncludeLinkedZones</name>
-                    <direction>in</direction>
-                    <relatedStateVariable>A_ARG_TYPE_AlarmIncludeLinkedZones</relatedStateVariable>
-                </argument>
-            </argumentList>
-        </action>
-     */
-  }
-  
-  /**
-   * NOT IMPLEMENTED
-   *
-   */
-  public void getRunningAlarmProperties () {
-    /* TODO
-     *         <action>
-            <name>GetRunningAlarmProperties</name>
-            <argumentList>
-                <argument>
-                    <name>InstanceID</name>
-                    <direction>in</direction>                    <relatedStateVariable>A_ARG_TYPE_InstanceID</relatedStateVariable>
-                </argument>
-                <argument>
-                    <name>AlarmID</name>
-                    <direction>out</direction>
-                    <relatedStateVariable>AlarmIDRunning</relatedStateVariable>
-                </argument>
-                <argument>
-                    <name>GroupID</name>
-                    <direction>out</direction>
-                    <relatedStateVariable>A_ARG_TYPE_GroupID</relatedStateVariable>
-                </argument>
-                <argument>
-                    <name>LoggedStartTime</name>
-                    <direction>out</direction>
-                    <relatedStateVariable>AlarmLoggedStartTime</relatedStateVariable>
-                </argument>
-            </argumentList>
-        </action>
-     */
+  public AlarmProperties getRunningAlarmProperties () throws IOException, UPNPResponseException {
+    ActionMessage message = messageFactory.getMessage("RunAlarm");
+    message.setInputParameter("InstanceID", 0); 
+    ActionResponse response = message.service();
+    return new AlarmProperties(Integer.parseInt(response.getOutActionArgumentValue("AlarmID")),
+        Integer.parseInt(response.getOutActionArgumentValue("GroupID")),
+        TimeUtilities.convertISO8601DateToLong(response.getOutActionArgumentValue("LoggedStartTime")));
   }
 
   /**
-   * NOT IMPLEMENTED
+   * Delays alarm detonation by the given duration.
+   * @throws UPNPResponseException 
+   * @throws IOException 
    *
    */
-  public void snoozeAlarm() {
-    /* TODO
-     *         <action>
-            <name>SnoozeAlarm</name>
-            <argumentList>
-                <argument>
-                    <name>InstanceID</name>
-                    <direction>in</direction>                    <relatedStateVariable>A_ARG_TYPE_InstanceID</relatedStateVariable>
-                </argument>
-                <argument>
-                    <name>Duration</name>
-                    <direction>in</direction>
-                    <relatedStateVariable>A_ARG_TYPE_ISO8601Time</relatedStateVariable>
-                </argument>            
-            </argumentList>
-        </action>
-
-     */
+  public void snoozeAlarm(long duration) throws IOException, UPNPResponseException {
+    ActionMessage message = messageFactory.getMessage("SnoozeAlarm");
+    message.setInputParameter("InstanceID", 0); 
+    message.setInputParameter("Duration", TimeUtilities.convertLongToISO8601Duration(duration)); 
+    message.service();
   }
   
   public void handleStateVariableEvent(String varName, String newValue) {

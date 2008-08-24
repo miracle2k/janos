@@ -15,7 +15,7 @@
  */
 package net.sf.janos.model;
 
-import java.io.IOException;
+import java.net.MalformedURLException;
 import java.net.URL;
 
 import net.sf.janos.control.ZonePlayer;
@@ -25,8 +25,8 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 
 /**
- * A class representing an entry in a zone players music library. eg. a queue
- * entry, or a line in.
+ * An immutable data transfer object representing an entry in a zone players
+ * music library. eg. a queue entry, or a line in.
  * 
  * @author David Wheeler
  * 
@@ -117,9 +117,9 @@ public class Entry {
      * @param zp
      *          the zone player from which to retrieve the album art.
      * @return the URL containing the album art image.
-     * @throws IOException
+     * @throws MalformedURLException 
      */
-    public URL getAlbumArtURL(ZonePlayer zp) throws IOException {
+    public URL getAlbumArtURL(ZonePlayer zp) throws MalformedURLException {
       String uri = getAlbumArtUri();
       if (uri.startsWith("/getAA")) {
         // need to use mpath. what does this mean??

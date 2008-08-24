@@ -20,7 +20,8 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 
 /**
- * Contains the name and icon (URI) for a zone player.
+ * An immutable data transfer object containing the name and icon (URI) for a
+ * zone player.
  * 
  * TODO: this class could use a real getIcon() that loads from a file depending
  * on the icon URI?
@@ -42,10 +43,16 @@ public class ZoneAttributes {
     LOG.debug("Zone name: " + name + ", zone icon: " + icon);
   }
 
+  /**
+   * @return the name of the Zone.
+   */
   public String getName() {
     return name;
   }
 
+  /**
+   * @return a string representation of the URI of the icon for the Zone.
+   */
   public String getIcon() {
     return icon;
   }

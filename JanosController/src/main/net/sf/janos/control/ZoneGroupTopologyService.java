@@ -15,8 +15,15 @@
  */
 package net.sf.janos.control;
 
+import java.io.IOException;
+
 import net.sbbi.upnp.ServiceEventHandler;
+import net.sbbi.upnp.messages.ActionMessage;
+import net.sbbi.upnp.messages.ActionResponse;
+import net.sbbi.upnp.messages.UPNPResponseException;
 import net.sbbi.upnp.services.UPNPService;
+import net.sf.janos.model.UnresponsiveDeviceActionType;
+import net.sf.janos.model.UpdateType;
 import net.sf.janos.model.ZoneGroupState;
 import net.sf.janos.model.xml.ResultParser;
 
@@ -32,34 +39,36 @@ import org.xml.sax.SAXException;
  * @author David Wheeler
  *
  */
-public class ZoneGroupTopologyService extends AbstractService implements ServiceEventHandler {
+public class ZoneGroupTopologyService extends AbstractService {
   
   private static final Log LOG = LogFactory.getLog(ZoneGroupTopologyService.class);
 
+  private final ServiceEventHandler serviceEventHandler = new ServiceEventHandler() {
+    public void handleStateVariableEvent(String varName, String newValue) {
+      LOG.debug(varName + "=" + newValue);
+      try {
+        if (varName.equals("AvailableSoftwareUpdate")) {
+        } else if (varName == "ZoneGroupState") {
+          zoneGroup = ResultParser.getGroupStateFromResult(SonosController.getInstance(), newValue);
+        } else if (varName == "ThirdPartyMediaServers") {
+
+        } else if (varName == "AlarmRunSequence") {
+
+        }
+      } catch (SAXException e) {
+        LOG.error("Could not parse state var: " + e);
+      }
+
+    }
+  };
+  
 
   private ZoneGroupState zoneGroup;
   public ZoneGroupTopologyService(UPNPService service) {
     super(service, ZonePlayerConstants.SONOS_SERVICE_ZONE_GROUP_TOPOLOGY);
-    registerServiceEventing(this);
+    registerServiceEventing(serviceEventHandler);
   }
 
-  // TODO move into sub class to hide from API
-  public void handleStateVariableEvent(String varName, String newValue) {
-    LOG.debug(varName + "=" + newValue);
-    try {
-      if (varName.equals("AvailableSoftwareUpdate")) {
-      } else if (varName == "ZoneGroupState") {
-        zoneGroup = ResultParser.getGroupStateFromResult(SonosController.getInstance(), newValue);
-      } else if (varName == "ThirdPartyMediaServers") {
-
-      } else if (varName == "AlarmRunSequence") {
-
-      }
-    } catch (SAXException e) {
-      LOG.error("Could not parse state var: " + e);
-    }
-  }
-  
   /**
    * @return an object representing the (perceived) group state.
    */
@@ -111,75 +120,58 @@ public class ZoneGroupTopologyService extends AbstractService implements Service
     </serviceStateTable> */
   
   /**
-   * NOT IMPLEMENTED
+   * Checks for the availability of an update.
+   * @param type
+   * @param cachedOnly
+   * @param version
+   * @throws IOException
+   * @throws UPNPResponseException
    */
-  public void checkForUpdate(/* TODO */) {
-    /* TODO
-     *     <actionList>
-        <action>
-            <name>CheckForUpdate</name>
-            <argumentList>
-                <argument>
-                    <name>UpdateType</name>
-                    <direction>in</direction>
-                    <relatedStateVariable>A_ARG_TYPE_UpdateType</relatedStateVariable>
-                </argument>
-                <argument>
-                    <name>CachedOnly</name>
-                    <direction>in</direction>
-                    <relatedStateVariable>A_ARG_TYPE_CachedOnly</relatedStateVariable>
-                </argument>
-                <argument>
-                    <name>Version</name>
-                    <direction>in</direction>
-                    <relatedStateVariable>A_ARG_TYPE_Version</relatedStateVariable>
-                </argument>
-                <argument>
-                    <name>UpdateItem</name>
-                    <direction>out</direction>
-                    <relatedStateVariable>A_ARG_TYPE_UpdateItem</relatedStateVariable>
-                </argument>
-            </argumentList>
-        </action>
-
-     */
+  public String checkForUpdate(UpdateType type, boolean cachedOnly, String version) throws IOException, UPNPResponseException {
+    ActionMessage message = messageFactory.getMessage("CheckForUpdate");
+    message.setInputParameter("UpdateType", type);
+    message.setInputParameter("CachedOnly", cachedOnly);
+    message.setInputParameter("Version", version);
+    ActionResponse response = message.service();
+    return response.getOutActionArgumentValue("UpdateItem");
   }
 
+  /**
+   * 
+   * @param updateUrl
+   * @param updateFlags
+   * @throws IOException
+   * @throws UPNPResponseException
+   */
+  public void beginSoftwareUpdate(String updateUrl, int updateFlags) throws IOException, UPNPResponseException {
+    ActionMessage message = messageFactory.getMessage("BeginSoftwareUpdate");
+    message.setInputParameter("UpdateURL", updateUrl);
+    message.setInputParameter("Flags", updateFlags);
+    message.service();
+  }
+  
+  /**
+   * 
+   * @param deviceUuid
+   * @param action
+   * @throws IOException
+   * @throws UPNPResponseException
+   */
+  public void reportUnresponsiveDevice(String deviceUuid, UnresponsiveDeviceActionType action) throws IOException, UPNPResponseException {
+    ActionMessage message = messageFactory.getMessage("ReportUnresponsiveDevice");
+    message.setInputParameter("DeviceUUID", deviceUuid);
+    message.setInputParameter("DesiredAction", action);
+    message.service();
+  }
+  
+  @Override
+  public void dispose() {
+    super.dispose();
+    unregisterServiceEventing(serviceEventHandler);
+  }
   /*
-        <action>
-            <name>BeginSoftwareUpdate</name>
-            <argumentList>
-                <argument>
-                    <name>UpdateURL</name>
-                    <direction>in</direction>
-                    <relatedStateVariable>A_ARG_TYPE_UpdateURL</relatedStateVariable>
-                </argument>
-                <argument>
-                    <name>Flags</name>
-                    <direction>in</direction>
-                    <relatedStateVariable>A_ARG_TYPE_UpdateFlags</relatedStateVariable>
-                </argument>
-            </argumentList>
-        </action>
-        <action>
-            <name>ReportUnresponsiveDevice</name>
-            <argumentList>
-                <argument>
-                    <name>DeviceUUID</name>
-                    <direction>in</direction>
-                    <relatedStateVariable>A_ARG_TYPE_MemberID</relatedStateVariable>
-                </argument>
-                <argument>
-                    <name>DesiredAction</name>
-                    <direction>in</direction>
-                    <relatedStateVariable>A_ARG_TYPE_UnresponsiveDeviceActionType</relatedStateVariable>
-                </argument>
-            </argumentList>
-        </action>
         <action>
             <name>ReportAlarmStartedRunning</name>
         </action>
-    </actionList>
-</scpd>
    */
 }

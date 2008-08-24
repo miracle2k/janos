@@ -16,9 +16,11 @@
 package net.sf.janos.model;
 
 /**
- * Information regarding the state, status and speed of a transport.
+ * An immutable data transfer object containing information regarding the state,
+ * status and speed of a transport.
+ * 
  * @author David Wheeler
- *
+ * 
  */
 public class TransportInfo {
   

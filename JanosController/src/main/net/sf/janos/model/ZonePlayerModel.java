@@ -36,14 +36,18 @@ public class ZonePlayerModel {
   public void addZonePlayer(ZonePlayer zp) {
     this.zonePlayers.add(zp);
     for (ZonePlayerModelListener l : listeners ) {
-      l.zonePlayerAdded(zp);
+      l.zonePlayerAdded(zp, this);
     }
   }
   
+  /**
+   * Removes the given zone player from the list. 
+   * @param zp
+   */
   public void remove(ZonePlayer zp) {
     this.zonePlayers.remove(zp);
     for (ZonePlayerModelListener l : listeners) {
-      l.zonePlayerRemoved(zp);
+      l.zonePlayerRemoved(zp, this);
     }
   }
   

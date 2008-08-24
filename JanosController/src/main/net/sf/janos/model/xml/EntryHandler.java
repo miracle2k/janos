@@ -20,11 +20,14 @@ import java.util.List;
 
 import net.sf.janos.model.Entry;
 
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
 import org.xml.sax.Attributes;
 import org.xml.sax.SAXException;
 import org.xml.sax.helpers.DefaultHandler;
 
 public class EntryHandler extends DefaultHandler {
+  private static final Log LOG = LogFactory.getLog(EntryHandler.class);
   private enum Element {
     TITLE, 
     CLASS,
@@ -67,6 +70,9 @@ public class EntryHandler extends DefaultHandler {
       element = Element.ALBUM;
     } else if (qName.equals("upnp:albumArtURI")) {
       element = Element.ALBUM_ART_URI;
+    } else {
+      LOG.warn("did not recognise element named " + localName);
+      element = null;
     }
   }
   

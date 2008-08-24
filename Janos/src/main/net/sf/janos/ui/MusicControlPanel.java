@@ -49,6 +49,8 @@ public class MusicControlPanel extends Composite implements ZoneListSelectionLis
 
   private ZonePlayer currentZone;
   private Button play;
+  private Button next;
+  private Button previous;
   private Scale volume;
 
   public MusicControlPanel(Composite parent, int style, ZonePlayer zone) {
@@ -66,7 +68,7 @@ public class MusicControlPanel extends Composite implements ZoneListSelectionLis
     volume = new Scale(this, SWT.HORIZONTAL);
     volume.setMinimum(0);
     volume.setMaximum(100);
-    Button previous = new Button(this, SWT.PUSH);
+    previous = new Button(this, SWT.PUSH);
     previous.setText("<");
     previous.addMouseListener(new MouseAdapter() {
       @Override
@@ -82,7 +84,7 @@ public class MusicControlPanel extends Composite implements ZoneListSelectionLis
         play();
       }
     });
-    Button next = new Button(this, SWT.PUSH);
+    next = new Button(this, SWT.PUSH);
     next.setText(">");
     next.addMouseListener(new MouseAdapter() {
       @Override
@@ -206,6 +208,20 @@ public class MusicControlPanel extends Composite implements ZoneListSelectionLis
     }
     volume.setSelection(getVolume());
     setIsPlaying(isPlaying());
+    updateEnabledness();
+  }
+
+  /**
+   * Sets the buttons to enabled/disabled depending on whether a zoneplayer is
+   * selected.
+   * 
+   */
+  private void updateEnabledness() {
+    boolean enabled = (currentZone != null);
+    play.setEnabled(enabled);
+    volume.setEnabled(enabled);
+    next.setEnabled(enabled);
+    previous.setEnabled(enabled);
   }
 
   public void valuesChanged(Set<RenderingControlEventType> events, RenderingControlService source) {

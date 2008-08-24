@@ -81,8 +81,9 @@ public class SonosControllerShell {
 		
     queue = new QueueDisplay(shell, SWT.NONE, controller);
     GridData nowPlayingData = new GridData(); 
-    nowPlayingData.widthHint=200;
+    nowPlayingData.widthHint=250;
     nowPlayingData.verticalAlignment=GridData.FILL;
+    nowPlayingData.horizontalAlignment=GridData.FILL;
     nowPlayingData.grabExcessVerticalSpace=true;
     queue.setLayoutData(nowPlayingData);
     zoneList.addSelectionListener(queue);

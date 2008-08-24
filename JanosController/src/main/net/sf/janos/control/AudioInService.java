@@ -15,7 +15,14 @@
  */
 package net.sf.janos.control;
 
+import java.io.IOException;
+
+import net.sbbi.upnp.messages.ActionMessage;
+import net.sbbi.upnp.messages.ActionResponse;
+import net.sbbi.upnp.messages.UPNPResponseException;
 import net.sbbi.upnp.services.UPNPService;
+import net.sf.janos.model.AudioInputAttributes;
+import net.sf.janos.model.LineLevel;
 
 /**
  * For controlling the audio in service of a zone player. 
@@ -68,98 +75,85 @@ public class AudioInService extends AbstractService {
         <dataType>i4</dataType>
       </stateVariable>
     </serviceStateTable>
-    <actionList>
-        <action>
-        <name>StartTransmissionToGroup</name>
-        <argumentList>
-            <argument>
-                <name>CoordinatorID</name>
-                <direction>in</direction>
-                <relatedStateVariable>A_ARG_TYPE_MemberID</relatedStateVariable>
-            </argument>
-            <argument>
-    <name>CurrentTransportSettings</name>
-    <direction>out</direction>
-    <relatedStateVariable>A_ARG_TYPE_TransportSettings</relatedStateVariable>
-      </argument>
-        </argumentList>
-        </action>
-        <action>
-        <name>StopTransmissionToGroup</name>
-        <argumentList>
-            <argument>
-                <name>CoordinatorID</name>
-                <direction>in</direction>
-                <relatedStateVariable>A_ARG_TYPE_MemberID</relatedStateVariable>
-            </argument>
-        </argumentList>
-        </action>
-        <action>
-        <name>SetAudioInputAttributes</name>
-        <argumentList>
-            <argument>
-                <name>DesiredName</name>
-                <direction>in</direction>
-                <relatedStateVariable>AudioInputName</relatedStateVariable>
-            </argument>
-            <argument>
-                <name>DesiredIcon</name>
-                <direction>in</direction>
-                <relatedStateVariable>Icon</relatedStateVariable>
-            </argument>
-        </argumentList>
-        </action>
-        <action>
-        <name>GetAudioInputAttributes</name>
-        <argumentList>
-            <argument>
-                <name>CurrentName</name>
-                <direction>out</direction>
-                <relatedStateVariable>AudioInputName</relatedStateVariable>
-            </argument>
-            <argument>
-                <name>CurrentIcon</name>
-                <direction>out</direction>
-                <relatedStateVariable>Icon</relatedStateVariable>
-            </argument>
-        </argumentList>
-        </action>
-        <action>
-        <name>SetLineInLevel</name>
-        <argumentList>
-            <argument>
-    <name>DesiredLeftLineInLevel</name>
-    <direction>in</direction>
-    <relatedStateVariable>LeftLineInLevel</relatedStateVariable>
-      </argument>
-            <argument>
-    <name>DesiredRightLineInLevel</name>
-    <direction>in</direction>
-    <relatedStateVariable>RightLineInLevel</relatedStateVariable>
-      </argument>
-        </argumentList>
-        </action>
-        <action>
-        <name>GetLineInLevel</name>
-        <argumentList>
-            <argument>
-                <name>CurrentLeftLineInLevel</name>
-                <direction>out</direction>
-                <relatedStateVariable>LeftLineInLevel</relatedStateVariable>
-            </argument>
-            <argument>
-                <name>CurrentRightLineInLevel</name>
-                <direction>out</direction>
-                <relatedStateVariable>RightLineInLevel</relatedStateVariable>
-            </argument>
-        </argumentList>
-        </action>
-
-
-    </actionList>
-</scpd>
-   */
+    */
   
+  /**
+   * TODO return a TransportSettings object.
+   * @param groupId The group to which the transmission should be.
+   * @throws UPNPResponseException 
+   * @throws IOException 
+   */
+  public String startTransmissionToGroup(String groupId) throws IOException, UPNPResponseException {
+    ActionMessage message = messageFactory.getMessage("StartTransmissionToGroup");
+    message.setInputParameter("CoordinatorID", groupId);
+    ActionResponse response = message.service();
+    return response.getOutActionArgumentValue("CurrentTransportSettings");
+  }
+  
+  /**
+   * 
+   * @param groupId
+   * @throws IOException
+   * @throws UPNPResponseException
+   */
+  public void stopTransmissionToGroup(String groupId) throws IOException, UPNPResponseException {
+    ActionMessage message = messageFactory.getMessage("StopTransmissionToGroup");
+    message.setInputParameter("CoordinatorID", groupId);
+    message.service();
+  }
+  
+  /**
+   * Sets the attributes for the audio input.
+   * @param name the name of the audio input
+   * @param iconUri a URI defining an icon for the audio input
+   * @throws UPNPResponseException 
+   * @throws IOException 
+   */
+  public void setAudioInputAttributes(String name, String iconUri) throws IOException, UPNPResponseException {
+    ActionMessage message = messageFactory.getMessage("SetAudioInputAttributes");
+    message.setInputParameter("DesiredName", name);
+    message.setInputParameter("DesiredIcon", iconUri);
+    message.service();
+  }
+  
+  /**
+   * 
+   * @return an object containing the attributes of the audio input service.
+   * @throws UPNPResponseException
+   * @throws IOException
+   */
+  public AudioInputAttributes getAudioInputAttributes() throws IOException, UPNPResponseException {
+    ActionMessage message = messageFactory.getMessage("GetAudioInputAttributes");
+    ActionResponse response = message.service();
+    return new AudioInputAttributes(response.getOutActionArgumentValue("AudioInputName"),
+        response.getOutActionArgumentValue("Icon"));
+  }
+  
+  /**
+   * Sets the level for each component of the line in. 
+   * @param leftLevel
+   * @param rightLevel
+   * @throws UPNPResponseException 
+   * @throws IOException 
+   */
+  public void setLineInLevel(int leftLevel, int rightLevel) throws IOException, UPNPResponseException {
+    ActionMessage message = messageFactory.getMessage("SetLineInLevel");
+    message.setInputParameter("DesiredLeftLineInLevel", leftLevel);
+    message.setInputParameter("DesiredRightLineInLevel", rightLevel);
+    message.service();
+  }
+  
+  /**
+   * @return the current line levels for the audio input
+   * @throws UPNPResponseException 
+   * @throws IOException 
+   */
+  public LineLevel getLineInLevel() throws IOException, UPNPResponseException {
+    ActionMessage message = messageFactory.getMessage("GetLineInLevel");
+    ActionResponse response = message.service();
+    return new LineLevel(Integer.parseInt(response.getOutActionArgumentValue("CurrentLeftLineInLevel")), 
+        Integer.parseInt(response.getOutActionArgumentValue("CurrentRightLineInLevel")));
+  }
   
   public void handleStateVariableEvent(String varName, String newValue) {
     // TODO Auto-generated method stub

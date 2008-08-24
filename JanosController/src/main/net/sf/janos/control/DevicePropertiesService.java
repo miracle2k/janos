@@ -22,14 +22,16 @@ import net.sbbi.upnp.messages.ActionResponse;
 import net.sbbi.upnp.messages.UPNPResponseException;
 import net.sbbi.upnp.services.UPNPService;
 import net.sf.janos.model.ZoneAttributes;
+import net.sf.janos.model.ZoneInfo;
 
 /**
- * For querying the device properties of a zone player.
+ * For querying the device properties of a zone player. This is a Sonos specific
+ * class.
  * 
  * NOTE: this class is incomplete.
  * 
  * @author David Wheeler
- *
+ * 
  */
 public class DevicePropertiesService extends AbstractService {
   protected DevicePropertiesService(UPNPService service) {
@@ -53,6 +55,107 @@ public class DevicePropertiesService extends AbstractService {
       e.printStackTrace();
     }
     return null;
+  }
+  
+  /**
+   * Sets the state of the Sonos Device's LED to the given state.
+   * 
+   * @param ledEnabled
+   * @throws IOException
+   * @throws UPNPResponseException
+   */
+  public void setLEDState(boolean ledEnabled) throws IOException, UPNPResponseException {
+    ActionMessage message = messageFactory.getMessage("SetLEDState");
+    message.setInputParameter("DesiredLEDState", ledEnabled?"On":"Off");
+    message.service();
+  }
+  
+  /**
+   * Gets the current state of the Sonos Device's LED.
+   * @return
+   * @throws IOException
+   * @throws UPNPResponseException
+   */
+  public boolean getLEDState() throws IOException, UPNPResponseException {
+    ActionMessage message = messageFactory.getMessage("GetLEDState");
+    ActionResponse response = message.service();
+    String state = response.getOutActionArgumentValue("CurrentLEDState");
+    return "On".equals(state);
+  }
+  
+  /**
+   * Sets or unsets the Sonos Device to run in invisible mode.
+   * @param isInvisible
+   * @throws IOException
+   * @throws UPNPResponseException
+   */
+  public void setInvisible(boolean isInvisible) throws IOException, UPNPResponseException {
+    ActionMessage message = messageFactory.getMessage("SetInvisible");
+    message.setInputParameter("DesiredInvisible", isInvisible);
+    message.service();
+  }
+  
+  /**
+   * @return <code>true</code> if the Sonos Device is currently operating in
+   *         Invisible mode, or <code>false</code> otherwise.
+   * @throws IOException
+   * @throws UPNPResponseException
+   */
+  public boolean getInvisible() throws IOException, UPNPResponseException {
+    ActionMessage message = messageFactory.getMessage("GetInvisible");
+    ActionResponse response = message.service();
+    return Boolean.parseBoolean(response.getOutActionArgumentValue("CurrentInvisible"));
+  }
+  
+  /**
+   * Applies the given {@link ZoneAttributes} to this Sonos Device.
+   * @param atts
+   * @throws IOException
+   * @throws UPNPResponseException
+   */
+  public void setZoneAttributes(ZoneAttributes atts) throws IOException, UPNPResponseException {
+    ActionMessage message = messageFactory.getMessage("SetZoneAttributes");
+    message.setInputParameter("DesiredZoneName", atts.getName());
+    message.setInputParameter("DesiredIcon", atts.getIcon());
+    message.service();
+  }
+  
+//  public ZoneAttributes getZoneAttributes() {
+//    ActionMessage message = messageFactory.getMessage("GetZoneAttributes");
+//    ActionResponse response = message.service();
+//    String name = response.getOutActionArgumentValue("DesiredZoneName");
+//    String icon = response.getOutActionArgumentValue("DesiredIcon");
+//    return new ZoneAttributes(name, icon);
+//  }
+  
+  /**
+   * @return A string representation of the HouseholdID for this Sonos Device.
+   * @throws IOException
+   * @throws UPNPResponseException
+   */
+  public String getHouseholdID() throws IOException, UPNPResponseException {
+    ActionMessage message = messageFactory.getMessage("GetHouseholdID");
+    ActionResponse response = message.service();
+    return response.getOutActionArgumentValue("HouseholdID");
+  }
+  
+  /**
+   * @return a ZoneInfo object containing the information for this Sonos Device.
+   * @throws IOException
+   * @throws UPNPResponseException
+   */
+  public ZoneInfo getZoneInfo() throws IOException, UPNPResponseException {
+    ActionMessage message = messageFactory.getMessage("GetZoneInfo");
+    ActionResponse response = message.service();
+    
+    return new ZoneInfo(response.getOutActionArgumentValue("SerialNumber"),
+        response.getOutActionArgumentValue("SoftwareVersion"),
+        response.getOutActionArgumentValue("DisplaySoftwareVersion"),
+        response.getOutActionArgumentValue("HardwareVersion"),
+        response.getOutActionArgumentValue("IPAddress"),
+        response.getOutActionArgumentValue("MACAddress"),
+        response.getOutActionArgumentValue("CopyrightInfo"),
+        response.getOutActionArgumentValue("ExtraInfo"));
   }
   
   /* TODO
@@ -109,133 +212,6 @@ public class DevicePropertiesService extends AbstractService {
             <dataType>string</dataType>
         </stateVariable>
     </serviceStateTable>
-    <actionList>
-        <action>
-        <name>SetLEDState</name>
-        <argumentList>
-            <argument>
-                <name>DesiredLEDState</name>
-                <direction>in</direction>
-                <relatedStateVariable>LEDState</relatedStateVariable>
-            </argument>
-        </argumentList>
-        </action>
-        <action>
-        <name>GetLEDState</name>
-        <argumentList>
-            <argument>
-                <name>CurrentLEDState</name>
-                <direction>out</direction>
-                <relatedStateVariable>LEDState</relatedStateVariable>
-            </argument>
-        </argumentList>
-        </action>
-        <action>
-        <name>SetInvisible</name>
-        <argumentList>
-            <argument>
-                <name>DesiredInvisible</name>
-                <direction>in</direction>
-                <relatedStateVariable>Invisible</relatedStateVariable>
-            </argument>
-        </argumentList>
-        </action>
-        <action>
-        <name>GetInvisible</name>
-        <argumentList>
-            <argument>
-                <name>CurrentInvisible</name>
-                <direction>out</direction>
-                <relatedStateVariable>Invisible</relatedStateVariable>
-            </argument>
-        </argumentList>
-        </action>
-        <action>
-        <name>SetZoneAttributes</name>
-        <argumentList>
-            <argument>
-                <name>DesiredZoneName</name>
-                <direction>in</direction>
-                <relatedStateVariable>ZoneName</relatedStateVariable>
-            </argument>
-            <argument>
-                <name>DesiredIcon</name>
-                <direction>in</direction>
-                <relatedStateVariable>Icon</relatedStateVariable>
-            </argument>
-        </argumentList>
-        </action>
-        <action>
-        <name>GetZoneAttributes</name>
-        <argumentList>
-            <argument>
-                <name>CurrentZoneName</name>
-                <direction>out</direction>
-                <relatedStateVariable>ZoneName</relatedStateVariable>
-            </argument>
-            <argument>
-                <name>CurrentIcon</name>
-                <direction>out</direction>
-                <relatedStateVariable>Icon</relatedStateVariable>
-            </argument>
-        </argumentList>
-        </action>
-        <action>
-        <name>GetHouseholdID</name>
-        <argumentList>
-            <argument>
-                <name>CurrentHouseholdID</name>
-                <direction>out</direction>
-                <relatedStateVariable>HouseholdID</relatedStateVariable>
-            </argument>
-        </argumentList>
-        </action>
-        <action>
-        <name>GetZoneInfo</name>
-        <argumentList>
-            <argument>
-                <name>SerialNumber</name>
-                <direction>out</direction>
-                <relatedStateVariable>SerialNumber</relatedStateVariable>
-            </argument>
-            <argument>
-                <name>SoftwareVersion</name>
-                <direction>out</direction>
-                <relatedStateVariable>SoftwareVersion</relatedStateVariable>
-            </argument>
-            <argument>
-                <name>DisplaySoftwareVersion</name>
-                <direction>out</direction>
-                <relatedStateVariable>DisplaySoftwareVersion</relatedStateVariable>
-            </argument>
-            <argument>
-                <name>HardwareVersion</name>
-                <direction>out</direction>
-                <relatedStateVariable>HardwareVersion</relatedStateVariable>
-            </argument>
-            <argument>
-                <name>IPAddress</name>
-                <direction>out</direction>
-                <relatedStateVariable>IPAddress</relatedStateVariable>
-            </argument>
-            <argument>
-                <name>MACAddress</name>
-                <direction>out</direction>
-                <relatedStateVariable>MACAddress</relatedStateVariable>
-            </argument>
-            <argument>
-                <name>CopyrightInfo</name>
-                <direction>out</direction>
-                <relatedStateVariable>CopyrightInfo</relatedStateVariable>
-            </argument>
-            <argument>
-                <name>ExtraInfo</name>
-                <direction>out</direction>
-                <relatedStateVariable>ExtraInfo</relatedStateVariable>
-            </argument>
-        </argumentList>
-        </action>
-    </actionList>
 </scpd>
    */
 

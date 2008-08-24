@@ -36,14 +36,41 @@ import org.xml.sax.SAXException;
  * @author David Wheeler
  *
  */
-public class ContentDirectoryService extends AbstractService implements ServiceEventHandler {
+public class ContentDirectoryService extends AbstractService {
   
+  private static final int DEFAULT_REQUEST_COUNT = 200;
+
+  private static final String DEFAULT_SORT_CRITERIA = "";
+
+  private static final String DEFAULT_FILTER_STRING = "dc:title,res,dc:creator,upnp:artist,upnp:album";
+
+  private static final String DEFAULT_BROWSE_TYPE = "BrowseDirectChildren";
+
   private static final Log LOG = LogFactory.getLog(ContentDirectoryService.class);
 
+  private final ServiceEventHandler serviceEventHandler = new ServiceEventHandler() {
+    public void handleStateVariableEvent(String variable, String value) {
+      LOG.info("ContentDirectory Event: " + variable + "=" + value);
+      /*
+       * Expected Event Variables:
+       * SystemUpdateID
+       * ContainerUpdateID
+       * ShareListRefreshState [NOTRUN|RUNNING|DONE]
+       * ShareIndexInProgress
+       * ShareIndexLastError
+       * UserRadioUpdateID
+       * MasterRadioUpdateID
+       * SavedQueuesUpdateID
+       * ShareListUpdateID
+       */
+      // TODO implement
+      
+    }
+  };
   
   protected ContentDirectoryService(UPNPService service) {
     super(service, ZonePlayerConstants.SONOS_SERVICE_CONTENT_DIRECTORY);
-    registerServiceEventing(this);
+    registerServiceEventing(serviceEventHandler);
   }
 
   /**
@@ -104,49 +131,91 @@ public class ContentDirectoryService extends AbstractService implements ServiceE
    * @return a List of Entries of maximum size <code>length</code>, or null if the request fails.
    */
   public List<Entry> getEntries(int startAt, int length, String type) {
-    ActionMessage browseAction = messageFactory.getMessage("Browse");
-    browseAction.setInputParameter("ObjectID", type);
-    browseAction.setInputParameter("BrowseFlag", "BrowseDirectChildren");
-    browseAction.setInputParameter("Filter", "dc:title,res,dc:creator,upnp:artist,upnp:album");
-    browseAction.setInputParameter("StartingIndex", String.valueOf(startAt));
-    browseAction.setInputParameter("RequestedCount", String.valueOf(length));
-    browseAction.setInputParameter("SortCriteria", "");
-    ActionResponse response;
     try {
-      response = browseAction.service();
+      ActionResponse response = getEntriesImpl(startAt, length, type, DEFAULT_BROWSE_TYPE, DEFAULT_FILTER_STRING, DEFAULT_SORT_CRITERIA);
+
       LOG.debug("response value types: " + response.getOutActionArgumentNames());
       LOG.info("Returned " + response.getOutActionArgumentValue("NumberReturned") + " of " + response.getOutActionArgumentValue("TotalMatches") + " results.");
       String result = response.getOutActionArgumentValue("Result");
       LOG.debug(result);
       return ResultParser.getEntriesFromStringResult(result);
+    } catch (SAXException e) {
+      // TODO Auto-generated catch block
+      e.printStackTrace();
     } catch (IOException e) {
       // TODO Auto-generated catch block
       e.printStackTrace();
     } catch (UPNPResponseException e) {
       // TODO Auto-generated catch block
       e.printStackTrace();
-    } catch (SAXException e) {
-      // TODO Auto-generated catch block
-      e.printStackTrace();
     }
     return null;
   }
-
-  public void handleStateVariableEvent(String variable, String value) {
-    LOG.info("ContentDirectory Event: " + variable + "=" + value);
-    /*
-     * Expected Event Variables:
-     * SystemUpdateID
-     * ContainerUpdateID
-     * ShareListRefreshState [NOTRUN|RUNNING|DONE]
-     * ShareIndexInProgress
-     * ShareIndexLastError
-     * UserRadioUpdateID
-     * MasterRadioUpdateID
-     * SavedQueuesUpdateID
-     * ShareListUpdateID
-     */
-    // TODO implement
-    
+  
+  /**
+   * Performs a getEntries request, returning the response
+   * @param startAt the index of the first entry to be returned.
+   * @param length the maximum number of entries to returned.
+   * @param type the type of entries to be retrieved eg "A:ARTIST" or "Q:".
+   * @param browseType either "BrowseMetadata" or "BrowseDirectChildren"
+   * @param filter a filter on the returned results
+   * @param sortCriteria how to sort the returned results
+   * @return the ActionResponse retured from the Sonos unit
+   * @throws IOException if a network error prevents communications
+   * @throws UPNPResponseException if a UPnP error response is returned
+   */
+  public ActionResponse getEntriesImpl(int startAt, int length, String type, String browseType, String filter, String sortCriteria) throws IOException, UPNPResponseException {
+    ActionMessage browseAction = messageFactory.getMessage("Browse");
+    browseAction.setInputParameter("ObjectID", type);
+    browseAction.setInputParameter("BrowseFlag", browseType);
+    browseAction.setInputParameter("Filter", filter);
+    browseAction.setInputParameter("StartingIndex", String.valueOf(startAt));
+    browseAction.setInputParameter("RequestedCount", String.valueOf(length));
+    browseAction.setInputParameter("SortCriteria", sortCriteria);
+    ActionResponse response;
+    response = browseAction.service();
+    return response;
   }
+  
+  public void getAllEntriesAsync(final EntryCallback callback, final String type) {
+    SonosController.getInstance().getExecutor().execute(new Runnable() {
+      public void run() {
+        int startAt = 0;
+        boolean completedSuccessfully = false;
+        try {
+          ActionResponse response = getEntriesImpl(startAt, DEFAULT_REQUEST_COUNT, type, DEFAULT_BROWSE_TYPE, DEFAULT_FILTER_STRING, DEFAULT_SORT_CRITERIA);
+          int totalCount = Integer.parseInt(response.getOutActionArgumentValue("TotalMatches"));
+          
+          startAt = Integer.parseInt(response.getOutActionArgumentValue("NumberReturned"));
+          callback.updateCount(totalCount);
+          callback.addEntries(ResultParser.getEntriesFromStringResult(response.getOutActionArgumentValue("Result")));
+          while (startAt < totalCount) {
+            response = getEntriesImpl(startAt, DEFAULT_REQUEST_COUNT, type, DEFAULT_BROWSE_TYPE, DEFAULT_FILTER_STRING, DEFAULT_SORT_CRITERIA);
+            startAt += Integer.parseInt(response.getOutActionArgumentValue("NumberReturned"));
+            callback.addEntries(ResultParser.getEntriesFromStringResult(response.getOutActionArgumentValue("Result")));
+          }
+          completedSuccessfully = true;
+        } catch (IOException e) {
+          // TODO Auto-generated catch block
+          e.printStackTrace();
+        } catch (UPNPResponseException e) {
+          // TODO Auto-generated catch block
+          e.printStackTrace();
+        } catch (SAXException e) {
+          // TODO Auto-generated catch block
+          e.printStackTrace();
+        } finally {
+          callback.retrievalComplete(completedSuccessfully);
+        }
+        
+      }
+    });
+  }
+  
+  @Override
+  public void dispose() {
+    super.dispose();
+    unregisterServiceEventing(serviceEventHandler);
+  }
+
 }

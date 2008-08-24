@@ -22,6 +22,7 @@ import java.util.Map;
 
 import net.sf.janos.control.SonosController;
 import net.sf.janos.model.Entry;
+import net.sf.janos.model.TrackMetaData;
 import net.sf.janos.model.ZoneGroupState;
 
 import org.apache.commons.logging.Log;
@@ -47,6 +48,12 @@ public class ResultParser {
    */
   public static List<Entry> getEntriesFromStringResult(String xml) throws SAXException {
     // TODO this is very slow - is there a faster way?
+    /* IDEAS: 1) adding a caching entity resolover (or even putting local copies
+     * of remote entities in the code base).
+     * 2) replace default SAX parser with something else (woodstox?)
+     * 3) use JAXB instead. 
+     */
+    
     XMLReader reader = XMLReaderFactory.createXMLReader();
     EntryHandler handler = new EntryHandler();
     reader.setContentHandler(handler);
@@ -106,4 +113,16 @@ public class ResultParser {
     }
     return handler.getChanges();
   }
+
+  public static TrackMetaData parseTrackMetaData(String xml) throws SAXException {
+    XMLReader reader = XMLReaderFactory.createXMLReader();
+    TrackMetaDataHandler handler = new TrackMetaDataHandler();
+    reader.setContentHandler(handler);
+    try {
+      reader.parse(new InputSource(new StringReader(xml)));
+    } catch (IOException e) {
+      // This should never happen - we're not performing I/O!
+      LOG.error("Could not parse AV Transport Event: ", e);
+    }
+    return handler.getMetaData();  }
 }

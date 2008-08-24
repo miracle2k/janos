@@ -22,9 +22,11 @@ import java.util.List;
 import net.sf.janos.control.ZonePlayer;
 
 /**
- * Contains the members and controller of a zone group.
+ * An immutable data transfer object containing the members and controller of a
+ * zone group.
+ * 
  * @author David Wheeler
- *
+ * 
  */
 public class ZoneGroup {
 

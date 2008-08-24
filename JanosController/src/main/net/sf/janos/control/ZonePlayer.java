@@ -18,11 +18,22 @@ package net.sf.janos.control;
 import java.io.IOException;
 import java.net.InetAddress;
 import java.net.UnknownHostException;
+import java.util.List;
+
+import org.xml.sax.SAXException;
 
 import net.sbbi.upnp.devices.UPNPRootDevice;
 import net.sbbi.upnp.messages.UPNPResponseException;
 import net.sf.janos.model.Entry;
+import net.sf.janos.model.TransportInfo.TransportState;
 
+/**
+ * Corresponds to a physical Zone Player, and gives access all the devices and
+ * services that a Zone Player has.
+ * 
+ * @author David Wheeler
+ * 
+ */
 public class ZonePlayer {
   
   private final UPNPRootDevice dev;
@@ -164,20 +175,36 @@ public class ZonePlayer {
    *          the entry to enqueue.
    */
   public void enqueueEntry(Entry entry) {
-    // TODO this just plays it...
     try {
       AVTransportService serv = getMediaRendererDevice().getAvTransportService();
-      serv.addToQueue(entry);
-      serv.play();
+      int index = serv.addToQueue(entry);
+      if (serv.getMediaInfo().getCurrentURI().startsWith("x-rincon-queue:")) {
+        playQueueEntry(index - 1);
+      }
+      if (!serv.getTransportInfo().getState().equals(TransportState.PLAYING)) {
+        serv.play();
+      }
     } catch (IOException e) {
       // TODO Auto-generated catch block
       e.printStackTrace();
     } catch (UPNPResponseException e) {
       // TODO Auto-generated catch block
       e.printStackTrace();
+    } catch (SAXException e) {
+      // TODO Auto-generated catch block
+      e.printStackTrace();
     }
   }
-  
+
+  public void playQueueEntry(int index) throws IOException, UPNPResponseException {
+    AVTransportService serv = getMediaRendererDevice().getAvTransportService();
+    List<Entry> entries = getMediaServerDevice().getContentDirectoryService().getQueue(index-1, 1);
+    if (!entries.isEmpty()) {
+      Entry queue = entries.get(0);
+      serv.setAvTransportUri(queue);
+    }
+  }
+
   /**
    * @return the IP address for this zone player.
    */
@@ -190,5 +217,23 @@ public class ZonePlayer {
    */
   public int getPort() {
     return port;
+  }
+  
+  // TODO is UDN a sensible choice for identity?
+  @Override
+  public boolean equals(Object obj) {
+    if (obj == null) {
+      return false;
+    }
+    if (obj instanceof ZonePlayer) {
+      ZonePlayer zp = (ZonePlayer) obj;
+      return zp.getRootDevice().getUDN().equals(getRootDevice().getUDN());
+    }
+    return false;
+  }
+  
+  @Override
+  public int hashCode() {
+    return getRootDevice().getUDN().hashCode();
   }
 }

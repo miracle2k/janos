@@ -19,8 +19,8 @@ import net.sf.janos.control.ZonePlayer;
 
 public interface ZonePlayerModelListener {
 
-  public void zonePlayerRemoved(ZonePlayer zp);
+  public void zonePlayerRemoved(ZonePlayer zp, ZonePlayerModel source);
 
-  public void zonePlayerAdded(ZonePlayer zp);
+  public void zonePlayerAdded(ZonePlayer zp, ZonePlayerModel source);
 
 }

@@ -20,9 +20,10 @@ import java.util.Collection;
 import java.util.List;
 
 /**
- * contains each of the known zone groups.
+ * An immutable data transfer object containing each of the known zone groups.
+ * 
  * @author David Wheeler
- *
+ * 
  */
 public class ZoneGroupState {
 
