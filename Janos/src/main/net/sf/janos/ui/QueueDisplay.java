@@ -33,7 +33,8 @@ import net.sf.janos.control.ZonePlayer;
 import net.sf.janos.model.Entry;
 import net.sf.janos.model.MediaInfo;
 import net.sf.janos.model.PositionInfo;
-import net.sf.janos.model.TransportInfo;
+import net.sf.janos.model.QueueModel;
+import net.sf.janos.model.QueueModelListener;
 import net.sf.janos.model.xml.AVTransportEventHandler.AVTransportEventType;
 import net.sf.janos.util.ui.ImageUtilities;
 
@@ -51,8 +52,13 @@ import org.eclipse.swt.layout.FillLayout;
 import org.eclipse.swt.layout.GridData;
 import org.eclipse.swt.layout.GridLayout;
 import org.eclipse.swt.widgets.Composite;
+import org.eclipse.swt.widgets.Event;
 import org.eclipse.swt.widgets.Group;
 import org.eclipse.swt.widgets.Label;
+import org.eclipse.swt.widgets.Listener;
+import org.eclipse.swt.widgets.Table;
+import org.eclipse.swt.widgets.TableColumn;
+import org.eclipse.swt.widgets.TableItem;
 import org.xml.sax.SAXException;
 
 /**
@@ -67,7 +73,7 @@ public class QueueDisplay extends Composite implements ZoneListSelectionListener
   /**
    * The maximum number of items to display in the queue
    */
-  public static final int QUEUE_LENGTH = 20;
+  public static final int QUEUE_LENGTH = 100;
   
   /**
    * The colour of the labels
@@ -102,14 +108,42 @@ public class QueueDisplay extends Composite implements ZoneListSelectionListener
   /**
    * The queue
    */
-  private final org.eclipse.swt.widgets.List queue;
+  private final Table queue;
   
   /**
    * The current zone
    */
   private ZonePlayer currentZone;
 
+  /**
+   * The mouse listener for the queue table
+   */
   private QueueMouseListener queueMouseListener;
+  
+  /**
+   * Fills the queue table with data from the queue model
+   */
+  private QueueDataFiller queueDataFiller = new QueueDataFiller();
+  
+  /**
+   * the image for the song that is currently playing
+   */
+  private Image nowPlayingImage;
+  
+  /**
+   * The image for songs that aren't playing
+   */
+  private Image emptyImage;
+
+  /**
+   * The queue model
+   */
+  private QueueModel queueModel = new QueueModel();
+
+  /**
+   * updates the queue table when the queue model changes
+   */
+  private TableUpdater queueModelListener;
 
   /**
    * Creates a new QueueDisplay
@@ -147,13 +181,36 @@ public class QueueDisplay extends Composite implements ZoneListSelectionListener
     gd.heightHint = 128;
     artwork.setLayoutData(gd);
     
+    InputStream is = getClass().getResourceAsStream("/nowPlaying.png");
+    
+    nowPlayingImage = new Image(getDisplay(), is);
+    try {
+      is.close();
+    } catch (IOException e) {
+    }
+    is = getClass().getResourceAsStream("/empty.png");
+    emptyImage = new Image(getDisplay(), is);
+    try {
+      is.close();
+    } catch (IOException e) {
+    }
+    
+    
+    queueModelListener = new TableUpdater();
+    queueModel.addQueueModelListener(queueModelListener);
+    
     Group queueBox = new Group(this, SWT.NONE);
     queueBox.setText("Now Playing");
     queueBox.setForeground(LABEL_COLOR);
     queueBox.setLayout(new FillLayout());
-    queue = new org.eclipse.swt.widgets.List(queueBox, SWT.SINGLE | SWT.V_SCROLL);
+    queue = new Table(queueBox, SWT.SINGLE | SWT.VIRTUAL);
+    queue.setLinesVisible(true);
     queueMouseListener = new QueueMouseListener();
     queue.addMouseListener(queueMouseListener);
+    TableColumn queueColumn = new TableColumn(queue, SWT.NONE);
+    queueColumn.setText("Queue Entries");
+    queueColumn.setWidth(200);
+    queue.addListener(SWT.SetData, queueDataFiller);
     GridData queueData = new GridData(GridData.FILL, GridData.FILL, true, true);
     queueBox.setLayoutData(queueData);
     nowPlaying.setData(queueData);
@@ -171,7 +228,15 @@ public class QueueDisplay extends Composite implements ZoneListSelectionListener
    */
   @Override
   public void dispose() {
-    showNowPlayingForZone(null);  
+    if (nowPlayingImage != null) {
+      nowPlayingImage.dispose();
+    }
+    if (emptyImage != null) {
+      emptyImage.dispose();
+    }
+    if (queueModel != null) {
+      queueModel.removeQueueModelListener(queueModelListener);
+    }
     super.dispose();
   }
   
@@ -191,7 +256,6 @@ public class QueueDisplay extends Composite implements ZoneListSelectionListener
     trackArtist.setText("");
     trackName.setText("");
     artwork.setImage(null);
-    queue.setItems(new String[0]);
     redraw();
     controller.getExecutor().execute(new NowPlayingFetcher(zone));
   }
@@ -217,9 +281,9 @@ public class QueueDisplay extends Composite implements ZoneListSelectionListener
    */
   private void setQueueEntry(PositionInfo posInfo, final ZonePlayer zone) {
     // TODO develop a queue model to display
-    final List<Entry> queueEntries = zone.getMediaServerDevice().getContentDirectoryService().getQueue(posInfo.getTrackNum() -1,QUEUE_LENGTH + 1);
+    final List<Entry> queueEntries = zone.getMediaServerDevice().getContentDirectoryService().getQueue(0,QUEUE_LENGTH);
     if (queueEntries.size() > 0) {
-      final Entry currentEntry = queueEntries.remove(0);
+      final Entry currentEntry = queueEntries.get(posInfo.getTrackNum()-1);
       URL albumArtUrl = null;
       try {
         albumArtUrl = currentEntry.getAlbumArtURL(zone);
@@ -227,8 +291,8 @@ public class QueueDisplay extends Composite implements ZoneListSelectionListener
         LOG.error("Could not get album art URL: ", e);
       }
       setNowPlayingAsync(currentEntry.getCreator(), currentEntry.getAlbum(), currentEntry.getTitle(), albumArtUrl);
-      getDisplay().asyncExec(new QueueUpdater(queueEntries));
     }
+    getDisplay().asyncExec(new QueueUpdater(queueEntries));
   }
 
   /**
@@ -236,6 +300,7 @@ public class QueueDisplay extends Composite implements ZoneListSelectionListener
    */
   public void valuesChanged(Set<AVTransportEventType> events, AVTransportService source) {
     if (source == currentZone.getMediaRendererDevice().getAvTransportService()) {
+      // TODO this is the slow (but easy) way
       controller.getExecutor().execute(new NowPlayingFetcher(currentZone));
     }
   }
@@ -251,11 +316,7 @@ public class QueueDisplay extends Composite implements ZoneListSelectionListener
     }
 
     public void run() {
-      queue.removeAll();
-      for (Entry entry : entries) {
-        queue.add(entry.getTitle());
-      }
-      layout();
+      queueModel.setEntries(entries);
     }
   }
 
@@ -278,7 +339,6 @@ public class QueueDisplay extends Composite implements ZoneListSelectionListener
       this.name = name;
     }
     
-
     public void run() {
       trackArtist.setText(artist);
       trackAlbum.setText(album);
@@ -297,6 +357,11 @@ public class QueueDisplay extends Composite implements ZoneListSelectionListener
     }
   }
   
+  /**
+   * A runnable that fetches album artwork and applies it to the artwork label
+   * @author David Wheeler
+   *
+   */
   private final class AlbumArtworkFetcher implements Runnable {
     private URL url;
     public AlbumArtworkFetcher(URL url) {
@@ -341,8 +406,11 @@ public class QueueDisplay extends Composite implements ZoneListSelectionListener
     }
   }
 
-  // TODO this is fine for now playing, but should do a query of the queue for
-  // the rest of the queue.
+  /**
+   * A Runnable that requests the currently playing track and applies the info to this QueueDisplay
+   * @author David Wheeler
+   *
+   */
   protected class NowPlayingFetcher implements Runnable {
 
     private ZonePlayer zone;
@@ -355,7 +423,6 @@ public class QueueDisplay extends Composite implements ZoneListSelectionListener
       }
       try {
         MediaInfo mediaInfo = zone.getMediaRendererDevice().getAvTransportService().getMediaInfo();
-        TransportInfo transportInfo = zone.getMediaRendererDevice().getAvTransportService().getTransportInfo();
         PositionInfo posInfo = zone.getMediaRendererDevice().getAvTransportService().getPositionInfo();
         String uri = mediaInfo.getCurrentURI();
         if (uri == null) {
@@ -376,7 +443,8 @@ public class QueueDisplay extends Composite implements ZoneListSelectionListener
             return;
           }
           
-          setQueueEntry(posInfo, currentZone);          
+          setQueueEntry(posInfo, currentZone);
+          queueModel.setNowPlaying(posInfo.getTrackNum() -1);
         } else if (uri.startsWith("x-rincon:")){
           // We're streaming from another sonos
           String id = uri.substring(9);
@@ -406,11 +474,16 @@ public class QueueDisplay extends Composite implements ZoneListSelectionListener
     }
   }
   
+  /**
+   * Plays any queue entry on double click
+   * @author David Wheeler
+   *
+   */
   public class QueueMouseListener implements MouseListener {
     public void mouseDoubleClick(MouseEvent e) {
-      int queueIndex = ((org.eclipse.swt.widgets.List)e.getSource()).getSelectionIndex();
+      int queueIndex = ((Table)e.getSource()).getSelectionIndex();
       try {
-        currentZone.playQueueEntry(queueIndex - 1);
+        currentZone.playQueueEntry(queueIndex + 1);
       } catch (IOException e1) {
         // TODO Auto-generated catch block
         e1.printStackTrace();
@@ -432,4 +505,52 @@ public class QueueDisplay extends Composite implements ZoneListSelectionListener
 
   }
 
+  /**
+   * Populates the queue Table with data from the QueueModel
+   * @author David Wheeler
+   *
+   */
+  public class QueueDataFiller implements Listener {
+
+    public void handleEvent(Event event) {
+      TableItem row = (TableItem) event.item;
+      row.setText(queueModel.getTitle(event.index));
+      if (queueModel.isNowPlaying(event.index)) {
+        row.setImage(nowPlayingImage);
+      }
+      else {
+        row.setImage(emptyImage);
+      }
+    }
+  }
+  
+  /**
+   * Notifies the queue Table of any changes to the QueueModel
+   * @author David Wheeler
+   *
+   */
+  public class TableUpdater implements QueueModelListener {
+
+    private Runnable updater = new Runnable() {
+      public void run() {
+        queue.setItemCount(queueModel.getSize());
+        queue.clearAll();
+        queue.redraw();
+        if (queueModel.getNowPlaying() > -1) {
+          queue.showItem(queue.getItem(queueModel.getNowPlaying()));
+        }
+      }
+    };
+    
+    public void entriesChanged(QueueModel model) {
+      updater.run();
+    }
+
+    public void nowPlayingChanged(QueueModel model) {
+      // TODO a bit lazy - shouldn't have to repaint the whole table, just a few
+      // rows
+      queue.getDisplay().asyncExec(updater);
+    }
+
+  }
 }

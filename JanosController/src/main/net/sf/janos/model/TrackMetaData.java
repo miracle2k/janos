@@ -97,8 +97,8 @@ public class TrackMetaData {
       // need to use mpath. what does this mean??
       LOG.info("uri = " + uri);
     } 
-    
-    return new URL("http", zp.getIP().getHostAddress(), zp.getPort(), uri);
+
+    return uri.isEmpty() ? null : new URL("http", zp.getIP().getHostAddress(), zp.getPort(), uri);
   }
 
 }

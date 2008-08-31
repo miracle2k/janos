@@ -18,14 +18,14 @@ package net.sf.janos.control;
 import java.io.IOException;
 import java.net.InetAddress;
 import java.net.UnknownHostException;
-import java.util.List;
-
-import org.xml.sax.SAXException;
 
 import net.sbbi.upnp.devices.UPNPRootDevice;
 import net.sbbi.upnp.messages.UPNPResponseException;
 import net.sf.janos.model.Entry;
+import net.sf.janos.model.SeekTargetFactory;
 import net.sf.janos.model.TransportInfo.TransportState;
+
+import org.xml.sax.SAXException;
 
 /**
  * Corresponds to a physical Zone Player, and gives access all the devices and
@@ -198,11 +198,7 @@ public class ZonePlayer {
 
   public void playQueueEntry(int index) throws IOException, UPNPResponseException {
     AVTransportService serv = getMediaRendererDevice().getAvTransportService();
-    List<Entry> entries = getMediaServerDevice().getContentDirectoryService().getQueue(index-1, 1);
-    if (!entries.isEmpty()) {
-      Entry queue = entries.get(0);
-      serv.setAvTransportUri(queue);
-    }
+    serv.seek(SeekTargetFactory.createTrackSeekTarget(index));
   }
 
   /**
