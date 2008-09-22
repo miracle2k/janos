@@ -26,7 +26,15 @@ public class Janos {
    * @param args
    */
   public static void main(String[] args) {
-    System.setProperty("net.sbbi.upnp.Discovery.bindPort", "2000");
+//    System.setProperty("net.sbbi.upnp.Discovery.bindPort", "2000");
+    if (args.length > 1) {
+      System.out.println("Usage: Janos [port]");
+      System.exit(1);
+    }
+    
+    if (args.length == 1) {
+      System.setProperty("net.sbbi.upnp.Discovery.bindPort", args[0]);
+    }
     
     SonosController controller = SonosController.getInstance();
     SonosControllerShell shell = new SonosControllerShell(new Display(), controller);

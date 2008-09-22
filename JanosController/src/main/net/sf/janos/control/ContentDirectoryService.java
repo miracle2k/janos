@@ -38,6 +38,7 @@ import org.xml.sax.SAXException;
  */
 public class ContentDirectoryService extends AbstractService {
   
+
   private static final int DEFAULT_REQUEST_COUNT = 200;
 
   private static final String DEFAULT_SORT_CRITERIA = "";
@@ -177,45 +178,64 @@ public class ContentDirectoryService extends AbstractService {
     return response;
   }
   
-  public void getAllEntriesAsync(final EntryCallback callback, final String type) {
-    SonosController.getInstance().getExecutor().execute(new Runnable() {
-      public void run() {
-        int startAt = 0;
-        boolean completedSuccessfully = false;
-        try {
-          ActionResponse response = getEntriesImpl(startAt, DEFAULT_REQUEST_COUNT, type, DEFAULT_BROWSE_TYPE, DEFAULT_FILTER_STRING, DEFAULT_SORT_CRITERIA);
-          int totalCount = Integer.parseInt(response.getOutActionArgumentValue("TotalMatches"));
-          
-          startAt = Integer.parseInt(response.getOutActionArgumentValue("NumberReturned"));
-          callback.updateCount(totalCount);
-          callback.addEntries(ResultParser.getEntriesFromStringResult(response.getOutActionArgumentValue("Result")));
-          while (startAt < totalCount) {
-            response = getEntriesImpl(startAt, DEFAULT_REQUEST_COUNT, type, DEFAULT_BROWSE_TYPE, DEFAULT_FILTER_STRING, DEFAULT_SORT_CRITERIA);
-            startAt += Integer.parseInt(response.getOutActionArgumentValue("NumberReturned"));
-            callback.addEntries(ResultParser.getEntriesFromStringResult(response.getOutActionArgumentValue("Result")));
-          }
-          completedSuccessfully = true;
-        } catch (IOException e) {
-          // TODO Auto-generated catch block
-          e.printStackTrace();
-        } catch (UPNPResponseException e) {
-          // TODO Auto-generated catch block
-          e.printStackTrace();
-        } catch (SAXException e) {
-          // TODO Auto-generated catch block
-          e.printStackTrace();
-        } finally {
-          callback.retrievalComplete(completedSuccessfully);
-        }
-        
-      }
-    });
+  public BrowseHandle getAllEntriesAsync(final EntryCallback callback, final String type) {
+    AsyncBrowser handle = new AsyncBrowser(type, callback);
+    SonosController.getInstance().getExecutor().execute(handle);
+    return handle;
   }
   
   @Override
   public void dispose() {
     super.dispose();
     unregisterServiceEventing(serviceEventHandler);
+  }
+  
+  private final class AsyncBrowser implements Runnable, BrowseHandle {
+    private final String type;
+
+    private final EntryCallback callback;
+    
+    private boolean isCancelled = false;
+
+    protected AsyncBrowser(String type, EntryCallback callback) {
+      this.type = type;
+      this.callback = callback;
+    }
+
+    public void run() {
+      int startAt = 0;
+      boolean completedSuccessfully = false;
+      try {
+        ActionResponse response = getEntriesImpl(startAt, DEFAULT_REQUEST_COUNT, type, DEFAULT_BROWSE_TYPE, DEFAULT_FILTER_STRING, DEFAULT_SORT_CRITERIA);
+        int totalCount = Integer.parseInt(response.getOutActionArgumentValue("TotalMatches"));
+        
+        startAt = Integer.parseInt(response.getOutActionArgumentValue("NumberReturned"));
+        callback.updateCount(totalCount);
+        callback.addEntries(ResultParser.getEntriesFromStringResult(response.getOutActionArgumentValue("Result")));
+        while (!isCancelled && startAt < totalCount) {
+          response = getEntriesImpl(startAt, DEFAULT_REQUEST_COUNT, type, DEFAULT_BROWSE_TYPE, DEFAULT_FILTER_STRING, DEFAULT_SORT_CRITERIA);
+          startAt += Integer.parseInt(response.getOutActionArgumentValue("NumberReturned"));
+          callback.addEntries(ResultParser.getEntriesFromStringResult(response.getOutActionArgumentValue("Result")));
+        }
+        completedSuccessfully = isCancelled;
+      } catch (IOException e) {
+        // TODO Auto-generated catch block
+        e.printStackTrace();
+      } catch (UPNPResponseException e) {
+        // TODO Auto-generated catch block
+        e.printStackTrace();
+      } catch (SAXException e) {
+        // TODO Auto-generated catch block
+        e.printStackTrace();
+      } finally {
+        callback.retrievalComplete(completedSuccessfully);
+      }
+      
+    }
+    
+    public void cancel() {
+      isCancelled = true;
+    }
   }
 
 }

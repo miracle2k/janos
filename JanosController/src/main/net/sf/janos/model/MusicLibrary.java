@@ -19,6 +19,7 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
 
+import net.sf.janos.control.BrowseHandle;
 import net.sf.janos.control.EntryCallback;
 import net.sf.janos.control.ZonePlayer;
 
@@ -39,16 +40,29 @@ public class MusicLibrary {
   private int reportedSize;
 
   private List<MusicLibraryListener> listeners = new ArrayList<MusicLibraryListener>();
+
+  private BrowseHandle browser;
   
   public MusicLibrary(ZonePlayer zone) {
     this(zone, null);
   }
   
   public MusicLibrary(ZonePlayer zone, Entry entry) {
+    String id;
     if (entry != null) {
-      zone.getMediaServerDevice().getContentDirectoryService().getAllEntriesAsync(new MusicLibraryEntryCallback(), entry.getId());
+      id = entry.getId();
+    } else {
+      id = "A:";
     }
+    browser = zone.getMediaServerDevice().getContentDirectoryService().getAllEntriesAsync(new MusicLibraryEntryCallback(), id);
     // TODO add notification listener
+  }
+  
+  public void dispose() {
+    if (browser != null) {
+      browser.cancel();
+    }
+    removeListeners();
   }
   
   protected void addEntries(Collection<Entry> newEntries) {

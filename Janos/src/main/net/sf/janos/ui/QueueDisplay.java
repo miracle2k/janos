@@ -460,7 +460,16 @@ public class QueueDisplay extends Composite implements ZoneListSelectionListener
         } else if (uri.startsWith("x-rincon-mp3radio:")) {
           // yep, it's the radio
           setNowPlayingAsync("Internet Radio", mediaInfo.getCurrentURI().substring(mediaInfo.getCurrentURI().lastIndexOf("://") + 1), mediaInfo.getCurrentURIMetaData().getTitle(), null);
-        } // TODO else...
+        } else if (uri.startsWith("x-rincon-stream:")) {
+          // line in stream
+          setNowPlayingAsync("Line In", "", mediaInfo.getCurrentURIMetaData().getTitle(), null);
+        } else {
+          if (LOG.isWarnEnabled()) {
+            LOG.warn("Couldn't find type of " + mediaInfo.getCurrentURIMetaData().getId() + ": " + uri);
+          }
+        }
+        
+        // TODO else...
       } catch (IOException e) {
         // TODO Auto-generated catch block
         LOG.error("Couldn't load queue", e);

@@ -1,0 +1,19 @@
+Change Log
+
+0.2
+- Removed tooltip on zone list
+- Added log4j logging
+- Dispose correctly on close
+- Added icons for zones, library entries
+- Added Radio, Line In to library
+- Browse requests now cancelled when table is disposed
+
+0.1
+Initial Release. 
+Currently works for: 
+  Browsing Music 
+  Adding to queue (not removing) 
+  Seeking in queue 
+  Changing volume 
+  Next/Previous 
+  Displaying now playing info

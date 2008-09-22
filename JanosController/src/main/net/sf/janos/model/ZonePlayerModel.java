@@ -95,4 +95,8 @@ public class ZonePlayerModel {
   public void removeZonePlayerModelListener(ZonePlayerModelListener l) {
     listeners.remove(l);
   }
+
+  public int getSize() {
+    return zonePlayers.size();
+  }
 }

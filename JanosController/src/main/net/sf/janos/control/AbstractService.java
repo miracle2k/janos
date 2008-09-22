@@ -42,9 +42,9 @@ public abstract class AbstractService {
   private static final Log LOG = LogFactory.getLog(AbstractService.class);
   
   /**
-   * The length of time in seconds to register events for.
+   * The default length of time in seconds to register events for.
    */
-  protected static final int DEFAULT_EVENT_PERIOD = 600; // 10 mins
+  protected static final int DEFAULT_EVENT_PERIOD = 3600; // 1 hour
   
   protected final UPNPService service;
   protected final UPNPMessageFactory messageFactory;
@@ -61,6 +61,7 @@ public abstract class AbstractService {
   }
   
   public void dispose() {
+    LOG.info("Unregistering event listeners for " + getClass());
     List<EventingRefreshTask> tasksCopy = new ArrayList<EventingRefreshTask>(tasks);
     for (EventingRefreshTask task : tasksCopy) {
       unregisterServiceEventing(task.handler);
@@ -107,8 +108,8 @@ public abstract class AbstractService {
       refreshServiceEventing(DEFAULT_EVENT_PERIOD, handler);
       EventingRefreshTask task = new EventingRefreshTask(handler);
       tasks.add(task);
-      // schedule to refresh half of the event period (in milis, not seconds)
-      timer.schedule(task, DEFAULT_EVENT_PERIOD * 500, DEFAULT_EVENT_PERIOD * 500);
+      // schedule to refresh 1 minute less than the event period (in milis, not seconds)
+      timer.schedule(task, (DEFAULT_EVENT_PERIOD-60) * 1000, (DEFAULT_EVENT_PERIOD-60) * 1000);
       return true;
     } catch (IOException e) {
       LOG.warn("Could not register service eventing: ", e);

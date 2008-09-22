@@ -4,8 +4,9 @@
 	<classpathentry kind="src" output="build/test" path="src/test"/>
 	<classpathentry kind="con" path="org.eclipse.jdt.launching.JRE_CONTAINER"/>
 	<classpathentry combineaccessrules="false" kind="src" path="/UPNPLib"/>
-	<classpathentry kind="lib" path="lib/swt.jar" sourcepath="/org.eclipse.swt/src.zip"/>
+	<classpathentry kind="lib" path="lib/swt.jar" sourcepath="/Users/davidwheeler/Desktop/Recent Downloads/swt-3-macosx/src.zip"/>
 	<classpathentry kind="lib" path="lib/commons-logging-api.jar"/>
+	<classpathentry kind="lib" path="lib/log4j-1.2.15.jar"/>
 	<classpathentry combineaccessrules="false" kind="src" path="/JanosController"/>
 	<classpathentry kind="output" path="build"/>
 </classpath>

@@ -23,6 +23,7 @@ import net.sf.janos.control.AVTransportListener;
 import net.sf.janos.control.AVTransportService;
 import net.sf.janos.control.RenderingControlListener;
 import net.sf.janos.control.RenderingControlService;
+import net.sf.janos.control.SonosController;
 import net.sf.janos.control.ZoneListSelectionListener;
 import net.sf.janos.control.ZonePlayer;
 import net.sf.janos.model.TransportInfo.TransportState;
@@ -136,21 +137,24 @@ public class MusicControlPanel extends Composite implements ZoneListSelectionLis
   }
   
   protected void play() {
-    try {
-      if (play.getText().equals("Pause")) {
-        currentZone.getMediaRendererDevice().getAvTransportService().pause();
-        setIsPlaying(isPlaying());
-      } else if (play.getText().equals("Play")) {
-        currentZone.getMediaRendererDevice().getAvTransportService().play();
-        setIsPlaying(isPlaying());
+    final String action = play.getText();
+    SonosController.getInstance().getExecutor().execute(new Runnable() {
+      public void run() {
+        try {
+          if (action.equals("Pause")) {
+            currentZone.getMediaRendererDevice().getAvTransportService().pause();
+          } else if (action.equals("Play")) {
+            currentZone.getMediaRendererDevice().getAvTransportService().play();
+          }
+        } catch (UPNPResponseException e) {
+          // TODO Auto-generated catch block
+          e.printStackTrace();
+        } catch (IOException e) {
+          // TODO Auto-generated catch block
+          e.printStackTrace();
+        }
       }
-    } catch (UPNPResponseException e) {
-      // TODO Auto-generated catch block
-      e.printStackTrace();
-    } catch (IOException e) {
-      // TODO Auto-generated catch block
-      e.printStackTrace();
-    }
+    });
   }
 
   protected void next() {

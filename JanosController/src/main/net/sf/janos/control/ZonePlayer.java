@@ -17,6 +17,8 @@ package net.sf.janos.control;
 
 import java.io.IOException;
 import java.net.InetAddress;
+import java.net.MalformedURLException;
+import java.net.URL;
 import java.net.UnknownHostException;
 
 import net.sbbi.upnp.devices.UPNPRootDevice;
@@ -213,6 +215,16 @@ public class ZonePlayer {
    */
   public int getPort() {
     return port;
+  }
+  
+  /**
+   * Creates a new URL by appending the given string to this zonePlayer's attributes. 
+   * @param url the url to append, eg "/images/image1.png"
+   * @return the complete url eg "http://192.168.0.1:1400/images/image1.png"
+   * @throws MalformedURLException 
+   */
+  public URL appendUrl(String url) throws MalformedURLException {
+    return new URL("http", getIP().getHostAddress(), getPort(), url);
   }
   
   // TODO is UDN a sensible choice for identity?

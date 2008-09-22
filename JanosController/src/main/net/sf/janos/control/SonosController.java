@@ -31,6 +31,7 @@ import net.sbbi.upnp.DiscoveryAdvertisement;
 import net.sbbi.upnp.DiscoveryEventHandler;
 import net.sbbi.upnp.DiscoveryListener;
 import net.sbbi.upnp.DiscoveryResultsHandler;
+import net.sbbi.upnp.ServicesEventing;
 import net.sbbi.upnp.devices.UPNPRootDevice;
 import net.sf.janos.model.ZoneGroup;
 import net.sf.janos.model.ZonePlayerModel;
@@ -112,6 +113,7 @@ public class SonosController implements ZoneListSelectionListener{
   }
   
   private SonosController() {
+    ServicesEventing.getInstance().setDaemonPort(Integer.parseInt(System.getProperty("net.sf.EventingPort", "2001")));
     try {
       // These first two listen for broadcast advertisements, while the 3rd
       // listens for responses to a search request.
@@ -198,7 +200,9 @@ public class SonosController implements ZoneListSelectionListener{
    * @param udn
    */
   private void removeZonePlayer(final String udn) {
-    zonePlayers.remove(zonePlayers.getById(udn));
+    ZonePlayer zp = zonePlayers.getById(udn);
+    zonePlayers.remove(zp);
+    zp.dispose();
   }
   
   /**
@@ -241,5 +245,8 @@ public class SonosController implements ZoneListSelectionListener{
     DiscoveryAdvertisement.getInstance().unRegisterEvent(DiscoveryAdvertisement.EVENT_SSDP_ALIVE, ZonePlayerConstants.SONOS_DEVICE_TYPE, discoveryHandler);
     DiscoveryAdvertisement.getInstance().unRegisterEvent(DiscoveryAdvertisement.EVENT_SSDP_BYE_BYE, ZonePlayerConstants.SONOS_DEVICE_TYPE, discoveryHandler);
     DiscoveryListener.getInstance().unRegisterResultsHandler(discoveryHandler, ZonePlayerConstants.SONOS_DEVICE_TYPE);
+    for (ZonePlayer zp : zonePlayers.getAllZones()) {
+      zp.dispose();
+    }
   }
 }

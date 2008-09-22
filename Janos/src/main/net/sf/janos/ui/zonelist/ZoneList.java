@@ -15,27 +15,41 @@
  */
 package net.sf.janos.ui.zonelist;
 
+import java.io.IOException;
+import java.io.InputStream;
+import java.net.URL;
 import java.util.ArrayList;
 import java.util.List;
 
+import net.sbbi.upnp.devices.DeviceIcon;
 import net.sf.janos.control.SonosController;
 import net.sf.janos.control.ZoneListSelectionListener;
 import net.sf.janos.control.ZonePlayer;
 import net.sf.janos.model.ZonePlayerModel;
 import net.sf.janos.model.ZonePlayerModelListener;
 
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
 import org.eclipse.swt.SWT;
 import org.eclipse.swt.events.SelectionEvent;
 import org.eclipse.swt.events.SelectionListener;
+import org.eclipse.swt.graphics.Image;
+import org.eclipse.swt.graphics.ImageData;
+import org.eclipse.swt.graphics.ImageLoader;
 import org.eclipse.swt.layout.FillLayout;
 import org.eclipse.swt.widgets.Composite;
+import org.eclipse.swt.widgets.Event;
+import org.eclipse.swt.widgets.Listener;
+import org.eclipse.swt.widgets.Table;
+import org.eclipse.swt.widgets.TableColumn;
+import org.eclipse.swt.widgets.TableItem;
 
 public class ZoneList extends Composite implements ZonePlayerModelListener {
   
-//  private static final Log LOG = LogFactory.getLog(ZoneList.class);
+  private static final Log LOG = LogFactory.getLog(ZoneList.class);
   
   private final List<ZoneListSelectionListener> selectionListeners = new ArrayList<ZoneListSelectionListener>();
-  private final org.eclipse.swt.widgets.List zoneTable;
+  private final Table zoneTable;
   private final ZonePlayerModel model;
   private int currentSelection = -1;
 
@@ -44,8 +58,19 @@ public class ZoneList extends Composite implements ZonePlayerModelListener {
     this.model = controller.getZonePlayerModel();
 
     setLayout(new FillLayout(SWT.VERTICAL));
-    zoneTable = new org.eclipse.swt.widgets.List(this, SWT.SINGLE);
-    zoneTable.setToolTipText("Drag a zone onto another to link them");
+    zoneTable = new Table(this, SWT.SINGLE | SWT.VIRTUAL);
+    TableColumn zoneColumn = new TableColumn(zoneTable, SWT.NONE);
+    zoneColumn.setText("Zones");
+    zoneColumn.setWidth(180);
+//    zoneTable.setToolTipText("Drag a zone onto another to link them");
+    zoneTable.addListener(SWT.SetData, new Listener() {
+      public void handleEvent(Event event) {
+        TableItem item = (TableItem)event.item;
+        int index = event.index;
+        item.setText(model.get(index).getDevicePropertiesService().getZoneAttributes().getName());
+        setIcon(item, model.get(index));
+      }
+    });
     
     zoneTable.addSelectionListener(new SelectionListener() {
       public void widgetDefaultSelected(SelectionEvent arg0) {
@@ -61,10 +86,19 @@ public class ZoneList extends Composite implements ZonePlayerModelListener {
     });
     currentSelection = zoneTable.getSelectionIndex();
     
-    controller.getZonePlayerModel().addZonePlayerModelListener(this);
-    for (ZonePlayer zp : controller.getZonePlayerModel().getAllZones()) {
+    model.addZonePlayerModelListener(this);
+    for (ZonePlayer zp : model.getAllZones()) {
       addZonePlayerToDisplay(zp);
     }
+  }
+  
+  @Override
+  public void dispose() {
+    super.dispose();
+//    for (TableColumn col : zoneTable.getColumns()) {
+//      col.dispose();
+//    }
+//    zoneTable.dispose();
   }
   
   public void zonePlayerAdded(final ZonePlayer dev, ZonePlayerModel model) {
@@ -74,32 +108,8 @@ public class ZoneList extends Composite implements ZonePlayerModelListener {
   private void addZonePlayerToDisplay(final ZonePlayer dev) {
     getDisplay().asyncExec(new Runnable() {
       public void run() {
-//        Label deviceLabel = new Label(ZoneList.this, SWT.NONE);
-//        deviceLabel.setText(dev.getRootDevice().getFriendlyName());
-//        List<DeviceIcon> icons = dev.getRootDevice().getDeviceIcons(); //getChildDevice(SonosController.MEDIA_SERVER_DEVICE_TYPE).getDeviceIcons();
-//        LOG.info ("device icons: " + icons);
-//        if (icons != null && icons.size() > 0) {
-//          URL location = icons.get(0).getUrl();
-//          LOG.debug("Setting icon to "+ location);
-//          InputStream stream = null;
-//          try {
-//            stream = location.openStream();
-//            deviceLabel.setImage(new Image(getDisplay(), stream));
-//          } catch (IOException e) {
-//            // who cares
-//          } finally {
-//            if (stream != null) {
-//              try {
-//                stream.close();
-//              } catch (IOException e) {
-//                // TODO Auto-generated catch block
-//                e.printStackTrace();
-//              }
-//            }
-//          }
-//        }
-        zoneTable.add(dev.getDevicePropertiesService().getZoneAttributes().getName());
-        if (zoneTable.getItemCount() == 1) {
+        zoneTable.setItemCount(model.getSize());
+        if (zoneTable.getSelectionIndex() == -1) {
           // BUG for some reason, this call doesn't fire selection events. so we have to do it ourselfs!
           zoneTable.select(0);
           currentSelection=0;
@@ -107,14 +117,58 @@ public class ZoneList extends Composite implements ZonePlayerModelListener {
         }
         redraw();
       }
+
     });
   }
   
-  public void zonePlayerRemoved(final ZonePlayer dev, ZonePlayerModel model) {
+  private void setIcon(final TableItem newItem, final ZonePlayer dev) {
+    // TODO use image cache
+    Image oldImage = newItem.getImage();
+    if (oldImage != null) {
+      oldImage.dispose();
+    }
+    List<DeviceIcon> icons = dev.getMediaRendererDevice().getUPNPDevice().getDeviceIcons();
+    if (icons == null || icons.isEmpty()) {
+      newItem.setImage((Image)null);
+      return;
+    }
+    final DeviceIcon deviceIcon = icons.get(0);
+    SonosController.getInstance().getExecutor().execute(new Runnable() {
+      public void run() {
+        InputStream is = null;
+        URL url = deviceIcon.getUrl();
+        try {
+          is = url.openStream();
+          final ImageData[] images = new ImageLoader().load(is);
+          if (images != null && images.length > 0) {
+            newItem.getDisplay().asyncExec(new Runnable() {
+              public void run() {
+                if (!newItem.isDisposed()) {
+                  newItem.setImage(new Image(newItem.getDisplay(), images[0]));
+                }
+              }
+            });
+          }
+        } catch (IOException e) {
+          LOG.error("Couldn't load image " + url, e);
+        } finally {
+          if (is != null) {
+            try {
+              is.close();
+            } catch (IOException ex1) {}
+          }
+        }
+      }
+    });
+  }
+
+  
+  public void zonePlayerRemoved(final ZonePlayer dev, final ZonePlayerModel model) {
     getDisplay().asyncExec(new Runnable() {
       public void run() {
-       zoneTable.remove(dev.getDevicePropertiesService().getZoneAttributes().getName());
-       redraw();
+//       zoneTable.remove(dev.getDevicePropertiesService().getZoneAttributes().getName());
+        zoneTable.setItemCount(model.getSize());
+        redraw();
       }
     });
   }

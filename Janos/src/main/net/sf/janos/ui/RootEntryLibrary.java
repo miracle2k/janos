@@ -15,30 +15,29 @@
  */
 package net.sf.janos.ui;
 
-import java.util.List;
+import java.util.ArrayList;
+import java.util.Collection;
 
 import net.sf.janos.control.ZonePlayer;
 import net.sf.janos.model.Entry;
 import net.sf.janos.model.MusicLibrary;
 
-// TODO need to implement selection listener?
-public class RootEntryLibrary extends MusicLibrary {
+public class RootEntryLibrary extends MusicLibrary{
 
   public RootEntryLibrary(ZonePlayer zone) {
-    super(zone);
-    int start = 0;
-    int length = 50;
-    List<Entry> newArtists = zone.getMediaServerDevice()
-        .getContentDirectoryService().getFolderEntries(start, length);
-    while (newArtists != null && newArtists.size() > 0) {
-      entries.addAll(newArtists);
-      if (length > newArtists.size()) {
-        break;
-      }
-      start += length;
-      newArtists = zone.getMediaServerDevice().getContentDirectoryService()
-          .getArtists(start, length);
-    }
+    super(zone); // already adds A: entries
+    Entry radio = new Entry("R:", "Radio Stations", null, null, null, null, "object.container.radioContainer", null);
+    Entry lineIn = new Entry("AI:", "Line In", null, null, null, null, "object.container.lineInContainer", null);
+    Collection<Entry> entries = new ArrayList<Entry>();
+    entries.add(radio);
+    entries.add(lineIn);
+    // TODO these should be added AFTER the other entries...
+    addEntries(entries);
 
+  }
+  
+  @Override
+  protected void setReportedSize(int count) {
+    super.setReportedSize(count + 2);
   }
 }

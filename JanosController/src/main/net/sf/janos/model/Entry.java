@@ -126,7 +126,7 @@ public class Entry {
         LOG.info("uri = " + uri);
       } 
       
-      return new URL("http", zp.getIP().getHostAddress(), zp.getPort(), uri);
+      return zp.appendUrl(uri);
     }
 
     /**

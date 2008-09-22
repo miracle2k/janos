@@ -32,6 +32,9 @@ import org.eclipse.swt.events.MouseEvent;
 import org.eclipse.swt.events.MouseListener;
 import org.eclipse.swt.events.SelectionEvent;
 import org.eclipse.swt.events.SelectionListener;
+import org.eclipse.swt.graphics.Device;
+import org.eclipse.swt.graphics.Image;
+import org.eclipse.swt.graphics.ImageData;
 import org.eclipse.swt.layout.FillLayout;
 import org.eclipse.swt.widgets.Composite;
 import org.eclipse.swt.widgets.Event;
@@ -51,6 +54,12 @@ public class MusicLibraryTable extends Composite implements ZonePlayerModelListe
    * The string displayed when no zone players are known of
    */
   private static final String NO_ZONES_TABLE_STRING = "No ZonePlayers found";
+  
+  private static final ImageData ARTIST_IMAGE = new ImageData("resources/artist.png");
+  private static final ImageData TRACK_IMAGE = new ImageData("resources/track.png");
+  private static final ImageData ALBUM_IMAGE = new ImageData("resources/album.png");
+  private static final ImageData PLAYLIST_IMAGE = new ImageData("resources/playlist.png");
+  private static final ImageData GENRE_IMAGE = new ImageData("resources/genre.png");
   
   /**
    * The list of music tables and related objects
@@ -75,6 +84,8 @@ public class MusicLibraryTable extends Composite implements ZonePlayerModelListe
    */
   public MusicLibraryTable(final Composite parent, int style, final SonosControllerShell controllerShell) {
     super(parent, style);
+    tableMouseListener = new TableMouseListener(controllerShell);
+    tableSelectionListener = new TableSelectionListener(controllerShell);
     setLayout(new FillLayout(SWT.HORIZONTAL));
 
     ZonePlayerModel zoneModel = controllerShell.getController().getZonePlayerModel();
@@ -86,8 +97,6 @@ public class MusicLibraryTable extends Composite implements ZonePlayerModelListe
       populateMusicLibraryFrom(zoneModel.get(0));
     }
     
-    tableMouseListener = new TableMouseListener(controllerShell);
-    tableSelectionListener = new TableSelectionListener(controllerShell);
   }
   
   /**
@@ -103,12 +112,14 @@ public class MusicLibraryTable extends Composite implements ZonePlayerModelListe
     final MusicLibrary rootLib = new RootEntryLibrary(player);
     final Table typeTable = new Table(this, SWT.MULTI |SWT.FULL_SELECTION| SWT.VIRTUAL | SWT.BORDER);
     TableLibraryAdapter listener = new TableLibraryAdapter(rootLib);
+    TableUpdater musicLibraryListener = new TableUpdater(typeTable, rootLib);
+    rootLib.addListener(musicLibraryListener);
     musicTables.add(new MusicTable(typeTable, rootLib, listener));
     typeTable.setLinesVisible(true);
     typeTable.setHeaderVisible(true);
     TableColumn name = new TableColumn(typeTable, SWT.LEFT);
     name.setText("Type");
-    name.setWidth(150);
+    name.setWidth(180);
     
     typeTable.setItemCount(rootLib.getSize());
     typeTable.addListener (SWT.SetData, listener);
@@ -130,6 +141,11 @@ public class MusicLibraryTable extends Composite implements ZonePlayerModelListe
           if (table.model != null) {
             table.model.removeListeners();
           }
+          for (TableItem item : table.table.getItems()) {
+            if (item.getImage() != null) {
+              item.getImage().dispose();
+            }
+          }
           table.table.dispose();
         }
       }
@@ -146,7 +162,7 @@ public class MusicLibraryTable extends Composite implements ZonePlayerModelListe
     table.getTable().removeMouseListener(tableMouseListener);
     table.getTable().removeSelectionListener(tableSelectionListener);
     if (table.model != null) {
-      table.model.removeListeners();
+      table.model.dispose();
     }
     table.table.dispose();
   }
@@ -305,7 +321,9 @@ public class MusicLibraryTable extends Composite implements ZonePlayerModelListe
     public void handleEvent (final Event event) {
       TableItem item = (TableItem) event.item;
       if (lib.hasEntryFor(event.index)) {
-        item.setText(lib.getEntryAt(event.index).getTitle());
+        Entry entry = lib.getEntryAt(event.index);
+        item.setText(entry.getTitle());
+        item.setImage(createImage(item.getDisplay(), entry));
       } else {
         item.setText("<loading..>");
       }
@@ -329,7 +347,9 @@ public class MusicLibraryTable extends Composite implements ZonePlayerModelListe
     public void entriesAdded(final int start, final int end) {
       table.getDisplay().asyncExec(new Runnable() {
         public void run() {
-          table.clear(start, end);
+          if (!table.isDisposed()) {
+            table.clear(start, end);
+          }
         }
       });
     }
@@ -337,7 +357,9 @@ public class MusicLibraryTable extends Composite implements ZonePlayerModelListe
     public void sizeChanged() {
       table.getDisplay().asyncExec(new Runnable() {
         public void run() {
-          table.setItemCount(lib.getSize());
+          if (!table.isDisposed()) {
+            table.setItemCount(lib.getSize());
+          }
         }
       });
     }
@@ -366,6 +388,56 @@ public class MusicLibraryTable extends Composite implements ZonePlayerModelListe
     public Table getTable() {
       return table;
     }
+  }
+
+  /**
+   * Creates an image appropriate for the provided entry
+   * @param display the Device to create the image for
+   * @param entry the entry the image is to reflect
+   * @return an Image appropriate for the given entry, or null
+   */
+  public Image createImage(Device display, Entry entry) {
+    // try to do it in order of most-popular to least-popular, to reduce cpu load
+    if (entry.getUpnpClass().equals("object.container.album.musicAlbum")) {
+      return new Image(display, ALBUM_IMAGE);
+    }
+    if (entry.getUpnpClass().equals("object.item.audioItem.musicTrack")) {
+      return new Image(display, TRACK_IMAGE);
+    }
+    if (entry.getId().startsWith("A:ALBUMARTIST")) {
+      return new Image(display, ARTIST_IMAGE);
+    }
+    if (entry.getId().startsWith("A:ALBUM")) {
+      return new Image(display, ALBUM_IMAGE);
+    }
+    if (entry.getId().startsWith("A:TRACK")) {
+      return new Image(display, TRACK_IMAGE);
+    }
+    if (entry.getId().startsWith("A:COMPOSER")) {
+      return new Image(display, ARTIST_IMAGE);
+    }
+    if (entry.getId().startsWith("A:PLAYLIST")) {
+      return new Image(display, PLAYLIST_IMAGE);
+    }
+    if (entry.getId().startsWith("A:ARTIST")) { // Contributing Artist
+      return new Image(display, ARTIST_IMAGE);
+    }
+    if (entry.getId().startsWith("A:GENRE")) {
+      return new Image(display, GENRE_IMAGE);
+    }
+    if (entry.getUpnpClass().equals("object.container.radioContainer")) { // "Radio Stations"
+      return new Image(display, PLAYLIST_IMAGE);
+    }
+    if (entry.getUpnpClass().equals("object.item.audioItem.audioBroadcast")) { // a playable radio station
+      return new Image(display, TRACK_IMAGE);
+    }
+    if (entry.getId().startsWith("R:")) { // a radio station grouping
+      return new Image(display, PLAYLIST_IMAGE);
+    }
+    if (entry.getId().startsWith("AI:")) {
+      return null; // line in
+    }
+    return null;
   }
 
 }

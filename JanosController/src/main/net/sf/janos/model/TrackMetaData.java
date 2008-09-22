@@ -98,7 +98,7 @@ public class TrackMetaData {
       LOG.info("uri = " + uri);
     } 
 
-    return uri.isEmpty() ? null : new URL("http", zp.getIP().getHostAddress(), zp.getPort(), uri);
+    return uri.length() == 0 ? null : new URL("http", zp.getIP().getHostAddress(), zp.getPort(), uri);
   }
 
 }

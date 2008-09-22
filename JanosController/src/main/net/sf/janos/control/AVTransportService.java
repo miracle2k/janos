@@ -16,6 +16,7 @@
 package net.sf.janos.control;
 
 import java.io.IOException;
+import java.text.MessageFormat;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashMap;
@@ -55,7 +56,6 @@ import org.xml.sax.SAXException;
  * NOTE: some methods in this class are incomplete stubs.
  * 
  * @author David Wheeler
- *
  */
 public class AVTransportService extends AbstractService implements ServiceEventHandler {
   
@@ -64,25 +64,25 @@ public class AVTransportService extends AbstractService implements ServiceEventH
   private static final String SET_AV_TRANSPORT_URI_ACTION = "SetAVTransportURI";
   private static final String PLAY_ACTION = "Play";
     
-  // TODO here's a lazy hack
-  private static final String METADATA1 = 
+  /**
+   * The format for a metadata tag:
+   * 0: id
+   * 1: parent id
+   * 2: title
+   * 3: upnp:class
+   */
+  private static final MessageFormat METADATA_FORMAT = new MessageFormat(
       "<DIDL-Lite xmlns:dc=\"http://purl.org/dc/elements/1.1/\" " +
       "xmlns:upnp=\"urn:schemas-upnp-org:metadata-1-0/upnp/\" " +
       "xmlns:r=\"urn:schemas-rinconnetworks-com:metadata-1-0/\" " +
       "xmlns=\"urn:schemas-upnp-org:metadata-1-0/DIDL-Lite/\">" +
-      "<item id=\"";
-  private static final String METADATA2 = 
-      "\" parentID=\"";
-      
-  private static final String METADATA3 = 
-    "\" restricted=\"true\">" +
-      "<dc:title>";
-  private static final String METADATA4 = "</dc:title>" +
-      "<upnp:class>object.item.audioItem.audioBroadcast</upnp:class>" +
+      "<item id=\"{0}\" parentID=\"{1}\" restricted=\"true\">" +
+      "<dc:title>{2}</dc:title>" +
+      "<upnp:class>{3}</upnp:class>" +
       "<desc id=\"cdudn\" nameSpace=\"urn:schemas-rinconnetworks-com:metadata-1-0/\">" +
       "RINCON_AssociatedZPUDN</desc>" +
-      "</item></DIDL-Lite>";
-
+      "</item></DIDL-Lite>");
+  
   private final Map<AVTransportEventType, String> state = new HashMap<AVTransportEventType, String>();
   private final List<AVTransportListener> listeners = new ArrayList<AVTransportListener>();
   
@@ -112,11 +112,33 @@ public class AVTransportService extends AbstractService implements ServiceEventH
   }
   
   private static String compileMetadataString(Entry entry) {
-    StringBuilder str = new StringBuilder(METADATA1);
-    str.append(entry.getId()).append(METADATA2);
-    str.append(entry.getParentId()).append(METADATA3);
-    str.append(entry.getTitle()).append(METADATA4);
-    return StringEscapeUtils.escapeXml(str.toString());
+    
+    if (entry.getUpnpClass().equals("object.container.radioContainer")
+        || entry.getUpnpClass().equals("object.container.lineInContainer")) {
+      // I made up these ones for Janos - they cannot be used by sonos
+      if (LOG.isWarnEnabled()) {
+        LOG.warn("compileMetadataString() called on inappropriate entry " + entry);
+      }
+      return "";
+    }
+    if (entry.getUpnpClass().equals("object.item.audioItem.audioBroadcast")) {
+      // TODO radio has different metadata
+      
+    }
+    if (entry.getUpnpClass().equals("object.item.audioItem")) {
+      // TODO line in has different metadata, and requires zone info
+      
+    }
+    // Not too sure what's up with this, but it doesn't seem to like having long upnp class names
+    String upnpClass = entry.getUpnpClass();
+    if (upnpClass.startsWith("object.container")) {
+      upnpClass = "object.container";
+    }
+    String metadata = METADATA_FORMAT.format(new Object[] {entry.getId(), entry.getParentId(), entry.getTitle(), upnpClass});
+    if (LOG.isDebugEnabled()) {
+      LOG.debug("Created metadata: " + metadata);
+    }
+    return StringEscapeUtils.escapeXml(metadata);
   }
 
   /**
@@ -230,7 +252,7 @@ public class AVTransportService extends AbstractService implements ServiceEventH
       state.put(AVTransportEventType.RecordMediumWriteStatus, resp.getOutActionArgumentValue("WriteStatus"));
     }
     String metaDataString = state.get(AVTransportEventType.AVTransportURIMetaData);
-    TrackMetaData trackMetaData = metaDataString.isEmpty() ? null : ResultParser.parseTrackMetaData(metaDataString);
+    TrackMetaData trackMetaData = metaDataString.length() == 0 ? null : ResultParser.parseTrackMetaData(metaDataString);
     return new MediaInfo(state.get(AVTransportEventType.NumberOfTracks), 
         TimeUtilities.convertDurationToLong(state.get(AVTransportEventType.CurrentTrackDuration)),
         state.get(AVTransportEventType.AVTransportURI), 
