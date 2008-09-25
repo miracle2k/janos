@@ -251,8 +251,15 @@ public class AVTransportService extends AbstractService implements ServiceEventH
       state.put(AVTransportEventType.RecordStorageMedium, resp.getOutActionArgumentValue("RecordMedium"));
       state.put(AVTransportEventType.RecordMediumWriteStatus, resp.getOutActionArgumentValue("WriteStatus"));
     }
-    String metaDataString = state.get(AVTransportEventType.AVTransportURIMetaData);
-    TrackMetaData trackMetaData = metaDataString.length() == 0 ? null : ResultParser.parseTrackMetaData(metaDataString);
+    
+    TrackMetaData trackMetaData = null;
+    
+    try {
+	    String metaDataString = state.get(AVTransportEventType.AVTransportURIMetaData);
+	    trackMetaData = metaDataString.length() == 0 ? null : ResultParser.parseTrackMetaData(metaDataString);
+    } catch (NullPointerException e) {
+    }
+    
     return new MediaInfo(state.get(AVTransportEventType.NumberOfTracks), 
         TimeUtilities.convertDurationToLong(state.get(AVTransportEventType.CurrentTrackDuration)),
         state.get(AVTransportEventType.AVTransportURI), 

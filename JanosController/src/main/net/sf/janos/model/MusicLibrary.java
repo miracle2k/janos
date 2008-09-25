@@ -33,6 +33,7 @@ import org.apache.commons.logging.LogFactory;
  */
 public class MusicLibrary {
 
+  @SuppressWarnings("unused")
   private static final Log LOG = LogFactory.getLog(MusicLibrary.class);
 
   protected final List<Entry> entries = new ArrayList<Entry>();

@@ -36,6 +36,10 @@ public class EntryHandler extends DefaultHandler {
     CREATOR,
     RES
   }
+  
+  // Maintain a set of elements about which it is unuseful to complain about.
+  // This list will be initialized on the first failure case
+  private static List<String> ignore = null;
     
   private String id;
   private String parentId;
@@ -71,7 +75,14 @@ public class EntryHandler extends DefaultHandler {
     } else if (qName.equals("upnp:albumArtURI")) {
       element = Element.ALBUM_ART_URI;
     } else {
-      LOG.warn("did not recognise element named " + localName);
+      if (ignore == null) {
+    	  ignore = new ArrayList<String>();
+    	  ignore.add("DIDL-Lite");
+      }
+      
+      if (!ignore.contains(localName)) {
+    	  LOG.warn("did not recognise element named " + localName);
+      }
       element = null;
     }
   }

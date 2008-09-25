@@ -165,9 +165,9 @@ public class SonosController implements ZoneListSelectionListener{
    * @throws IOException 
    */
   private void sendSearchPacket(String searchTarget) throws IOException {
-    for ( Enumeration e = NetworkInterface.getNetworkInterfaces(); e.hasMoreElements(); ) {
+    for ( Enumeration<NetworkInterface> e = NetworkInterface.getNetworkInterfaces(); e.hasMoreElements(); ) {
       NetworkInterface intf = (NetworkInterface)e.nextElement();
-      for ( Enumeration adrs = intf.getInetAddresses(); adrs.hasMoreElements(); ) {
+      for ( Enumeration<InetAddress> adrs = intf.getInetAddresses(); adrs.hasMoreElements(); ) {
         InetAddress adr = (InetAddress)adrs.nextElement();
         if ( adr instanceof Inet4Address && !adr.isLoopbackAddress()  ) {
           Discovery.sendSearchMessage( adr, Discovery.DEFAULT_TTL, Discovery.DEFAULT_MX, searchTarget );

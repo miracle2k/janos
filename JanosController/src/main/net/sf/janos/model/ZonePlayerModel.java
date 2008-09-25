@@ -30,13 +30,31 @@ public class ZonePlayerModel {
   }
   
   /**
-   * Adds the given zone player to the end of the list.
+   * Adds the given zone player to the list in a sorted order.
    * @param zp
    */
   public void addZonePlayer(ZonePlayer zp) {
-    this.zonePlayers.add(zp);
+	
+	if (zonePlayers.isEmpty()) {
+		zonePlayers.add(zp);
+	} else {
+		String newName = zp.getDevicePropertiesService().getZoneAttributes().getName(); 
+		boolean added = false;
+		for (int i=0; i<zonePlayers.size(); i++) {
+			String currentName = zonePlayers.get(i).getDevicePropertiesService().getZoneAttributes().getName();
+			if (currentName.compareToIgnoreCase(newName) > 0 ) {
+				zonePlayers.add(i, zp);
+				added = true;
+				break;
+			}
+		}
+		if (added == false ) {
+			zonePlayers.add(zp);
+		}
+	}
+
     for (ZonePlayerModelListener l : listeners ) {
-      l.zonePlayerAdded(zp, this);
+   		l.zonePlayerAdded(zp, this);
     }
   }
   
@@ -77,7 +95,11 @@ public class ZonePlayerModel {
    * @return the zone player at the given index.
    */
   public ZonePlayer get(int index) {
-    return zonePlayers.get(index);
+	  try {
+		  return zonePlayers.get(index);
+	  } catch (Exception e) {
+		  return null;
+	  }
   }
   
   /**
