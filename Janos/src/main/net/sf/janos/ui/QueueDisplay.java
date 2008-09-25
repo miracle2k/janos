@@ -202,7 +202,7 @@ public class QueueDisplay extends Composite implements ZoneListSelectionListener
     queueModel.addQueueModelListener(queueModelListener);
     
     Group queueBox = new Group(this, SWT.NONE);
-    queueBox.setText("Now Playing");
+    queueBox.setText("Zone Queue");
     queueBox.setForeground(LABEL_COLOR);
     queueBox.setLayout(new FillLayout());
     queue = new Table(queueBox, SWT.SINGLE | SWT.VIRTUAL);
@@ -279,21 +279,19 @@ public class QueueDisplay extends Composite implements ZoneListSelectionListener
   private void setQueueEntry(PositionInfo posInfo, final ZonePlayer zone) {
     // TODO develop a queue model to display
     final List<Entry> queueEntries = zone.getMediaServerDevice().getContentDirectoryService().getQueue(0,QUEUE_LENGTH);
-    if (queueEntries.size() > 0) {
-      final Entry currentEntry = queueEntries.get(posInfo.getTrackNum()-1);
-      URL albumArtUrl = null;
-      try {
-        albumArtUrl = currentEntry.getAlbumArtURL(zone);
-      } catch (MalformedURLException e) {
-        LOG.error("Could not get album art URL: ", e);
-      }
-      
-      // BML: It seems to me that we should not bind the queue display with the now playing display.
-      // while make be a fine assumption for queue-based playback, it is inparopriate for music
-      // services which are not queue-based.  For example, while listening to a shoutcast station,
-      // it is still perfectly acceptable to have music in the queue.  It just happens to be that the
-      // music in the queue is not playing.  Nonetheless, the user might like to know/choose music from the queue.
-      setNowPlayingAsync(currentEntry.getCreator(), currentEntry.getAlbum(), currentEntry.getTitle(), albumArtUrl);
+    if (posInfo != null ) {
+	    if (queueEntries.size() > 0) {
+	      final Entry currentEntry = queueEntries.get(posInfo.getTrackNum()-1);
+	      URL albumArtUrl = null;
+	      try {
+	        albumArtUrl = currentEntry.getAlbumArtURL(zone);
+	      } catch (MalformedURLException e) {
+	        LOG.error("Could not get album art URL: ", e);
+	      }
+	      setNowPlayingAsync(currentEntry.getCreator(), currentEntry.getAlbum(), currentEntry.getTitle(), albumArtUrl);
+	    } else {
+	    	setNowPlayingAsync("", "", "", null);
+	    }
     }
     getDisplay().asyncExec(new QueueUpdater(queueEntries));
   }
@@ -460,16 +458,16 @@ public class QueueDisplay extends Composite implements ZoneListSelectionListener
         } else if (uri.startsWith("x-rincon-mp3radio:")) {
           // yep, it's the radio
           setNowPlayingAsync("Internet Radio", mediaInfo.getCurrentURI().substring(mediaInfo.getCurrentURI().lastIndexOf("://") + 3), mediaInfo.getCurrentURIMetaData().getTitle(), null);
-          displayEmptyQueue();
+          setQueueEntry(null, currentZone);
         } else if (uri.startsWith("x-rincon-stream:")) {
           // line in stream
           setNowPlayingAsync("Line In", "", mediaInfo.getCurrentURIMetaData().getTitle(), null);
-          displayEmptyQueue();
+          setQueueEntry(null, currentZone);
         } else if (uri.startsWith("pndrradio:")) {
             // Pandora
         	TrackMetaData i = ResultParser.parseTrackMetaData(posInfo.getTrackMetaData());
         	setNowPlayingAsync("Pandora: " + i.getCreator(), i.getAlbum(), i.getTitle() , new URL(i.getAlbumArtUri()));
-        	displayEmptyQueue();
+        	setQueueEntry(null, currentZone);
         } else {
           if (LOG.isWarnEnabled()) {
             LOG.warn("Couldn't find type of " + mediaInfo.getCurrentURIMetaData().getId() + ": " + uri);
