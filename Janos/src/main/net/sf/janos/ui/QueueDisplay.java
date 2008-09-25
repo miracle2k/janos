@@ -36,6 +36,7 @@ import net.sf.janos.model.PositionInfo;
 import net.sf.janos.model.QueueModel;
 import net.sf.janos.model.QueueModelListener;
 import net.sf.janos.model.TrackMetaData;
+import net.sf.janos.model.xml.ResultParser;
 import net.sf.janos.model.xml.AVTransportEventHandler.AVTransportEventType;
 import net.sf.janos.util.ui.ImageUtilities;
 
@@ -253,10 +254,6 @@ public class QueueDisplay extends Composite implements ZoneListSelectionListener
     if (zone != null) {
       zone.getMediaRendererDevice().getAvTransportService().addAvTransportListener(this);
     }
-    trackAlbum.setText("");
-    trackArtist.setText("");
-    trackName.setText("");
-    artwork.setImage(null);
     controller.getExecutor().execute(new NowPlayingFetcher(zone));
   }
 
@@ -462,7 +459,7 @@ public class QueueDisplay extends Composite implements ZoneListSelectionListener
           
         } else if (uri.startsWith("x-rincon-mp3radio:")) {
           // yep, it's the radio
-          setNowPlayingAsync("Internet Radio", mediaInfo.getCurrentURI().substring(mediaInfo.getCurrentURI().lastIndexOf("://") + 1), mediaInfo.getCurrentURIMetaData().getTitle(), null);
+          setNowPlayingAsync("Internet Radio", mediaInfo.getCurrentURI().substring(mediaInfo.getCurrentURI().lastIndexOf("://") + 3), mediaInfo.getCurrentURIMetaData().getTitle(), null);
           displayEmptyQueue();
         } else if (uri.startsWith("x-rincon-stream:")) {
           // line in stream
@@ -470,8 +467,8 @@ public class QueueDisplay extends Composite implements ZoneListSelectionListener
           displayEmptyQueue();
         } else if (uri.startsWith("pndrradio:")) {
             // Pandora
-        	TrackMetaData i = mediaInfo.getCurrentURIMetaData();
-        	setNowPlayingAsync("Pandora: " + i.getTitle(), i.getAlbumArtist(), i.getCreator() , null);
+        	TrackMetaData i = ResultParser.parseTrackMetaData(posInfo.getTrackMetaData());
+        	setNowPlayingAsync("Pandora: " + i.getCreator(), i.getAlbum(), i.getTitle() , new URL(i.getAlbumArtUri()));
         	displayEmptyQueue();
         } else {
           if (LOG.isWarnEnabled()) {
@@ -480,14 +477,7 @@ public class QueueDisplay extends Composite implements ZoneListSelectionListener
         }
         
         // TODO else...
-      } catch (IOException e) {
-        // TODO Auto-generated catch block
-        LOG.error("Couldn't load queue", e);
-      } catch (UPNPResponseException e) {
-        // TODO Auto-generated catch block
-        LOG.error("Couldn't load queue", e);
-      } catch (SAXException e) {
-        // TODO Auto-generated catch block
+      } catch (Exception e) {
         LOG.error("Couldn't load queue", e);
       }
     }
