@@ -16,11 +16,11 @@
 package net.sf.janos.ui;
 
 import java.io.BufferedInputStream;
-import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.InputStream;
 import java.net.MalformedURLException;
 import java.net.URL;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Set;
 
@@ -35,6 +35,7 @@ import net.sf.janos.model.MediaInfo;
 import net.sf.janos.model.PositionInfo;
 import net.sf.janos.model.QueueModel;
 import net.sf.janos.model.QueueModelListener;
+import net.sf.janos.model.TrackMetaData;
 import net.sf.janos.model.xml.AVTransportEventHandler.AVTransportEventType;
 import net.sf.janos.util.ui.ImageUtilities;
 
@@ -256,7 +257,6 @@ public class QueueDisplay extends Composite implements ZoneListSelectionListener
     trackArtist.setText("");
     trackName.setText("");
     artwork.setImage(null);
-    redraw();
     controller.getExecutor().execute(new NowPlayingFetcher(zone));
   }
 
@@ -290,6 +290,12 @@ public class QueueDisplay extends Composite implements ZoneListSelectionListener
       } catch (MalformedURLException e) {
         LOG.error("Could not get album art URL: ", e);
       }
+      
+      // BML: It seems to me that we should not bind the queue display with the now playing display.
+      // while make be a fine assumption for queue-based playback, it is inparopriate for music
+      // services which are not queue-based.  For example, while listening to a shoutcast station,
+      // it is still perfectly acceptable to have music in the queue.  It just happens to be that the
+      // music in the queue is not playing.  Nonetheless, the user might like to know/choose music from the queue.
       setNowPlayingAsync(currentEntry.getCreator(), currentEntry.getAlbum(), currentEntry.getTitle(), albumArtUrl);
     }
     getDisplay().asyncExec(new QueueUpdater(queueEntries));
@@ -377,11 +383,8 @@ public class QueueDisplay extends Composite implements ZoneListSelectionListener
         Image tmpImage = new Image(getDisplay(), imageData);
         artworkImage = ImageUtilities.scaleImageTo(tmpImage, 128, 128);
         tmpImage.dispose();
-      } catch (FileNotFoundException e) {
+      } catch (Exception e) {
         // no artwork. TODO add default image
-      } catch (IOException e) {
-        // TODO Auto-generated catch block
-        e.printStackTrace();
       } finally {
         if (artworkStream != null) {
           try {
@@ -460,9 +463,16 @@ public class QueueDisplay extends Composite implements ZoneListSelectionListener
         } else if (uri.startsWith("x-rincon-mp3radio:")) {
           // yep, it's the radio
           setNowPlayingAsync("Internet Radio", mediaInfo.getCurrentURI().substring(mediaInfo.getCurrentURI().lastIndexOf("://") + 1), mediaInfo.getCurrentURIMetaData().getTitle(), null);
+          displayEmptyQueue();
         } else if (uri.startsWith("x-rincon-stream:")) {
           // line in stream
           setNowPlayingAsync("Line In", "", mediaInfo.getCurrentURIMetaData().getTitle(), null);
+          displayEmptyQueue();
+        } else if (uri.startsWith("pndrradio:")) {
+            // Pandora
+        	TrackMetaData i = mediaInfo.getCurrentURIMetaData();
+        	setNowPlayingAsync("Pandora: " + i.getTitle(), i.getAlbumArtist(), i.getCreator() , null);
+        	displayEmptyQueue();
         } else {
           if (LOG.isWarnEnabled()) {
             LOG.warn("Couldn't find type of " + mediaInfo.getCurrentURIMetaData().getId() + ": " + uri);
@@ -481,6 +491,13 @@ public class QueueDisplay extends Composite implements ZoneListSelectionListener
         LOG.error("Couldn't load queue", e);
       }
     }
+  }
+  
+  // BML: Display an empty queue.  This is a temporary workaround while we
+  // decouple queue display from now playing display.  See note above setQueueEntry
+  // on the subject.
+  public void displayEmptyQueue() {
+	  getDisplay().asyncExec(new QueueUpdater(new ArrayList<Entry>()));
   }
   
   /**
@@ -544,7 +561,6 @@ public class QueueDisplay extends Composite implements ZoneListSelectionListener
       public void run() {
         queue.setItemCount(queueModel.getSize());
         queue.clearAll();
-        queue.redraw();
         if (queueModel.getNowPlaying() > -1) {
           queue.showItem(queue.getItem(queueModel.getNowPlaying()));
         }

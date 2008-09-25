@@ -55,11 +55,11 @@ public class MusicLibraryTable extends Composite implements ZonePlayerModelListe
    */
   private static final String NO_ZONES_TABLE_STRING = "No ZonePlayers found";
   
-  private static final ImageData ARTIST_IMAGE = new ImageData("resources/artist.png");
-  private static final ImageData TRACK_IMAGE = new ImageData("resources/track.png");
-  private static final ImageData ALBUM_IMAGE = new ImageData("resources/album.png");
-  private static final ImageData PLAYLIST_IMAGE = new ImageData("resources/playlist.png");
-  private static final ImageData GENRE_IMAGE = new ImageData("resources/genre.png");
+  private static final ImageData ARTIST_IMAGE = new ImageData("artist.png");
+  private static final ImageData TRACK_IMAGE = new ImageData("track.png");
+  private static final ImageData ALBUM_IMAGE = new ImageData("album.png");
+  private static final ImageData PLAYLIST_IMAGE = new ImageData("playlist.png");
+  private static final ImageData GENRE_IMAGE = new ImageData("genre.png");
   
   /**
    * The list of music tables and related objects

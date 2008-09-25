@@ -51,7 +51,7 @@ public class ZoneList extends Composite implements ZonePlayerModelListener {
   private final List<ZoneListSelectionListener> selectionListeners = new ArrayList<ZoneListSelectionListener>();
   private final Table zoneTable;
   private final ZonePlayerModel model;
-  private int currentSelection = -1;
+  private String currentSelection = null;
 
   public ZoneList(Composite parent, int style, SonosController controller) {
     super(parent, style);
@@ -67,7 +67,9 @@ public class ZoneList extends Composite implements ZonePlayerModelListener {
       public void handleEvent(Event event) {
         TableItem item = (TableItem)event.item;
         int index = event.index;
-        item.setText(model.get(index).getDevicePropertiesService().getZoneAttributes().getName());
+        String name = model.get(index).getDevicePropertiesService().getZoneAttributes().getName(); 
+        item.setData(new String(name));
+        item.setText(name);
         setIcon(item, model.get(index));
       }
     });
@@ -77,14 +79,17 @@ public class ZoneList extends Composite implements ZonePlayerModelListener {
         // Don't care
       }
       public void widgetSelected(SelectionEvent arg0) {
-        int newSel = zoneTable.getSelectionIndex();
-        if (newSel != currentSelection) {
-          currentSelection = newSel;
-          fireZoneSelectionChanged(model.get(newSel));
+        String newSelection = (String)arg0.item.getData();
+
+        if (currentSelection == null || newSelection.compareTo(currentSelection) != 0 ){
+        	currentSelection = newSelection;
+        	fireZoneSelectionChanged(model.get(zoneTable.getSelectionIndex()));
         }
       }
     });
-    currentSelection = zoneTable.getSelectionIndex();
+
+    currentSelection = null;
+    zoneTable.deselectAll();
     
     model.addZonePlayerModelListener(this);
     for (ZonePlayer zp : model.getAllZones()) {
@@ -108,16 +113,31 @@ public class ZoneList extends Composite implements ZonePlayerModelListener {
   private void addZonePlayerToDisplay(final ZonePlayer dev) {
     getDisplay().asyncExec(new Runnable() {
       public void run() {
-        zoneTable.setItemCount(model.getSize());
-        if (zoneTable.getSelectionIndex() == -1) {
-          // BUG for some reason, this call doesn't fire selection events. so we have to do it ourselfs!
-          zoneTable.select(0);
-          currentSelection=0;
-          fireZoneSelectionChanged(model.get(currentSelection));
-        }
-        redraw();
-      }
+    	zoneTable.setItemCount(model.getSize());
+        zoneTable.clearAll();
 
+        // if we are inserting the first zone, select it.  Otherwise, adjust the selection
+        // to make sure the previously selected zone is still the selected zone after we insert
+        // the new zone.
+        
+        if (currentSelection == null) {
+        	zoneTable.deselectAll();
+        	currentSelection = dev.getDevicePropertiesService().getZoneAttributes().getName();
+           	zoneTable.setSelection(0);
+           	
+            // BUG for some reason, this call doesn't fire selection events. so we have to do it ourselfs!
+            fireZoneSelectionChanged(getSelectedZone());
+        } else {
+        	for (int i=0; i<zoneTable.getItemCount(); i++) {
+        		String newSelection = (String)zoneTable.getItem(i).getData();
+        		if (newSelection.compareTo(currentSelection)==0) {
+        			zoneTable.select(i);
+        			zoneTable.showSelection();
+        			break;
+        		}
+        	}
+        }
+      }
     });
   }
   
@@ -166,21 +186,20 @@ public class ZoneList extends Composite implements ZonePlayerModelListener {
   public void zonePlayerRemoved(final ZonePlayer dev, final ZonePlayerModel model) {
     getDisplay().asyncExec(new Runnable() {
       public void run() {
-//       zoneTable.remove(dev.getDevicePropertiesService().getZoneAttributes().getName());
+    	zoneTable.clearAll();
         zoneTable.setItemCount(model.getSize());
-        redraw();
       }
     });
   }
   
   public ZonePlayer getSelectedZone() {
-    return model.get(currentSelection);
+    return model.get(zoneTable.getSelectionIndex());
   }
 
   public void addSelectionListener(ZoneListSelectionListener l) {
     this.selectionListeners.add(l);
-    if (currentSelection >= 0) {
-      l.zoneSelectionChangedTo(model.get(currentSelection));
+    if (getSelectedZone() != null) {
+    	l.zoneSelectionChangedTo(getSelectedZone());
     }
   }
   
@@ -193,5 +212,4 @@ public class ZoneList extends Composite implements ZonePlayerModelListener {
       l.zoneSelectionChangedTo(newSelection);
     }
   }
-  
 }
