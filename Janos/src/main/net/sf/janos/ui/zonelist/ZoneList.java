@@ -78,7 +78,6 @@ public class ZoneList extends Composite implements ZonePlayerModelListener {
         if (currentSelection == null) {
         	currentSelection = name;
            	zoneTable.setSelection(0);
-           	System.out.println("FIRST ZONE: " + currentSelection);
            	
             // BUG for some reason, this call doesn't fire selection events. so we have to do it ourselfs!
             fireZoneSelectionChanged(getSelectedZone());
@@ -88,7 +87,6 @@ public class ZoneList extends Composite implements ZonePlayerModelListener {
         		if (newSelection != null && newSelection.compareTo(currentSelection)==0) {
         			zoneTable.select(i);
         			zoneTable.showSelection();
-        			System.out.println("ADDING ZONE: " + name + " New index is " + i);
         			break;
         		}
         	}
