@@ -71,6 +71,28 @@ public class ZoneList extends Composite implements ZonePlayerModelListener {
         item.setData(new String(name));
         item.setText(name);
         setIcon(item, model.get(index));
+        
+        // if we are inserting the first zone, select it.  Otherwise, adjust the selection
+        // to make sure the previously selected zone is still the selected zone after we insert
+        // the new zone.
+        if (currentSelection == null) {
+        	currentSelection = name;
+           	zoneTable.setSelection(0);
+           	System.out.println("FIRST ZONE: " + currentSelection);
+           	
+            // BUG for some reason, this call doesn't fire selection events. so we have to do it ourselfs!
+            fireZoneSelectionChanged(getSelectedZone());
+        } else {
+        	for (int i=0; i<zoneTable.getItemCount(); i++) {
+        		String newSelection = (String)zoneTable.getItem(i).getData();
+        		if (newSelection != null && newSelection.compareTo(currentSelection)==0) {
+        			zoneTable.select(i);
+        			zoneTable.showSelection();
+        			System.out.println("ADDING ZONE: " + name + " New index is " + i);
+        			break;
+        		}
+        	}
+        }
       }
     });
     
@@ -116,27 +138,7 @@ public class ZoneList extends Composite implements ZonePlayerModelListener {
     	zoneTable.setItemCount(model.getSize());
         zoneTable.clearAll();
 
-        // if we are inserting the first zone, select it.  Otherwise, adjust the selection
-        // to make sure the previously selected zone is still the selected zone after we insert
-        // the new zone.
-        
-        if (currentSelection == null) {
-        	zoneTable.deselectAll();
-        	currentSelection = dev.getDevicePropertiesService().getZoneAttributes().getName();
-           	zoneTable.setSelection(0);
-           	
-            // BUG for some reason, this call doesn't fire selection events. so we have to do it ourselfs!
-            fireZoneSelectionChanged(getSelectedZone());
-        } else {
-        	for (int i=0; i<zoneTable.getItemCount(); i++) {
-        		String newSelection = (String)zoneTable.getItem(i).getData();
-        		if (newSelection.compareTo(currentSelection)==0) {
-        			zoneTable.select(i);
-        			zoneTable.showSelection();
-        			break;
-        		}
-        	}
-        }
+ 
       }
     });
   }
