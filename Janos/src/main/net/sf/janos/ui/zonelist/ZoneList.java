@@ -137,8 +137,6 @@ public class ZoneList extends Composite implements ZonePlayerModelListener {
       public void run() {
     	zoneTable.setItemCount(model.getSize());
         zoneTable.clearAll();
-
- 
       }
     });
   }
@@ -149,12 +147,12 @@ public class ZoneList extends Composite implements ZonePlayerModelListener {
     if (oldImage != null) {
       oldImage.dispose();
     }
-    List<DeviceIcon> icons = dev.getMediaRendererDevice().getUPNPDevice().getDeviceIcons();
+    List<?> icons = dev.getMediaRendererDevice().getUPNPDevice().getDeviceIcons();
     if (icons == null || icons.isEmpty()) {
       newItem.setImage((Image)null);
       return;
     }
-    final DeviceIcon deviceIcon = icons.get(0);
+    final DeviceIcon deviceIcon = (DeviceIcon) icons.get(0);
     SonosController.getInstance().getExecutor().execute(new Runnable() {
       public void run() {
         InputStream is = null;
