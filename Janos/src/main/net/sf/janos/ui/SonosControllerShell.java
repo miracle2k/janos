@@ -26,81 +26,100 @@ import org.eclipse.swt.widgets.Display;
 import org.eclipse.swt.widgets.Shell;
 
 public class SonosControllerShell {
-  
+
 	private final Display display;
-  
-  private final Shell shell;
-	
-  private final SonosController controller;
-  
-  private ZoneList zoneList;
-  private QueueDisplay queue;
-  private MusicControlPanel controls;
+
+	private final Shell shell;
+
+	private final SonosController controller;
+
+	private ZoneList zoneList;
+	private QueueDisplay queue;
+	private MusicControlPanel controls;
+	private ZoneInfo zoneInfo;
 
 	public SonosControllerShell(Display display, SonosController controller) {
 		this.display = display;
-    this.shell = new Shell(display);
-    this.controller = controller;
+		this.shell = new Shell(display);
+		this.controller = controller;
 		buildComponents();
 	}
-  
-  public void start() {
-    shell.open();
-    while (!shell.isDisposed()) {
-      if (!display.readAndDispatch()) {
-        display.sleep();
-      }
-    }
-    display.dispose();
-    dispose();
-    controller.dispose();
-  }
-  
+
+	public void start() {
+		shell.open();
+		while (!shell.isDisposed()) {
+			if (!display.readAndDispatch()) {
+				display.sleep();
+			}
+		}
+		display.dispose();
+		dispose();
+		controller.dispose();
+	}
+
 	private void buildComponents() {
-    shell.setText("SonosJ");
-    shell.setLayout(new GridLayout(3, false));
-		
-    controls = new MusicControlPanel(shell, SWT.BORDER, null);
+		shell.setText("SonosJ");
+		shell.setLayout(new GridLayout(3, false));
+
+		controls = new MusicControlPanel(shell, SWT.BORDER, null);
 		GridData controlData = new GridData();
 		controlData.horizontalSpan=3;
 		controls.setLayoutData(controlData);
 
-    zoneList = new ZoneList(shell, SWT.BORDER, controller);
+		zoneList = new ZoneList(shell, SWT.BORDER, controller);
 		GridData zoneData = new GridData(GridData.FILL_VERTICAL);
 		zoneData.widthHint = 200;
 		zoneData.heightHint= 400;
 		zoneList.setLayoutData(zoneData);
-    zoneList.addSelectionListener(this.controller);
-    zoneList.addSelectionListener(controls);
-		
+		zoneList.addSelectionListener(this.controller);
+		zoneList.addSelectionListener(controls);
+
 		Composite music = new MusicLibraryTable(shell, SWT.NONE, this);
 		GridData musicData = new GridData(SWT.FILL, SWT.FILL, true, true);
 		musicData.widthHint=400;
 		musicData.heightHint=400;
 		music.setLayoutData(musicData);
-		
-    queue = new QueueDisplay(shell, SWT.NONE, controller);
-    GridData nowPlayingData = new GridData(); 
-    nowPlayingData.widthHint=250;
-    nowPlayingData.verticalAlignment=GridData.FILL;
-    nowPlayingData.horizontalAlignment=GridData.FILL;
-    nowPlayingData.grabExcessVerticalSpace=true;
-    queue.setLayoutData(nowPlayingData);
-    zoneList.addSelectionListener(queue);
+
+		if (false) {
+			queue = new QueueDisplay(shell, SWT.NONE, controller);
+			GridData nowPlayingData = new GridData(); 
+			nowPlayingData.widthHint=250;
+			nowPlayingData.verticalAlignment=GridData.FILL;
+			nowPlayingData.horizontalAlignment=GridData.FILL;
+			nowPlayingData.grabExcessVerticalSpace=true;
+			queue.setLayoutData(nowPlayingData);
+			zoneList.addSelectionListener(queue);
+		} else {
+			zoneInfo = new ZoneInfo(shell, SWT.SINGLE | SWT.BORDER);
+			GridData ziData = new GridData();
+			ziData.widthHint=250;
+			ziData.verticalAlignment=GridData.FILL;
+			ziData.horizontalAlignment=GridData.FILL;
+			ziData.grabExcessVerticalSpace=true;
+			zoneInfo.setLayoutData(ziData);
+			zoneList.addSelectionListener(zoneInfo);
+		}
 	}
-	
-  private void dispose() {
-    zoneList.removeSelectionListener(this.controller);
-    zoneList.removeSelectionListener(controls);
-    zoneList.dispose();
-    queue.dispose();
-  }
-  
-  public SonosController getController() {
-    return controller;
-  }
-  
-  public ZoneList getZoneList() {
-    return zoneList;
-  }
+
+	private void dispose() {
+		zoneList.removeSelectionListener(this.controller);
+		zoneList.removeSelectionListener(controls);
+		zoneList.dispose();
+		
+		if (queue != null) {
+			queue.dispose();
+		}
+		
+		if (zoneInfo != null) {
+			zoneInfo.dispose();
+		}
+	}
+
+	public SonosController getController() {
+		return controller;
+	}
+
+	public ZoneList getZoneList() {
+		return zoneList;
+	}
 }
