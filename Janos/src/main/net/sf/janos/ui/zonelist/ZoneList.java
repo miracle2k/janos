@@ -27,6 +27,7 @@ import net.sf.janos.control.ZoneListSelectionListener;
 import net.sf.janos.control.ZonePlayer;
 import net.sf.janos.model.ZonePlayerModel;
 import net.sf.janos.model.ZonePlayerModelListener;
+import net.sf.janos.ui.SonosControllerShell;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -61,7 +62,7 @@ public class ZoneList extends Composite implements ZonePlayerModelListener {
     zoneTable = new Table(this, SWT.SINGLE | SWT.VIRTUAL);
     TableColumn zoneColumn = new TableColumn(zoneTable, SWT.NONE);
     zoneColumn.setText("Zones");
-    zoneColumn.setWidth(180);
+    zoneColumn.setWidth(SonosControllerShell.ZONE_LIST_WIDTH);
 //    zoneTable.setToolTipText("Drag a zone onto another to link them");
     zoneTable.addListener(SWT.SetData, new Listener() {
       public void handleEvent(Event event) {

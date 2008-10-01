@@ -226,7 +226,7 @@ public class ZoneInfoDisplay extends Composite implements AVTransportListener {
 		queue.addMouseListener(queueMouseListener);
 		TableColumn queueColumn = new TableColumn(queue, SWT.NONE);
 		queueColumn.setText("Queue Entries");
-		queueColumn.setWidth(200);
+		queueColumn.setWidth(SonosControllerShell.NOW_PLAYING_WIDTH);
 		queue.addListener(SWT.SetData, queueDataFiller);
 		GridData queueData = new GridData(GridData.FILL, GridData.FILL, true, true);
 		queueBox.setLayoutData(queueData);

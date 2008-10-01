@@ -27,6 +27,9 @@ import org.eclipse.swt.widgets.Shell;
 
 public class SonosControllerShell {
 
+	public final static int ZONE_LIST_WIDTH = 200;
+	public final static int NOW_PLAYING_WIDTH = 250;
+	
 	private final Display display;
 
 	private final Shell shell;
@@ -68,7 +71,7 @@ public class SonosControllerShell {
 
 		zoneList = new ZoneList(shell, SWT.BORDER, controller);
 		GridData zoneData = new GridData(GridData.FILL_VERTICAL);
-		zoneData.widthHint = 200;
+		zoneData.widthHint = ZONE_LIST_WIDTH;
 		zoneData.heightHint= 400;
 		zoneList.setLayoutData(zoneData);
 		zoneList.addSelectionListener(this.controller);
@@ -83,7 +86,7 @@ public class SonosControllerShell {
 		if (false) {
 			queue = new QueueDisplay(shell, SWT.NONE, controller);
 			GridData nowPlayingData = new GridData(); 
-			nowPlayingData.widthHint=250;
+			nowPlayingData.widthHint=NOW_PLAYING_WIDTH;
 			nowPlayingData.verticalAlignment=GridData.FILL;
 			nowPlayingData.horizontalAlignment=GridData.FILL;
 			nowPlayingData.grabExcessVerticalSpace=true;
@@ -92,7 +95,7 @@ public class SonosControllerShell {
 		} else {
 			zoneInfo = new ZoneInfo(shell, SWT.SINGLE | SWT.BORDER);
 			GridData ziData = new GridData();
-			ziData.widthHint=250;
+			ziData.widthHint=NOW_PLAYING_WIDTH;
 			ziData.verticalAlignment=GridData.FILL;
 			ziData.horizontalAlignment=GridData.FILL;
 			ziData.grabExcessVerticalSpace=true;
