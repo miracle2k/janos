@@ -1,0 +1,16 @@
+The following files are covered by a CC license.  
+
+Button-First-32x32.png
+Button-Last-32x32.png
+Button-Play-32x32.png
+Button-Pause-32x32.png
+
+They were downloaded from:
+
+http://www.iconarchive.com/show/button-icons-by-deleket/
+
+which in turn referenced http://deleket.deviantart.com/ for attribution
+
+Details of the CC License can be found here:
+
+http://creativecommons.org/licenses/by-nc-nd/3.0/

@@ -393,8 +393,7 @@ public class ZoneInfoDisplay extends Composite implements AVTransportListener {
 				public void run() {
 					
 					URL lastURL = (URL)artwork.getData();
-					if (lastURL != null && lastURL.sameFile(u)) {
-					} else {
+					if (u==null || lastURL == null || !lastURL.sameFile(u)) {
 						Image oldImage = artwork.getImage();
 						artwork.setImage(i);
 						if ( oldImage != null) {
@@ -508,7 +507,7 @@ public class ZoneInfoDisplay extends Composite implements AVTransportListener {
 						}
 						setQueueEntry(null, currentZone);
 				} else {
-					if (LOG.isWarnEnabled()) {
+					if (LOG.isWarnEnabled() && mediaInfo != null ) {
 						LOG.warn("Couldn't find type of " + mediaInfo.getCurrentURIMetaData().getId() + ": " + uri);
 					}
 				}

@@ -16,6 +16,7 @@
 package net.sf.janos.ui;
 
 import java.io.IOException;
+import java.io.InputStream;
 import java.util.Set;
 
 import net.sbbi.upnp.messages.UPNPResponseException;
@@ -35,6 +36,7 @@ import org.eclipse.swt.events.MouseAdapter;
 import org.eclipse.swt.events.MouseEvent;
 import org.eclipse.swt.events.SelectionAdapter;
 import org.eclipse.swt.events.SelectionEvent;
+import org.eclipse.swt.graphics.Image;
 import org.eclipse.swt.layout.RowLayout;
 import org.eclipse.swt.widgets.Button;
 import org.eclipse.swt.widgets.Composite;
@@ -53,6 +55,26 @@ public class MusicControlPanel extends Composite implements ZoneListSelectionLis
   private Button next;
   private Button previous;
   private Scale volume;
+  
+  private enum Images { 
+	  PLAY 	("/Button-Play-32x32.png"), 
+	  PAUSE ("/Button-Pause-32x32.png"), 
+	  PREV	("/Button-First-32x32.png"), 
+	  NEXT	("/Button-Last-32x32.png");
+	  
+	  private String filename;
+	  private Image image;
+	  
+	  public String filename() {return filename;};
+	  public Image image() {return image;};
+	  public void setImage(Image i) {image=i;};
+	  
+	  Images (String filename) {
+		  this.filename = filename;
+	  }
+	  
+  };
+   
 
   public MusicControlPanel(Composite parent, int style, ZonePlayer zone) {
     super(parent, style);
@@ -66,18 +88,29 @@ public class MusicControlPanel extends Composite implements ZoneListSelectionLis
     layout.spacing=4;
     setLayout(layout);
     
+    for (Images i : Images.values()) {
+    	try {
+    		InputStream is;
+    		is = getClass().getResourceAsStream(i.filename());
+    		i.setImage(new Image(getDisplay(), is));
+    		is.close();
+    	} catch (Exception e) {
+    	}
+    }
+    
     volume = new Scale(this, SWT.HORIZONTAL);
     volume.setMinimum(0);
     volume.setMaximum(100);
+    
     previous = new Button(this, SWT.PUSH);
-    previous.setText("<");
+    previous.setImage(Images.PREV.image());
     previous.addMouseListener(new MouseAdapter() {
       @Override
       public void mouseUp(MouseEvent e) {
         previous();
       }
     });
-    // TODO initialize play and volume to correct values
+
     play = new Button(this, SWT.PUSH);
     play.addMouseListener(new MouseAdapter() {
       @Override
@@ -85,15 +118,15 @@ public class MusicControlPanel extends Composite implements ZoneListSelectionLis
         play();
       }
     });
+    
     next = new Button(this, SWT.PUSH);
-    next.setText(">");
+    next.setImage(Images.NEXT.image());
     next.addMouseListener(new MouseAdapter() {
       @Override
       public void mouseUp(MouseEvent e) {
         next();
       }
     });
-    
     
     volume.addSelectionListener(new SelectionAdapter() {
       @Override
@@ -108,18 +141,15 @@ public class MusicControlPanel extends Composite implements ZoneListSelectionLis
       if (currentZone != null) {
         return currentZone.getMediaRendererDevice().getAvTransportService().getTransportInfo().getState().equals(TransportState.PLAYING);
       }
-    } catch (IOException e) {
-      // TODO Auto-generated catch block
-      e.printStackTrace();
-    } catch (UPNPResponseException e) {
-      // TODO Auto-generated catch block
+    } catch (Exception e) {
       e.printStackTrace();
     }
     return false;
   }
   
   private void setIsPlaying(boolean isPlaying) {
-    play.setText(isPlaying ? "Pause" : "Play");
+    play.setImage(isPlaying ? Images.PAUSE.image() : Images.PLAY.image());
+    play.setData(isPlaying ? "Pause" : "Play" );
   }
 
   protected void previous() {
@@ -127,17 +157,13 @@ public class MusicControlPanel extends Composite implements ZoneListSelectionLis
       if (currentZone != null) {
         currentZone.getMediaRendererDevice().getAvTransportService().previous();
       }
-    } catch (IOException e) {
-      // TODO Auto-generated catch block
-      e.printStackTrace();
-    } catch (UPNPResponseException e) {
-      // TODO Auto-generated catch block
+    } catch (Exception e) {
       e.printStackTrace();
     }
   }
   
   protected void play() {
-    final String action = play.getText();
+    final String action = (String) play.getData();
     SonosController.getInstance().getExecutor().execute(new Runnable() {
       public void run() {
         try {
@@ -146,11 +172,7 @@ public class MusicControlPanel extends Composite implements ZoneListSelectionLis
           } else if (action.equals("Play")) {
             currentZone.getMediaRendererDevice().getAvTransportService().play();
           }
-        } catch (UPNPResponseException e) {
-          // TODO Auto-generated catch block
-          e.printStackTrace();
-        } catch (IOException e) {
-          // TODO Auto-generated catch block
+        } catch (Exception e) {
           e.printStackTrace();
         }
       }
@@ -162,11 +184,7 @@ public class MusicControlPanel extends Composite implements ZoneListSelectionLis
       if (currentZone != null) {
         currentZone.getMediaRendererDevice().getAvTransportService().next();
       }
-    } catch (IOException e) {
-      // TODO Auto-generated catch block
-      e.printStackTrace();
-    } catch (UPNPResponseException e) {
-      // TODO Auto-generated catch block
+    } catch (Exception e) {
       e.printStackTrace();
     }
   }
@@ -176,11 +194,7 @@ public class MusicControlPanel extends Composite implements ZoneListSelectionLis
       if (currentZone != null) {
         currentZone.getMediaRendererDevice().getRenderingControlService().setVolume(vol);
       }
-    } catch (IOException e) {
-      // TODO Auto-generated catch block
-      e.printStackTrace();
-    } catch (UPNPResponseException e) {
-      // TODO Auto-generated catch block
+    } catch (Exception e) {
       e.printStackTrace();
     }
   }
@@ -190,11 +204,7 @@ public class MusicControlPanel extends Composite implements ZoneListSelectionLis
       if (currentZone != null) {
         return currentZone.getMediaRendererDevice().getRenderingControlService().getVolume();
       }
-    } catch (IOException e) {
-      // TODO Auto-generated catch block
-      e.printStackTrace();
-    } catch (UPNPResponseException e) {
-      // TODO Auto-generated catch block
+    } catch (Exception e) {
       e.printStackTrace();
     }
     return 0;
@@ -243,6 +253,19 @@ public class MusicControlPanel extends Composite implements ZoneListSelectionLis
   @Override
   public void dispose() {
     zoneSelectionChangedTo(null);
+    
+    previous.setImage(null);
+    next.setImage(null);
+    play.setImage(null);
+    
+    for (Images i : Images.values()) {
+    	try {
+    		Image tmp = i.image();
+    		i.setImage(null);
+    		tmp.dispose();
+    	} catch (Exception e) {
+    	}
+    }
     super.dispose();
   }
 
