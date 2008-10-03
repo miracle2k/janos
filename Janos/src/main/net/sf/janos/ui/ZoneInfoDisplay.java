@@ -173,23 +173,34 @@ public class ZoneInfoDisplay extends Composite implements AVTransportListener {
 		nowPlaying.setLayout(new GridLayout(2, false));
 		nowPlaying.setLayoutData(gridData);
 		
+		GridData labelGridData = new GridData (GridData.HORIZONTAL_ALIGN_END );
+		
 		Label trackArtistLabel = new Label(nowPlaying, SWT.RIGHT);
-		trackArtistLabel.setText("Artist: ");
+		trackArtistLabel.setText("Artist:");
 		trackArtistLabel.setForeground(LABEL_COLOR);
 		trackArtist = new Label(nowPlaying, SWT.LEFT);
 		trackArtist.setLayoutData(gridData);
 		
 		Label trackAlbumLabel = new Label(nowPlaying, SWT.RIGHT);
-		trackAlbumLabel.setText("Album: ");
+		trackAlbumLabel.setText("Album:");
 		trackAlbumLabel.setForeground(LABEL_COLOR);
 		trackAlbum = new Label(nowPlaying, SWT.LEFT);
 		trackAlbum.setLayoutData(gridData);
 		
 		Label trackNameLabel = new Label(nowPlaying, SWT.RIGHT);
-		trackNameLabel.setText("Name: ");
+		trackNameLabel.setText("Name:");
 		trackNameLabel.setForeground(LABEL_COLOR);
+
 		trackName = new Label(nowPlaying, SWT.LEFT);
 		trackName.setLayoutData(gridData);
+		
+		int width = trackArtistLabel.computeSize(SWT.DEFAULT, SWT.DEFAULT, true).x;
+		width = Math.max( width, trackAlbumLabel.computeSize(SWT.DEFAULT, SWT.DEFAULT, true).x);
+		width = Math.max( width, trackNameLabel.computeSize(SWT.DEFAULT, SWT.DEFAULT, true).x);
+		labelGridData.widthHint = width;
+		trackNameLabel.setLayoutData(labelGridData);
+		trackArtistLabel.setLayoutData(labelGridData);
+		trackAlbumLabel.setLayoutData(labelGridData);
 		
 		artwork = new Label(nowPlaying, 0);
 		GridData gd = new GridData();
