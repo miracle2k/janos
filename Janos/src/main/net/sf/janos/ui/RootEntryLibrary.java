@@ -16,28 +16,41 @@
 package net.sf.janos.ui;
 
 import java.util.ArrayList;
-import java.util.Collection;
 
+import net.sf.janos.control.BrowseHandle;
 import net.sf.janos.control.ZonePlayer;
 import net.sf.janos.model.Entry;
 import net.sf.janos.model.MusicLibrary;
 
 public class RootEntryLibrary extends MusicLibrary{
 
+  private Entry searchResults;
+  private ArrayList<Entry> additionalEntries;
+
   public RootEntryLibrary(ZonePlayer zone) {
     super(zone); // already adds A: entries
-    Entry radio = new Entry("R:", "Radio Stations", null, null, null, null, "object.container.radioContainer", null);
-    Entry lineIn = new Entry("AI:", "Line In", null, null, null, null, "object.container.lineInContainer", null);
-    Collection<Entry> entries = new ArrayList<Entry>();
-    entries.add(radio);
-    entries.add(lineIn);
-    // TODO these should be added AFTER the other entries...
-    addEntries(entries);
-
   }
   
   @Override
   protected void setReportedSize(int count) {
-    super.setReportedSize(count + 2);
+    super.setReportedSize(count + additionalEntries.size());
+  }
+  
+  public Entry getSearchLibraryEntry() {
+    return searchResults;
+  }
+  
+  @Override
+  protected BrowseHandle loadEntries(ZonePlayer zone, String type) {
+    Entry radio = new Entry("R:", "Radio Stations", null, null, null, null, "object.container.radioContainer", null);
+    Entry lineIn = new Entry("AI:", "Line In", null, null, null, null, "object.container.lineInContainer", null);
+    searchResults = new Entry("SEARCH_RESULT", "Search Results", null, null, null, null, "object.container.searchResultContainer", null);
+    additionalEntries = new ArrayList<Entry>();
+    additionalEntries.add(radio);
+    additionalEntries.add(lineIn);
+    additionalEntries.add(searchResults);
+    // TODO these should be added AFTER the other entries...
+    addEntries(additionalEntries);
+    return super.loadEntries(zone, type);
   }
 }

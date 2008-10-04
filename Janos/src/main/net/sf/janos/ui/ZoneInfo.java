@@ -2,6 +2,7 @@ package net.sf.janos.ui;
 
 import java.util.HashMap;
 
+import net.sf.janos.control.SonosController;
 import net.sf.janos.control.ZoneListSelectionListener;
 import net.sf.janos.control.ZonePlayer;
 
@@ -21,8 +22,9 @@ public class ZoneInfo extends CTabFolder implements ZoneListSelectionListener {
 		setSelection(0);
 	}
 
-	@Override
 	public void zoneSelectionChangedTo(ZonePlayer newSelection) {
+    // always display the zone controller of a given zone, for if it's in a group
+    newSelection = SonosController.getCoordinatorForZonePlayer(newSelection);
 		String targetName = newSelection.getDevicePropertiesService().getZoneAttributes().getName();
 
 		// create the Zone Metadata Display if we don't already have one

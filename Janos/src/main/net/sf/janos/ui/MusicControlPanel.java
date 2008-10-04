@@ -252,12 +252,14 @@ public class MusicControlPanel extends Composite implements ZoneListSelectionLis
   
   @Override
   public void dispose() {
-    zoneSelectionChangedTo(null);
-    
-    previous.setImage(null);
-    next.setImage(null);
-    play.setImage(null);
-    
+    try {
+      zoneSelectionChangedTo(null);
+
+      previous.setImage(null);
+      next.setImage(null);
+      play.setImage(null);
+    } catch (Exception e) {
+    }
     for (Images i : Images.values()) {
     	try {
     		Image tmp = i.image();

@@ -15,8 +15,10 @@
  */
 package net.sf.janos.ui;
 
+import java.io.IOException;
+import java.io.InputStream;
+import java.util.Collection;
 import java.util.LinkedList;
-import java.util.List;
 import java.util.ListIterator;
 
 import net.sf.janos.control.SonosController;
@@ -24,9 +26,11 @@ import net.sf.janos.control.ZonePlayer;
 import net.sf.janos.model.Entry;
 import net.sf.janos.model.MusicLibrary;
 import net.sf.janos.model.MusicLibraryListener;
+import net.sf.janos.model.MusicLibraryModel;
 import net.sf.janos.model.ZonePlayerModel;
 import net.sf.janos.model.ZonePlayerModelListener;
 
+import org.apache.commons.logging.LogFactory;
 import org.eclipse.swt.SWT;
 import org.eclipse.swt.events.MouseEvent;
 import org.eclipse.swt.events.MouseListener;
@@ -55,16 +59,45 @@ public class MusicLibraryTable extends Composite implements ZonePlayerModelListe
    */
   private static final String NO_ZONES_TABLE_STRING = "No ZonePlayers found";
   
-  private static final ImageData ARTIST_IMAGE = new ImageData("artist.png");
-  private static final ImageData TRACK_IMAGE = new ImageData("track.png");
-  private static final ImageData ALBUM_IMAGE = new ImageData("album.png");
-  private static final ImageData PLAYLIST_IMAGE = new ImageData("playlist.png");
-  private static final ImageData GENRE_IMAGE = new ImageData("genre.png");
+  private static final ImageData ARTIST_IMAGE;
+  private static final ImageData TRACK_IMAGE;
+  private static final ImageData ALBUM_IMAGE;
+  private static final ImageData PLAYLIST_IMAGE;
+  private static final ImageData GENRE_IMAGE;
+  private static final ImageData SEARCH_IMAGE;
+  private static final ImageData LINE_IN_IMAGE;
+  
+  static {
+    // load images from classpath
+    ARTIST_IMAGE = loadImageData("artist.png");
+    TRACK_IMAGE = loadImageData("track.png");
+    ALBUM_IMAGE = loadImageData("album.png");
+    PLAYLIST_IMAGE = loadImageData("playlist.png");
+    GENRE_IMAGE = loadImageData("genre.png");
+    SEARCH_IMAGE = loadImageData("search.png");
+    LINE_IN_IMAGE = loadImageData("lineIn.png");
+  }
+  
+  /**
+   * Loads an image from the provided resource (treated as an absolute, not relative resource)
+   * @param resource the image to load
+   * @return the loaded image
+   */
+  private static ImageData loadImageData(String resource) {
+    InputStream is = ClassLoader.getSystemClassLoader().getResourceAsStream(resource);
+    ImageData data;
+    data = new ImageData(is);
+    try {
+      is.close();
+    } catch (IOException e) {}
+    return data;
+  }
   
   /**
    * The list of music tables and related objects
+   * TODO this should be a Deque, but that's introduced in java 1.6 :-/
    */
-  private final List<MusicTable> musicTables = new LinkedList<MusicTable>();
+  private final LinkedList<MusicTable> musicTables = new LinkedList<MusicTable>();
   
   /**
    * The mouse listener that acts on double click events
@@ -77,6 +110,21 @@ public class MusicLibraryTable extends Composite implements ZonePlayerModelListe
   private final SelectionListener tableSelectionListener;
   
   /**
+   * The sonos controller shell. yep, a circular reference
+   */
+  private final SonosControllerShell controller;
+
+  /**
+   * The library for the search results
+   */
+  private SearchResultLibrary searchResultLibrary;
+
+  /**
+   * The root entry table
+   */
+  private MusicTable rootTable;
+
+  /**
    * Creates a new MusicLibraryTable
    * @param parent the parent Composite in which this Composite resides
    * @param style The style
@@ -84,8 +132,10 @@ public class MusicLibraryTable extends Composite implements ZonePlayerModelListe
    */
   public MusicLibraryTable(final Composite parent, int style, final SonosControllerShell controllerShell) {
     super(parent, style);
+    this.controller = controllerShell;
     tableMouseListener = new TableMouseListener(controllerShell);
-    tableSelectionListener = new TableSelectionListener(controllerShell);
+    tableSelectionListener = new TableSelectionListener();
+    searchResultLibrary = new SearchResultLibrary();
     setLayout(new FillLayout(SWT.HORIZONTAL));
 
     ZonePlayerModel zoneModel = controllerShell.getController().getZonePlayerModel();
@@ -104,27 +154,29 @@ public class MusicLibraryTable extends Composite implements ZonePlayerModelListe
    * @param player
    */
   private void populateMusicLibraryFrom(ZonePlayer player) {
-    for (MusicTable table : musicTables) {
-      removeTable(table);
+    synchronized (musicTables) {
+      while (!musicTables.isEmpty()) {
+        removeTable(musicTables.removeLast());
+      }
+      
+      RootEntryLibrary rootLib = new RootEntryLibrary(player);
+      final Table typeTable = new Table(this, SWT.MULTI |SWT.FULL_SELECTION| SWT.VIRTUAL | SWT.BORDER);
+      TableLibraryAdapter listener = new TableLibraryAdapter(rootLib);
+      TableUpdater musicLibraryListener = new TableUpdater(typeTable, rootLib);
+      rootLib.addListener(musicLibraryListener);
+      rootTable = new MusicTable(typeTable, rootLib, listener);
+      musicTables.add(rootTable);
+      typeTable.setLinesVisible(true);
+      typeTable.setHeaderVisible(true);
+      TableColumn name = new TableColumn(typeTable, SWT.LEFT);
+      name.setText("Type");
+      name.setWidth(180);
+      
+      typeTable.setItemCount(rootLib.getSize());
+      typeTable.addListener (SWT.SetData, listener);
+      typeTable.addMouseListener(tableMouseListener);
+      typeTable.addSelectionListener(tableSelectionListener);
     }
-    musicTables.clear();
-    
-    final MusicLibrary rootLib = new RootEntryLibrary(player);
-    final Table typeTable = new Table(this, SWT.MULTI |SWT.FULL_SELECTION| SWT.VIRTUAL | SWT.BORDER);
-    TableLibraryAdapter listener = new TableLibraryAdapter(rootLib);
-    TableUpdater musicLibraryListener = new TableUpdater(typeTable, rootLib);
-    rootLib.addListener(musicLibraryListener);
-    musicTables.add(new MusicTable(typeTable, rootLib, listener));
-    typeTable.setLinesVisible(true);
-    typeTable.setHeaderVisible(true);
-    TableColumn name = new TableColumn(typeTable, SWT.LEFT);
-    name.setText("Type");
-    name.setWidth(180);
-    
-    typeTable.setItemCount(rootLib.getSize());
-    typeTable.addListener (SWT.SetData, listener);
-    typeTable.addMouseListener(tableMouseListener);
-    typeTable.addSelectionListener(tableSelectionListener);
   }
   
   /**
@@ -132,21 +184,10 @@ public class MusicLibraryTable extends Composite implements ZonePlayerModelListe
    */
   @Override
   public void dispose() {
-    if (musicTables != null) {
-      for (MusicTable table : musicTables) {
-        if (table.table != null) {
-          if (table.listener != null) {
-            table.table.removeListener(SWT.SetData, table.listener);
-          }
-          if (table.model != null) {
-            table.model.removeListeners();
-          }
-          for (TableItem item : table.table.getItems()) {
-            if (item.getImage() != null) {
-              item.getImage().dispose();
-            }
-          }
-          table.table.dispose();
+    synchronized (musicTables) {
+      if (musicTables != null) {
+        while (!musicTables.isEmpty()) {
+          removeTable(musicTables.removeLast());
         }
       }
     }
@@ -159,12 +200,23 @@ public class MusicLibraryTable extends Composite implements ZonePlayerModelListe
    * @param table the table to remove
    */
   private void removeTable(MusicTable table) {
-    table.getTable().removeMouseListener(tableMouseListener);
-    table.getTable().removeSelectionListener(tableSelectionListener);
     if (table.model != null) {
       table.model.dispose();
     }
-    table.table.dispose();
+    try {
+      if (!table.table.isDisposed()) {
+        table.table.removeMouseListener(tableMouseListener);
+        table.table.removeSelectionListener(tableSelectionListener);
+        for (TableItem item : table.table.getItems()) {
+          if (item.getImage() != null) {
+            item.getImage().dispose();
+          }
+        }
+        table.table.dispose();
+      }
+    } catch (Exception e) {
+      LogFactory.getLog(getClass()).debug("Error disposing table: ", e);
+    }
   }
   
   /**
@@ -172,18 +224,19 @@ public class MusicLibraryTable extends Composite implements ZonePlayerModelListe
    *
    */
   private void clearMusicLibrary() {
-    for (MusicTable table : musicTables) {
-      removeTable(table);
-    }
-    musicTables.clear();
+    synchronized (musicTables) {
+      while (!musicTables.isEmpty()) {
+        removeTable(musicTables.removeLast());
+      }
 
-    Table emptyTable = new Table(this, SWT.MULTI |SWT.FULL_SELECTION| SWT.VIRTUAL | SWT.BORDER);
-    musicTables.add(new MusicTable(emptyTable, null, null));
-    emptyTable.setLinesVisible(true);
-    emptyTable.setHeaderVisible(true);
-    TableColumn name = new TableColumn(emptyTable, SWT.LEFT);
-    name.setText(NO_ZONES_TABLE_STRING);
-    name.setWidth(150);
+      Table emptyTable = new Table(this, SWT.MULTI |SWT.FULL_SELECTION| SWT.VIRTUAL | SWT.BORDER);
+      musicTables.add(new MusicTable(emptyTable, null, null));
+      emptyTable.setLinesVisible(true);
+      emptyTable.setHeaderVisible(true);
+      TableColumn name = new TableColumn(emptyTable, SWT.LEFT);
+      name.setText(NO_ZONES_TABLE_STRING);
+      name.setWidth(150);
+    }
   }
 
   /**
@@ -193,9 +246,11 @@ public class MusicLibraryTable extends Composite implements ZonePlayerModelListe
     // need to do this on display thread
     getDisplay().asyncExec(new Runnable() {
       public void run() {
-        if (!musicTables.isEmpty() && musicTables.get(0).getModel() == null) {
-          populateMusicLibraryFrom(zp);
-          layout();
+        synchronized (musicTables) {
+          if (!musicTables.isEmpty() && musicTables.get(0).getModel() == null) {
+            populateMusicLibraryFrom(zp);
+            layout();
+          }
         }
       }
     });
@@ -214,180 +269,6 @@ public class MusicLibraryTable extends Composite implements ZonePlayerModelListe
         }
       }
     });
-  }
-
-  /**
-   * Adds selected entry to queue on double click events
-   */
-  private final class TableMouseListener implements MouseListener {
-    private final SonosControllerShell controller;
-
-    private TableMouseListener(SonosControllerShell controller) {
-      this.controller = controller;
-    }
-
-    public void mouseDoubleClick(MouseEvent e) {
-      // TODO multi selection
-      for (MusicTable table : musicTables ) {
-        if (table.getTable() == e.getSource()) {
-          int sel = table.getTable().getSelectionIndex();
-          if (sel >= 0) {
-            Entry entry = table.getModel().getEntryAt(sel);
-            ZonePlayer zone = SonosController.getCoordinatorForZonePlayer(controller.getZoneList().getSelectedZone());
-            zone.enqueueEntry(entry);
-            
-          }
-          return;
-        }
-      }
-    }
-
-    public void mouseDown(MouseEvent e) {
-      // Don't care
-    }
-
-    public void mouseUp(MouseEvent e) {
-      // Don't care
-    }
-  }
-
-  /**
-   * Opens child table on selection events
-   */
-  private final class TableSelectionListener implements SelectionListener {
-    private final SonosControllerShell controller;
-
-    private TableSelectionListener(SonosControllerShell controller) {
-      this.controller = controller;
-    }
-
-    public void widgetDefaultSelected(SelectionEvent e) {
-    }
-
-    public void widgetSelected(SelectionEvent e) {
-      // populate next table
-      ListIterator<MusicTable> i = musicTables.listIterator();
-      MusicTable selectedTable = null;
-      boolean tableFound = false;
-      while (i.hasNext()) {
-        MusicTable table = i.next();
-        if (table.getTable() == e.getSource()) {
-          tableFound = true;
-          selectedTable = table;
-        } else if (tableFound) {
-          i.remove();
-          removeTable(table);
-        }
-      }
-      if (selectedTable != null && selectedTable.getTable().getSelectionIndex() >= 0) {
-        // TODO multi selection
-        Entry entry = selectedTable.getModel().getEntryAt(selectedTable.getTable().getSelectionIndex());
-        if (entry.getUpnpClass().startsWith("object.container")) {
-          final MusicLibrary lib = new MusicLibrary(controller.getZoneList().getSelectedZone(), entry);
-          final Table table = new Table(MusicLibraryTable.this, SWT.MULTI |SWT.FULL_SELECTION| SWT.VIRTUAL | SWT.BORDER);
-          TableUpdater musicLibraryListener = new TableUpdater(table, lib);
-          lib.addListener(musicLibraryListener);
-          TableLibraryAdapter listener = new TableLibraryAdapter(lib);
-          musicTables.add(new MusicTable(table, lib, listener));
-          table.setLinesVisible(true);
-          table.setHeaderVisible(true);
-          TableColumn name = new TableColumn(table, SWT.LEFT);
-          name.setText(entry.getTitle());
-          name.setWidth(150);
-          name.setResizable(true);
-
-          table.setItemCount(lib.getSize());
-          table.addListener (SWT.SetData, listener);
-
-          table.addMouseListener(tableMouseListener);
-          table.addSelectionListener(this);
-          layout();
-        }
-      }
-    }
-  }
-
-  /**
-   * Populates the tables with the data from the MusicLibrary
-   */
-  private final class TableLibraryAdapter implements Listener {
-
-    private final MusicLibrary lib;
-
-    private TableLibraryAdapter(MusicLibrary lib) {
-      this.lib = lib;
-    }
-
-    public void handleEvent (final Event event) {
-      TableItem item = (TableItem) event.item;
-      if (lib.hasEntryFor(event.index)) {
-        Entry entry = lib.getEntryAt(event.index);
-        item.setText(entry.getTitle());
-        item.setImage(createImage(item.getDisplay(), entry));
-      } else {
-        item.setText("<loading..>");
-      }
-    }
-  }
-
-  /**
-   * Updates the table when the library changes
-   *
-   */
-  private final class TableUpdater implements MusicLibraryListener {
-    private final Table table;
-
-    private final MusicLibrary lib;
-
-    private TableUpdater(Table table, MusicLibrary lib) {
-      this.table = table;
-      this.lib = lib;
-    }
-
-    public void entriesAdded(final int start, final int end) {
-      table.getDisplay().asyncExec(new Runnable() {
-        public void run() {
-          if (!table.isDisposed()) {
-            table.clear(start, end);
-          }
-        }
-      });
-    }
-
-    public void sizeChanged() {
-      table.getDisplay().asyncExec(new Runnable() {
-        public void run() {
-          if (!table.isDisposed()) {
-            table.setItemCount(lib.getSize());
-          }
-        }
-      });
-    }
-  }
-
-  /**
-   * A container for a table and a model.
-   * @author David Wheeler
-   *
-   */
-  protected class MusicTable {
-    private final Table table;
-    private final MusicLibrary model;
-    private final TableLibraryAdapter listener;
-    
-    public MusicTable(Table table, MusicLibrary model, TableLibraryAdapter listener) {
-      this.table = table;
-      this.model = model;
-      this.listener = listener;
-    }
-
-    public MusicLibrary getModel() {
-      return model;
-    }
-
-    public Table getTable() {
-      return table;
-    }
   }
 
   /**
@@ -435,9 +316,227 @@ public class MusicLibraryTable extends Composite implements ZonePlayerModelListe
       return new Image(display, PLAYLIST_IMAGE);
     }
     if (entry.getId().startsWith("AI:")) {
-      return null; // line in
+      return new Image(display, LINE_IN_IMAGE); // line in
+    }
+    if (entry.getUpnpClass().equals("object.container.searchResultContainer")) {
+      return new Image(display, SEARCH_IMAGE);
     }
     return null;
+  }
+
+  /**
+   * Clears the search result library
+   */
+  public void clearSearch() {
+    searchResultLibrary.clear();
+  }
+
+  /**
+   * Adds the given entries to the end of the search results library
+   * @param entries
+   */
+  public void addSearchResults(Collection<Entry> entries) {
+    if (searchResultLibrary.getSize() == 0) {
+      RootEntryLibrary rootLib = (RootEntryLibrary)rootTable.getModel();
+      int index = rootLib.indexOf(rootLib.getSearchLibraryEntry());
+      rootTable.getTable().setSelection(index);
+      expandTableEntry(rootTable, index);
+    }
+    searchResultLibrary.addEntries(entries);
+  }
+
+  /**
+   * Expands the given entry in the given table. That is, it "pops" all deeper
+   * tables, and "pushes" a new table with the contents of the provided entry
+   * 
+   * @param parentTable
+   * @param entryIndex
+   */
+  protected void expandTableEntry(MusicTable parentTable, int entryIndex) {
+    // first remove all deeper tables
+    synchronized (musicTables) {
+      while (!musicTables.getLast().getTable().equals(parentTable.getTable())) {
+        removeTable(musicTables.removeLast());
+      }
+      
+      if (parentTable != null && entryIndex >= 0) {
+        // TODO multi selection
+        Entry entry = parentTable.getModel().getEntryAt(entryIndex);
+        if (entry.getUpnpClass().startsWith("object.container")) {
+          final MusicLibraryModel lib = createLibraryFor(entry);
+          final Table table = new Table(MusicLibraryTable.this, SWT.MULTI |SWT.FULL_SELECTION| SWT.VIRTUAL | SWT.BORDER);
+          TableUpdater musicLibraryListener = new TableUpdater(table, lib);
+          lib.addListener(musicLibraryListener);
+          TableLibraryAdapter listener = new TableLibraryAdapter(lib);
+          musicTables.add(new MusicTable(table, lib, listener));
+          table.setLinesVisible(true);
+          table.setHeaderVisible(true);
+          TableColumn name = new TableColumn(table, SWT.LEFT);
+          name.setText(entry.getTitle());
+          name.setWidth(150);
+          name.setResizable(true);
+
+          table.setItemCount(lib.getSize());
+          table.addListener (SWT.SetData, listener);
+
+          table.addMouseListener(tableMouseListener);
+          table.addSelectionListener(tableSelectionListener);
+          layout();
+        }
+      }
+    }
+  }
+
+  private MusicLibraryModel createLibraryFor(Entry entry) {
+    if (entry.getUpnpClass().equals("object.container.searchResultContainer")) {
+      return searchResultLibrary;
+    }
+    return new MusicLibrary(controller.getZoneList().getSelectedZone(), entry);
+  }
+
+  /**
+   * Adds selected entry to queue on double click events
+   */
+  private final class TableMouseListener implements MouseListener {
+    private final SonosControllerShell controller;
+
+    private TableMouseListener(SonosControllerShell controller) {
+      this.controller = controller;
+    }
+
+    public void mouseDoubleClick(MouseEvent e) {
+      // TODO multi selection
+      synchronized (musicTables) {
+        for (MusicTable table : musicTables ) {
+          if (table.getTable() == e.getSource()) {
+            int sel = table.getTable().getSelectionIndex();
+            if (sel >= 0) {
+              Entry entry = table.getModel().getEntryAt(sel);
+              ZonePlayer zone = SonosController.getCoordinatorForZonePlayer(controller.getZoneList().getSelectedZone());
+              zone.enqueueEntry(entry);
+              
+            }
+            return;
+          }
+        }
+      }
+    }
+
+    public void mouseDown(MouseEvent e) {
+      // Don't care
+    }
+
+    public void mouseUp(MouseEvent e) {
+      // Don't care
+    }
+  }
+
+  /**
+   * Opens child table on selection events
+   */
+  private final class TableSelectionListener implements SelectionListener {
+
+    public void widgetDefaultSelected(SelectionEvent e) {
+    }
+
+    public void widgetSelected(SelectionEvent e) {
+      // populate next table
+      synchronized (musicTables) {
+        ListIterator<MusicTable> i = musicTables.listIterator();
+        MusicTable selectedTable = null;
+        while (selectedTable == null && i.hasNext()) {
+          MusicTable table = i.next();
+          if (table.getTable() == e.getSource()) {
+            selectedTable = table;
+          }
+        }
+        expandTableEntry(selectedTable, selectedTable.getTable().getSelectionIndex());
+      }
+    }
+
+  }
+
+  /**
+   * Populates the tables with the data from the MusicLibrary
+   */
+  private final class TableLibraryAdapter implements Listener {
+
+    private final MusicLibraryModel lib;
+
+    private TableLibraryAdapter(MusicLibraryModel lib) {
+      this.lib = lib;
+    }
+
+    public void handleEvent (final Event event) {
+      TableItem item = (TableItem) event.item;
+      if (lib.hasEntryFor(event.index)) {
+        Entry entry = lib.getEntryAt(event.index);
+        item.setText(entry.getTitle());
+        item.setImage(createImage(item.getDisplay(), entry));
+      } else {
+        item.setText("<loading..>");
+      }
+    }
+  }
+
+  /**
+   * Updates the table when the library changes
+   *
+   */
+  private final class TableUpdater implements MusicLibraryListener {
+    private final Table table;
+
+    private final MusicLibraryModel lib;
+
+    private TableUpdater(Table table, MusicLibraryModel lib) {
+      this.table = table;
+      this.lib = lib;
+    }
+
+    public void entriesAdded(final int start, final int end) {
+      table.getDisplay().asyncExec(new Runnable() {
+        public void run() {
+          if (!table.isDisposed()) {
+            table.clear(start, end);
+          }
+        }
+      });
+    }
+
+    public void sizeChanged() {
+      table.getDisplay().asyncExec(new Runnable() {
+        public void run() {
+          if (!table.isDisposed()) {
+            table.setItemCount(lib.getSize());
+          }
+        }
+      });
+    }
+  }
+
+  /**
+   * A container for a table and a model.
+   * @author David Wheeler
+   *
+   */
+  protected class MusicTable {
+    private final Table table;
+    private final MusicLibraryModel model;
+    private final TableLibraryAdapter listener;
+    
+    public MusicTable(Table table, MusicLibraryModel model, TableLibraryAdapter listener) {
+      this.table = table;
+      this.model = model;
+      this.listener = listener;
+    }
+
+    public MusicLibraryModel getModel() {
+      return model;
+    }
+
+    public Table getTable() {
+      return table;
+    }
   }
 
 }

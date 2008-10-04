@@ -350,6 +350,7 @@ public class ZoneInfoDisplay extends Composite implements AVTransportListener {
 			this.setDaemon(true);
 		}
 
+    @Override
 		public void run() {
 			try {
 				while (true) {
@@ -432,6 +433,7 @@ public class ZoneInfoDisplay extends Composite implements AVTransportListener {
 			this.name = name;
 		}
 
+    @Override
 		public void run() {
 			trackArtist.setText(artist);
 			trackAlbum.setText(album);
@@ -463,6 +465,7 @@ public class ZoneInfoDisplay extends Composite implements AVTransportListener {
 		public NowPlayingFetcher() {
 		}
 		
+    @Override
 		public void run() {
 			if (currentZone == null) {
 				return;
