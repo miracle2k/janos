@@ -178,6 +178,28 @@ public class ContentDirectoryService extends AbstractService {
     return response;
   }
   
+  public String getSearchCapabilites() {
+    ActionMessage browseAction = messageFactory.getMessage("GetSortCapabilities");
+    ActionResponse response = null;
+    try {
+      response = browseAction.service();
+    } catch (IOException e) {
+      // TODO Auto-generated catch block
+      e.printStackTrace();
+    } catch (UPNPResponseException e) {
+      // TODO Auto-generated catch block
+      e.printStackTrace();
+    }
+    return response.getOutActionArgumentValue("SortCaps");
+    
+  }
+  
+  /**
+   * Retrieves all entries of the given type asyncronously, via the given callback
+   * @param callback
+   * @param type
+   * @return A unique handle to this search, allowing cancellation
+   */
   public BrowseHandle getAllEntriesAsync(final EntryCallback callback, final String type) {
     AsyncBrowser handle = new AsyncBrowser(type, callback);
     SonosController.getInstance().getExecutor().execute(handle);
@@ -210,12 +232,16 @@ public class ContentDirectoryService extends AbstractService {
         int totalCount = Integer.parseInt(response.getOutActionArgumentValue("TotalMatches"));
         
         startAt = Integer.parseInt(response.getOutActionArgumentValue("NumberReturned"));
-        callback.updateCount(totalCount);
-        callback.addEntries(ResultParser.getEntriesFromStringResult(response.getOutActionArgumentValue("Result")));
+        callback.updateCount(this, totalCount);
+        if (!isCancelled) {
+          callback.addEntries(this, ResultParser.getEntriesFromStringResult(response.getOutActionArgumentValue("Result")));
+        }
         while (!isCancelled && startAt < totalCount) {
           response = getEntriesImpl(startAt, DEFAULT_REQUEST_COUNT, type, DEFAULT_BROWSE_TYPE, DEFAULT_FILTER_STRING, DEFAULT_SORT_CRITERIA);
           startAt += Integer.parseInt(response.getOutActionArgumentValue("NumberReturned"));
-          callback.addEntries(ResultParser.getEntriesFromStringResult(response.getOutActionArgumentValue("Result")));
+          if (!isCancelled) {
+            callback.addEntries(this, ResultParser.getEntriesFromStringResult(response.getOutActionArgumentValue("Result")));
+          }
         }
         completedSuccessfully = isCancelled;
       } catch (IOException e) {
@@ -228,7 +254,7 @@ public class ContentDirectoryService extends AbstractService {
         // TODO Auto-generated catch block
         e.printStackTrace();
       } finally {
-        callback.retrievalComplete(completedSuccessfully);
+        callback.retrievalComplete(this, completedSuccessfully);
       }
       
     }

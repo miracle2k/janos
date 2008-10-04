@@ -19,11 +19,33 @@ import java.util.Collection;
 
 import net.sf.janos.model.Entry;
 
+/**
+ * A callback for an asyncronous browse. 
+ * 
+ * @see ContentDirectoryService#getAllEntriesAsync(EntryCallback, String)
+ * @author David Wheeler
+ *
+ */
 public interface EntryCallback {
 
-  public void updateCount(int count);
-  
-  public void addEntries(Collection<Entry> entries);
+  /**
+   * Called when the total number of matches is known.
+   * @param handle the handle of the search instance
+   * @param count the total number of matches
+   */
+  public void updateCount(BrowseHandle handle, int count);
 
-  public void retrievalComplete(boolean completedSuccessfully);
+  /**
+   * Called repeatedly with batches of results
+   * @param handle the handle of the search instance
+   * @param entries the results
+   */
+  public void addEntries(BrowseHandle handle, Collection<Entry> entries);
+
+  /**
+   * Called when the search is complete
+   * @param handle the handle of the search instance
+   * @param completedSuccessfully <code>true</code> if there were no errors and the search was not cancelled
+   */
+  public void retrievalComplete(BrowseHandle handle, boolean completedSuccessfully);
 }

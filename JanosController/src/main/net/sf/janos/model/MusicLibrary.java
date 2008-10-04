@@ -31,7 +31,7 @@ import org.apache.commons.logging.LogFactory;
  * @author David Wheeler
  *
  */
-public class MusicLibrary {
+public class MusicLibrary implements MusicLibraryModel {
 
   @SuppressWarnings("unused")
   private static final Log LOG = LogFactory.getLog(MusicLibrary.class);
@@ -55,10 +55,25 @@ public class MusicLibrary {
     } else {
       id = "A:";
     }
-    browser = zone.getMediaServerDevice().getContentDirectoryService().getAllEntriesAsync(new MusicLibraryEntryCallback(), id);
-    // TODO add notification listener
+    browser = loadEntries(zone, id);
   }
   
+  /**
+   * Begins the process of loading the entries for this library. This method is
+   * called from the constructor, and thus overriding implementers cannot assume
+   * existance of even final class fields
+   * 
+   * @param zone
+   * @param type
+   * @return the handle for the search
+   */
+  protected BrowseHandle loadEntries(ZonePlayer zone, String type) {
+    return zone.getMediaServerDevice().getContentDirectoryService().getAllEntriesAsync(new MusicLibraryEntryCallback(), type);
+  }
+  
+  /**
+   * {@inheritDoc}
+   */
   public void dispose() {
     if (browser != null) {
       browser.cancel();
@@ -72,6 +87,9 @@ public class MusicLibrary {
     fireEntriesAdded(oldSize, entries.size() -1);
   }
 
+  /**
+   * {@inheritDoc}
+   */
   public int getSize() {
     return Math.max(entries.size(), reportedSize);
   }
@@ -81,6 +99,9 @@ public class MusicLibrary {
     fireSizeChanged();
   }
 
+  /**
+   * {@inheritDoc}
+   */
   public Entry getEntryAt(int index) {
     return entries.get(index);
   }
@@ -89,14 +110,27 @@ public class MusicLibrary {
     return index < entries.size();
   }
   
+  public int indexOf(Entry entry) {
+    return entries.indexOf(entry);
+  }
+  
+  /**
+   * {@inheritDoc}
+   */
   public void addListener(MusicLibraryListener listener) {
     this.listeners.add(listener);
   }
 
+  /**
+   * {@inheritDoc}
+   */
   public void removeListener(MusicLibraryListener listener) {
     this.listeners.remove(listener);
   }
   
+  /**
+   * {@inheritDoc}
+   */
   public void removeListeners() {
     this.listeners.clear();
   }
@@ -115,16 +149,17 @@ public class MusicLibrary {
 
   public class MusicLibraryEntryCallback implements EntryCallback {
 
-    public void addEntries(Collection<Entry> entries) {
+    public void addEntries(BrowseHandle handle, Collection<Entry> entries) {
       MusicLibrary.this.addEntries(entries);
     }
 
-    public void retrievalComplete(boolean completedSuccessfully) {
-      // TODO Auto-generated method stub
-
+    public void retrievalComplete(BrowseHandle handle, boolean completedSuccessfully) {
+      if (handle == browser) {
+        browser = null;
+      }
     }
 
-    public void updateCount(int count) {
+    public void updateCount(BrowseHandle handle, int count) {
       setReportedSize(count);
     }
 
