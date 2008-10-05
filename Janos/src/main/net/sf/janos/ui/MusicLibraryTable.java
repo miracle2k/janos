@@ -207,6 +207,9 @@ public class MusicLibraryTable extends Composite implements ZonePlayerModelListe
       if (!table.table.isDisposed()) {
         table.table.removeMouseListener(tableMouseListener);
         table.table.removeSelectionListener(tableSelectionListener);
+        if (table.listener != null) {
+          table.table.removeListener(SWT.SetData, table.listener);
+        }
         for (TableItem item : table.table.getItems()) {
           if (item.getImage() != null) {
             item.getImage().dispose();
@@ -390,6 +393,8 @@ public class MusicLibraryTable extends Composite implements ZonePlayerModelListe
   private MusicLibraryModel createLibraryFor(Entry entry) {
     if (entry.getUpnpClass().equals("object.container.searchResultContainer")) {
       return searchResultLibrary;
+    } else if (entry.getUpnpClass().equals("object.container.lineInContainer")) {
+      return new LineInMusicLibrary();
     }
     return new MusicLibrary(controller.getZoneList().getSelectedZone(), entry);
   }
@@ -413,6 +418,8 @@ public class MusicLibraryTable extends Composite implements ZonePlayerModelListe
             if (sel >= 0) {
               Entry entry = table.getModel().getEntryAt(sel);
               ZonePlayer zone = SonosController.getCoordinatorForZonePlayer(controller.getZoneList().getSelectedZone());
+              // TODO This is a better way to do it when Drag and Drop has been implemented
+//              zone.getMediaRendererDevice().getAvTransportService().setAvTransportUri(entry);
               zone.enqueueEntry(entry);
               
             }
