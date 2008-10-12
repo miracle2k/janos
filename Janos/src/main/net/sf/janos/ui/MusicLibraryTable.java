@@ -241,7 +241,7 @@ public class MusicLibraryTable extends Composite implements ZonePlayerModelListe
       emptyTable.setHeaderVisible(true);
       TableColumn name = new TableColumn(emptyTable, SWT.LEFT);
       name.setText(NO_ZONES_TABLE_STRING);
-      name.setWidth(150);
+      emptyTable.addControlListener(tableResizer);
     }
   }
 
