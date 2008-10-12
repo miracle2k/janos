@@ -85,6 +85,7 @@ public class SearchBar extends Composite {
     public void widgetDefaultSelected(SelectionEvent e) {
       if (e.detail == SWT.CANCEL) {
         cancelPreviousSearch();
+        controller.getMusicLibrary().clearSearch();
       } else {
         // do search
         controller.getMusicLibrary().clearSearch();

@@ -198,6 +198,12 @@ public class ZonePlayer {
     }
   }
 
+  /**
+   * Seeks to the given entry in the queue (1 is the first entry in the queue)
+   * @param index
+   * @throws IOException
+   * @throws UPNPResponseException
+   */
   public void playQueueEntry(int index) throws IOException, UPNPResponseException {
     AVTransportService serv = getMediaRendererDevice().getAvTransportService();
     serv.seek(SeekTargetFactory.createTrackSeekTarget(index));

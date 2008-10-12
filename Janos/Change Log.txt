@@ -8,6 +8,7 @@ Change Log
 - Added Radio, Line In to library
 - Browse requests now cancelled when table is disposed
 - Added Search bar
+- Added URL adder bar
 
 0.1
 Initial Release. 

@@ -15,8 +15,6 @@
  */
 package net.sf.janos.ui;
 
-import java.io.IOException;
-import java.io.InputStream;
 import java.util.Collection;
 import java.util.LinkedList;
 import java.util.ListIterator;
@@ -29,6 +27,7 @@ import net.sf.janos.model.MusicLibraryListener;
 import net.sf.janos.model.MusicLibraryModel;
 import net.sf.janos.model.ZonePlayerModel;
 import net.sf.janos.model.ZonePlayerModelListener;
+import net.sf.janos.util.ui.ImageUtilities;
 
 import org.apache.commons.logging.LogFactory;
 import org.eclipse.swt.SWT;
@@ -69,28 +68,13 @@ public class MusicLibraryTable extends Composite implements ZonePlayerModelListe
   
   static {
     // load images from classpath
-    ARTIST_IMAGE = loadImageData("artist.png");
-    TRACK_IMAGE = loadImageData("track.png");
-    ALBUM_IMAGE = loadImageData("album.png");
-    PLAYLIST_IMAGE = loadImageData("playlist.png");
-    GENRE_IMAGE = loadImageData("genre.png");
-    SEARCH_IMAGE = loadImageData("search.png");
-    LINE_IN_IMAGE = loadImageData("lineIn.png");
-  }
-  
-  /**
-   * Loads an image from the provided resource (treated as an absolute, not relative resource)
-   * @param resource the image to load
-   * @return the loaded image
-   */
-  private static ImageData loadImageData(String resource) {
-    InputStream is = ClassLoader.getSystemClassLoader().getResourceAsStream(resource);
-    ImageData data;
-    data = new ImageData(is);
-    try {
-      is.close();
-    } catch (IOException e) {}
-    return data;
+    ARTIST_IMAGE = ImageUtilities.loadImageDataFromSystemClasspath("artist.png");
+    TRACK_IMAGE = ImageUtilities.loadImageDataFromSystemClasspath("track.png");
+    ALBUM_IMAGE = ImageUtilities.loadImageDataFromSystemClasspath("album.png");
+    PLAYLIST_IMAGE = ImageUtilities.loadImageDataFromSystemClasspath("playlist.png");
+    GENRE_IMAGE = ImageUtilities.loadImageDataFromSystemClasspath("genre.png");
+    SEARCH_IMAGE = ImageUtilities.loadImageDataFromSystemClasspath("search.png");
+    LINE_IN_IMAGE = ImageUtilities.loadImageDataFromSystemClasspath("lineIn.png");
   }
   
   /**

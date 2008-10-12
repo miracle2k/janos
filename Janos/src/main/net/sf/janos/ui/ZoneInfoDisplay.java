@@ -67,7 +67,7 @@ import org.eclipse.swt.widgets.TableItem;
  */
 public class ZoneInfoDisplay extends Composite implements AVTransportListener {
 
-	private static final Log LOG = LogFactory.getLog(QueueDisplay.class);
+	private static final Log LOG = LogFactory.getLog(ZoneInfoDisplay.class);
 
 	/**
 	 * The maximum number of items to display in the queue

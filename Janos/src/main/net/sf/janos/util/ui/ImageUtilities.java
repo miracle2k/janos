@@ -15,9 +15,13 @@
  */
 package net.sf.janos.util.ui;
 
+import java.io.IOException;
+import java.io.InputStream;
+
 import org.eclipse.swt.SWT;
 import org.eclipse.swt.graphics.GC;
 import org.eclipse.swt.graphics.Image;
+import org.eclipse.swt.graphics.ImageData;
 
 public class ImageUtilities {
   
@@ -42,4 +46,18 @@ public class ImageUtilities {
     return outImage;
   }
 
+  /**
+   * Loads an image from the provided resource (treated as an absolute, not relative resource)
+   * @param resource the image to load
+   * @return the loaded image
+   */
+  public static ImageData loadImageDataFromSystemClasspath(String resource) {
+    InputStream is = ClassLoader.getSystemClassLoader().getResourceAsStream(resource);
+    ImageData data;
+    data = new ImageData(is);
+    try {
+      is.close();
+    } catch (IOException e) {}
+    return data;
+  }
 }

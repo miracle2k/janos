@@ -122,8 +122,7 @@ public class AVTransportService extends AbstractService implements ServiceEventH
       return "";
     }
     if (entry.getUpnpClass().equals("object.item.audioItem.audioBroadcast")) {
-      // TODO radio has different metadata
-      
+//      return "";
     }
     if (entry.getUpnpClass().equals("object.item.audioItem")) {
       // TODO line in has different metadata, and requires zone info
@@ -173,7 +172,7 @@ public class AVTransportService extends AbstractService implements ServiceEventH
    */
   public void reorderTracksInQueue(int startAt, int num, int insertBefore)
       throws IOException, UPNPResponseException {
-    ActionMessage message = messageFactory.getMessage("AddURIToQueue");
+    ActionMessage message = messageFactory.getMessage("ReorderTracksInQueue");
     message.setInputParameter("InstanceID", 0);
     message.setInputParameter("StartingIndex", startAt);
     message.setInputParameter("NumberOfTracks", num);
@@ -188,7 +187,7 @@ public class AVTransportService extends AbstractService implements ServiceEventH
    * @throws UPNPResponseException
    */
   public void removeTrackFromQueue(Entry entry) throws IOException, UPNPResponseException {
-    ActionMessage message = messageFactory.getMessage("AddURIToQueue");
+    ActionMessage message = messageFactory.getMessage("RemoveTrackFromQueue");
     message.setInputParameter("InstanceID", 0);
     message.setInputParameter("ObjectID", entry.getId());
     message.service();
@@ -200,7 +199,7 @@ public class AVTransportService extends AbstractService implements ServiceEventH
    * @throws UPNPResponseException
    */
   public void clearQueue() throws IOException, UPNPResponseException {
-    ActionMessage message = messageFactory.getMessage("AddURIToQueue");
+    ActionMessage message = messageFactory.getMessage("RemoveAllTracksFromQueue");
     message.setInputParameter("InstanceID", 0);
     message.service();
   }
@@ -214,7 +213,7 @@ public class AVTransportService extends AbstractService implements ServiceEventH
    * @throws UPNPResponseException
    */
   public String saveQueue(String title, Entry queue) throws IOException, UPNPResponseException {
-    ActionMessage message = messageFactory.getMessage("AddURIToQueue");
+    ActionMessage message = messageFactory.getMessage("SaveQueue");
     message.setInputParameter("InstanceID", 0);
     message.setInputParameter("Title", title);
     message.setInputParameter("ObjectID", queue.getId());
