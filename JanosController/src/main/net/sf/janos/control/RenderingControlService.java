@@ -61,10 +61,35 @@ public class RenderingControlService extends AbstractService implements ServiceE
     registerServiceEventing(this);
   }
   
-//  public boolean getMute() {
-//    ActionMessage msg = messageFactory.getMessage(GET_MUTE_ACTION);
-//    msg.setInputParameter(parameterName, parameterValue)
-//  }
+  public boolean getMute() throws IOException, UPNPResponseException {
+
+	  String mute_master = state.get(RenderingControlEventType.MUTE_MASTER);
+	  if (mute_master == null) {
+		  ActionMessage message = messageFactory.getMessage("GetMute");
+		  message.setInputParameter("InstanceID", 0);
+		  message.setInputParameter("Channel", "Master"); // can also be LF or RF
+		  ActionResponse resp = message.service();
+		  state.put(RenderingControlEventType.MUTE_MASTER, resp.getOutActionArgumentValue("CurrentMute"));
+	  }
+	  return Integer.parseInt(state.get(RenderingControlEventType.MUTE_MASTER)) == 1;
+  }
+
+  /**
+   * Sets the mute to the given value. Must be between 0-1 inclusive.
+   * 
+   * @param mute
+   *          the new mute state.
+   * @throws IOException
+   * @throws UPNPResponseException
+   */
+
+  public void setMute(int mute) throws IOException, UPNPResponseException {
+	  ActionMessage message = messageFactory.getMessage("SetMute");
+	  message.setInputParameter("InstanceID", 0);
+	  message.setInputParameter("Channel", "Master"); // can also be LF or RF
+	  message.setInputParameter("DesiredMute", mute!=0?1:0);
+	  message.service();
+  }
   
   /**
    * Sets the volume to the given %. Must be between 0-100 inclusive.
