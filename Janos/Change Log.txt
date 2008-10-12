@@ -1,5 +1,8 @@
 Change Log
 
+11-Oct-2008
+- adjust MusicControlPanel to pin each column width to the ClientArea's width, eliminating "phantom" columns
+
 0.2
 - Removed tooltip on zone list
 - Added log4j logging

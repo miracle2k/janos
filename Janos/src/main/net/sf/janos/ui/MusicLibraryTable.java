@@ -31,6 +31,8 @@ import net.sf.janos.util.ui.ImageUtilities;
 
 import org.apache.commons.logging.LogFactory;
 import org.eclipse.swt.SWT;
+import org.eclipse.swt.events.ControlEvent;
+import org.eclipse.swt.events.ControlListener;
 import org.eclipse.swt.events.MouseEvent;
 import org.eclipse.swt.events.MouseListener;
 import org.eclipse.swt.events.SelectionEvent;
@@ -154,14 +156,31 @@ public class MusicLibraryTable extends Composite implements ZonePlayerModelListe
       typeTable.setHeaderVisible(true);
       TableColumn name = new TableColumn(typeTable, SWT.LEFT);
       name.setText("Type");
-      name.setWidth(180);
+      name.setResizable(false);
       
       typeTable.setItemCount(rootLib.getSize());
       typeTable.addListener (SWT.SetData, listener);
       typeTable.addMouseListener(tableMouseListener);
       typeTable.addSelectionListener(tableSelectionListener);
+      typeTable.addControlListener(tableResizer);
     }
   }
+  
+  static class TableResizer implements ControlListener {
+		@Override
+		public void controlMoved(ControlEvent arg0) {
+		}
+
+		@Override
+		public void controlResized(ControlEvent arg0) {
+			Table t = (Table)arg0.widget;
+			TableColumn c = t.getColumn(0);
+			c.setWidth(t.getClientArea().width);
+			t.layout();
+		}
+  };
+  static TableResizer tableResizer = new TableResizer();
+  
   
   /**
    * {@inheritDoc}
@@ -360,14 +379,14 @@ public class MusicLibraryTable extends Composite implements ZonePlayerModelListe
           table.setHeaderVisible(true);
           TableColumn name = new TableColumn(table, SWT.LEFT);
           name.setText(entry.getTitle());
-          name.setWidth(150);
-          name.setResizable(true);
+          name.setResizable(false);
 
           table.setItemCount(lib.getSize());
           table.addListener (SWT.SetData, listener);
 
           table.addMouseListener(tableMouseListener);
           table.addSelectionListener(tableSelectionListener);
+          table.addControlListener(tableResizer);
           layout();
         }
       }
