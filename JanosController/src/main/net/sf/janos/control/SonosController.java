@@ -40,7 +40,7 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 
 /**
- * The main controller class that discovers the sonos devices, and provids
+ * The main controller class that discovers the sonos devices, and provides
  * control over all the known zone player devices.
  * 
  * provides convenience methods for zone and zone player related activities.
