@@ -16,6 +16,8 @@
 package net.sf.janos.control;
 
 import java.io.IOException;
+import java.util.ArrayList;
+import java.util.List;
 
 import net.sbbi.upnp.ServiceEventHandler;
 import net.sbbi.upnp.messages.ActionMessage;
@@ -26,6 +28,7 @@ import net.sf.janos.model.UnresponsiveDeviceActionType;
 import net.sf.janos.model.UpdateType;
 import net.sf.janos.model.ZoneGroupState;
 import net.sf.janos.model.xml.ResultParser;
+
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -43,6 +46,8 @@ public class ZoneGroupTopologyService extends AbstractService {
   
   private static final Log LOG = LogFactory.getLog(ZoneGroupTopologyService.class);
 
+  private final List<ZoneGroupTopologyListener> listeners = new ArrayList<ZoneGroupTopologyListener>();
+  
   private final ServiceEventHandler serviceEventHandler = new ServiceEventHandler() {
     public void handleStateVariableEvent(String varName, String newValue) {
       LOG.debug(varName + "=" + newValue);
@@ -50,6 +55,7 @@ public class ZoneGroupTopologyService extends AbstractService {
         if (varName.equals("AvailableSoftwareUpdate")) {
         } else if (varName == "ZoneGroupState") {
           zoneGroup = ResultParser.getGroupStateFromResult(SonosController.getInstance(), newValue);
+          fireStateChanged();
         } else if (varName == "ThirdPartyMediaServers") {
 
         } else if (varName == "AlarmRunSequence") {
@@ -174,4 +180,32 @@ public class ZoneGroupTopologyService extends AbstractService {
             <name>ReportAlarmStartedRunning</name>
         </action>
    */
+  
+  private void fireStateChanged() {
+	  synchronized (listeners) {
+		  for (ZoneGroupTopologyListener l : listeners) {
+			  l.valuesChanged();
+		  }
+	  }
+  }
+
+  /**
+   * registers the given listener to be notified of changes to the state of the AVTransportService. 
+   * @param l
+   */
+  public void addZoneGroupTopologyListener(ZoneGroupTopologyListener l) {
+	  synchronized (listeners) {
+		  listeners.add(l);
+	  }
+  }
+
+  /**
+   * unregisters the given listener: no further notifications shall be recieved.
+   * @param l
+   */
+  public void removeZoneGroupTopologyListener(ZoneGroupTopologyListener l) {
+	  synchronized (listeners) {
+		  listeners.remove(l);
+	  }
+  }
 }
