@@ -15,11 +15,9 @@
  */
 package net.sf.janos.ui;
 
-import java.io.IOException;
 import java.io.InputStream;
 import java.util.Set;
 
-import net.sbbi.upnp.messages.UPNPResponseException;
 import net.sf.janos.control.AVTransportListener;
 import net.sf.janos.control.AVTransportService;
 import net.sf.janos.control.RenderingControlListener;
