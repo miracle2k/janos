@@ -176,7 +176,6 @@ public class MusicLibraryTable extends Composite implements ZonePlayerModelListe
 			Table t = (Table)arg0.widget;
 			TableColumn c = t.getColumn(0);
 			c.setWidth(t.getClientArea().width);
-			t.layout();
 		}
   };
   static TableResizer tableResizer = new TableResizer();
