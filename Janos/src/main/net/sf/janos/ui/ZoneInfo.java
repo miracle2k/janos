@@ -12,7 +12,7 @@ import org.eclipse.swt.widgets.Composite;
 import org.eclipse.swt.widgets.Control;
 
 public class ZoneInfo extends CTabFolder implements ZoneListSelectionListener {
-	
+
 	final private HashMap<String, Control> controls = new HashMap<String, Control>();
 
 	public ZoneInfo(Composite parent, int style) {
@@ -23,8 +23,8 @@ public class ZoneInfo extends CTabFolder implements ZoneListSelectionListener {
 	}
 
 	public void zoneSelectionChangedTo(ZonePlayer newSelection) {
-    // always display the zone controller of a given zone, for if it's in a group
-    newSelection = SonosController.getCoordinatorForZonePlayer(newSelection);
+		// always display the zone controller of a given zone, for if it's in a group
+		newSelection = SonosController.getCoordinatorForZonePlayer(newSelection);
 		String targetName = newSelection.getDevicePropertiesService().getZoneAttributes().getName();
 
 		// create the Zone Metadata Display if we don't already have one
@@ -33,15 +33,16 @@ public class ZoneInfo extends CTabFolder implements ZoneListSelectionListener {
 			q.showNowPlaying();
 			controls.put(targetName, q);
 		}
-		
+
 		// fetch the underlying control and stick it in the display
 		Control control = controls.get(targetName);
 		{
 			ZoneInfoDisplay q = (ZoneInfoDisplay)control;
 			q.showNowPlaying();
 		}
+
 		CTabItem item = getItem(0);
 		item.setControl(control);
-		item.setText(targetName);
+		item.setText("Queue for " + targetName);
 	}
 }
