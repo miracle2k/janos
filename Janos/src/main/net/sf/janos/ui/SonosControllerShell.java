@@ -71,13 +71,7 @@ public class SonosControllerShell {
 		sashForm= new SashForm(shell,SWT.HORIZONTAL);
 		sashForm.setLayout(new FillLayout());
 		
-
-		
 		ExpandBar bar = new ExpandBar(sashForm, SWT.NONE);
-//		GridData zoneControlData = new GridData(GridData.FILL_VERTICAL);
-//		zoneControlData.widthHint = 175;
-//		zoneControlData.verticalSpan = 2;
-//		bar.setLayoutData(zoneControlData);
 		zoneControls = new ZoneControlList(bar, controller);
 		
 		Composite rightSide = new Composite(sashForm, SWT.NONE);

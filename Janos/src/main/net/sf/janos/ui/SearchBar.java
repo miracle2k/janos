@@ -45,7 +45,8 @@ public class SearchBar extends Composite {
     this.browseHandles = Collections.synchronizedList(new ArrayList<BrowseHandle>());
     
     Text searchField = new Text(this, SWT.SEARCH | SWT.CANCEL );
-    SearchAction searchAction = new SearchAction(searchField);
+    @SuppressWarnings("unused")
+	SearchAction searchAction = new SearchAction(searchField);
   }
 
   public void performSearch(String text) {

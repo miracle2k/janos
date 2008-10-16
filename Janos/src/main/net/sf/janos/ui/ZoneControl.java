@@ -6,12 +6,14 @@ import net.sf.janos.model.ZoneGroup;
 import org.eclipse.swt.SWT;
 import org.eclipse.swt.events.ControlEvent;
 import org.eclipse.swt.events.ControlListener;
+import org.eclipse.swt.layout.FormAttachment;
+import org.eclipse.swt.layout.FormData;
+import org.eclipse.swt.layout.FormLayout;
 import org.eclipse.swt.layout.GridData;
-import org.eclipse.swt.layout.GridLayout;
 import org.eclipse.swt.widgets.Button;
 import org.eclipse.swt.widgets.Composite;
 
-public class ZoneControl extends Composite implements ControlListener {
+public class ZoneControl extends Composite {
 
 	private final ZoneGroup group;
 	private final NowPlaying nowPlaying;
@@ -27,21 +29,26 @@ public class ZoneControl extends Composite implements ControlListener {
 		boolean isMultiGroup = group.getMembers().size()>1;
 		
 		// Row 1
-		this.nowPlaying = new NowPlaying(this, 0, zone);
-		GridData npgd = new GridData();
-		npgd.horizontalSpan = 2;
-		getNowPlaying().setLayoutData(npgd);
+		nowPlaying = new NowPlaying(this, 0, zone);
+		FormData data1 = new FormData();
+		data1.left = new FormAttachment(0, 0);
+		data1.right = new FormAttachment(100, 0);
+		nowPlaying.setLayoutData(data1);
 		
 		// Row 2
-		this.volumeControl = new VolumeControl(this, 0, zone); 
-		GridData volumeControlGD = new GridData(SWT.LEFT, SWT.CENTER, false, false);
-		volumeControl.setLayoutData(volumeControlGD);
+		volumeControl = new VolumeControl(this, 0, zone); 
+		FormData data2 = new FormData();
+		data2.left = new FormAttachment(0, 0);
+		data2.top = new FormAttachment(nowPlaying);
+		volumeControl.setLayoutData(data2);
 		
-		
-		this.subGroups = new Button(this, SWT.NONE);
+		subGroups = new Button(this, SWT.NONE);
 		subGroups.setText("Group Members/Volume");
-		GridData subGroupGD = new GridData(SWT.RIGHT, SWT.CENTER, false, false);
-		subGroups.setLayoutData(subGroupGD);
+		FormData data3 = new FormData();
+		data3.left = new FormAttachment(volumeControl);
+		data3.right = new FormAttachment(100, 0);
+		data3.top = new FormAttachment(nowPlaying);
+		subGroups.setLayoutData(data3);
 			
 		if (isMultiGroup) {
 			subGroups.setVisible(true);
@@ -51,31 +58,19 @@ public class ZoneControl extends Composite implements ControlListener {
 		
 		// row 3
 		queue = new QueueDisplay(this, SWT.NONE, zone);
-		GridData queueGD = new GridData();
-		queueGD.horizontalSpan = 2;
-		queueGD.horizontalAlignment = GridData.FILL;
-		queueGD.grabExcessHorizontalSpace = true;
-		queue.setLayoutData(queueGD);
+		FormData data4 = new FormData();
+		data4.left = new FormAttachment(0, 0);
+		data4.right = new FormAttachment(100, 0);
+		data4.top = new FormAttachment(volumeControl);
+		data4.bottom = new FormAttachment(100,0);
+		data4.height = 100;
+		queue.setLayoutData(data4);
 		
- 		setLayout(new GridLayout(2, true));
- 		addControlListener(this);
-	}
-
-
-	@Override
-	public void controlMoved(ControlEvent arg0) {
-	}
-
-
-	@Override
-	public void controlResized(ControlEvent arg0) {
-		GridData gd = (GridData) getNowPlaying().getLayoutData();
-		// TODO: Account for this magic number (-10) which appears to be required
-		// to get a nice border around the NP group
-		gd.widthHint = this.getBounds().width - 10;	
-		layout();
-	}
-
+		FormLayout layout = new FormLayout();
+		layout.marginWidth = 3;
+		layout.marginHeight = 3;
+		setLayout(layout);
+ 	}
 
 	public NowPlaying getNowPlaying() {
 		return nowPlaying;
