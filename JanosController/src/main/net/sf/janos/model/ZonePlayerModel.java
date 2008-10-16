@@ -35,7 +35,9 @@ public class ZonePlayerModel {
    */
   public void addZonePlayer(ZonePlayer zp) {
 	
-	if (zonePlayers.isEmpty()) {
+	  boolean alphabetical = false;
+	  
+	if (!alphabetical || zonePlayers.isEmpty()) {
 		zonePlayers.add(zp);
 	} else {
 		String newName = zp.getDevicePropertiesService().getZoneAttributes().getName(); 

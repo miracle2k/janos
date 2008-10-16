@@ -302,11 +302,20 @@ public class AVTransportService extends AbstractService implements ServiceEventH
     ActionResponse resp = message.service();
     state.put(AVTransportEventType.CurrentTrack, resp.getOutActionArgumentValue("Track"));
     state.put(AVTransportEventType.CurrentTrackDuration, resp.getOutActionArgumentValue("TrackDuration"));
-    state.put(AVTransportEventType.CurrentTrackMetaData, resp.getOutActionArgumentValue("TrackMetaData"));
+    // state.put(AVTransportEventType.CurrentTrackMetaData, resp.getOutActionArgumentValue("TrackMetaData"));
     state.put(AVTransportEventType.CurrentTrackURI, resp.getOutActionArgumentValue("TrackURI"));
+    
+    TrackMetaData trackMetaData = null;
+    
+    try {
+	    String metaDataString = state.get(AVTransportEventType.CurrentTrackMetaData);
+	    trackMetaData = metaDataString.length() == 0 ? null : ResultParser.parseTrackMetaData(metaDataString);
+    } catch (Exception e) {
+    }
+    
     return new PositionInfo(Integer.parseInt(state.get(AVTransportEventType.CurrentTrack)), 
         TimeUtilities.convertDurationToLong(state.get(AVTransportEventType.CurrentTrackDuration)), 
-        state.get(AVTransportEventType.CurrentTrackMetaData), 
+        trackMetaData, 
         state.get(AVTransportEventType.CurrentTrackURI),
         TimeUtilities.convertDurationToLong(resp.getOutActionArgumentValue("RelTime")),
         TimeUtilities.convertDurationToLong(resp.getOutActionArgumentValue("AbsTime")),

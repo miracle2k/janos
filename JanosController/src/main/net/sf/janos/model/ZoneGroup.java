@@ -30,28 +30,40 @@ import net.sf.janos.control.ZonePlayer;
  */
 public class ZoneGroup {
 
-  private final List<ZonePlayer> members;
-  private final ZonePlayer coordinator;
-  private final String id;
-  
-  public ZoneGroup(String id, ZonePlayer coordinator, Collection<ZonePlayer> members) {
-    this.members= new ArrayList<ZonePlayer>(members);
-    if (!this.members.contains(coordinator)) {
-      this.members.add(coordinator);
-    }
-    this.coordinator = coordinator;
-    this.id = id;
-  }
-  
-  public List<ZonePlayer> getMembers() {
-    return members;
-  }
-  
-  public ZonePlayer getCoordinator() {
-    return coordinator;
-  }
-  
-  public String getId() {
-    return id;
-  }
+	private final List<ZonePlayer> members;
+	private final ZonePlayer coordinator;
+	private final String id;
+
+	public ZoneGroup(String id, ZonePlayer coordinator, Collection<ZonePlayer> members) {
+		this.members= new ArrayList<ZonePlayer>(members);
+		if (!this.members.contains(coordinator)) {
+			this.members.add(coordinator);
+		}
+		this.coordinator = coordinator;
+		this.id = id;
+	}
+
+	public List<ZonePlayer> getMembers() {
+		return members;
+	}
+
+	public ZonePlayer getCoordinator() {
+		return coordinator;
+	}
+
+	public String getId() {
+		return id;
+	}
+
+	@Override
+	public boolean equals(Object obj) {
+		if (obj == null) {
+			return false;
+		}
+		if (obj instanceof ZoneGroup) {
+			ZoneGroup group = (ZoneGroup) obj;
+			return group.getId().equals(getId());
+		}
+		return false;
+	}
 }

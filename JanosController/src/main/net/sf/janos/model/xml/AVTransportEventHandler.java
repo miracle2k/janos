@@ -88,7 +88,13 @@ public class AVTransportEventHandler extends DefaultHandler {
     CurrentRecordQualityMode,
     PossibleRecordQualityModes,
     NextAVTransportURI,
-    NextAVTransportURIMetaData;
+    NextAVTransportURIMetaData,
+    Event,
+    InstanceID,
+    NextTrackURI,
+    NextTrackMetaData,
+    EnqueuedTransportURI,
+    EnqueuedTransportURIMetaData;
   }
 
   private final Map<AVTransportEventType, String> changes = new HashMap<AVTransportEventType, String>();

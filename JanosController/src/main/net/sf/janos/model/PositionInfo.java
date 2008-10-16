@@ -26,14 +26,14 @@ public class PositionInfo {
 
   private final int trackNum;
   private final long trackDuration;
-  private final String trackMetaData;
+  private final TrackMetaData trackMetaData;
   private final String trackURI;
   private final long relTime;
   private final long absTime;
   private final int relCount;
   private final int absCount;
 
-  public PositionInfo(int trackNum, long trackDuration, String trackMetaData, 
+  public PositionInfo(int trackNum, long trackDuration, TrackMetaData trackMetaData, 
       String trackURI, long relTime, long absTime, int relCount, int absCount) {
     this.trackNum = trackNum;
     this.trackDuration = trackDuration;
@@ -53,7 +53,7 @@ public class PositionInfo {
     return relCount;
   }
 
-  public String getTrackMetaData() {
+  public TrackMetaData getTrackMetaData() {
     return trackMetaData;
   }
 

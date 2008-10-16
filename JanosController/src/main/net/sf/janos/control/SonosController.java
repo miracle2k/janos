@@ -34,6 +34,8 @@ import net.sbbi.upnp.DiscoveryResultsHandler;
 import net.sbbi.upnp.ServicesEventing;
 import net.sbbi.upnp.devices.UPNPRootDevice;
 import net.sf.janos.model.ZoneGroup;
+import net.sf.janos.model.ZoneGroupState;
+import net.sf.janos.model.ZoneGroupStateModel;
 import net.sf.janos.model.ZonePlayerModel;
 
 import org.apache.commons.logging.Log;
@@ -48,7 +50,7 @@ import org.apache.commons.logging.LogFactory;
  * @author David Wheeler
  * 
  */
-public class SonosController implements ZoneListSelectionListener{
+public class SonosController implements ZoneGroupTopologyListener {
   
   private static final Log LOG = LogFactory.getLog(SonosController.class);
 
@@ -98,8 +100,8 @@ public class SonosController implements ZoneListSelectionListener{
   };
   
   private final DiscoveryHandler discoveryHandler = new DiscoveryHandler();
-
-  private ZonePlayerModel zonePlayers = new ZonePlayerModel();
+  private final ZoneGroupStateModel groups = new ZoneGroupStateModel();
+  private final ZonePlayerModel zonePlayers = new ZonePlayerModel();
 
   /**
    * @return the singleton instance of SonosController
@@ -134,31 +136,8 @@ public class SonosController implements ZoneListSelectionListener{
     }
   }
   
-//  /**
-//   * performs a search for zone player devices, adding the results using
-//   * {@link #addZonePlayer(UPNPRootDevice)}.
-//   * 
-//   */
-//  private void searchForZones() {
-//    UPNPRootDevice[] devices;
-//    try {
-//      devices = Discovery.discover(DISCOVERY_TIMEOUT, ZonePlayerConstants.SONOS_DEVICE_TYPE);
-//      if (devices != null) {
-//        for (UPNPRootDevice device : devices) {
-//          LOG.info("Device found: " + device.getFriendlyName());
-//          addZonePlayer(device);
-//        }
-//      } else {
-//        LOG.warn("No devices found");
-//      }
-//    } catch (IOException e) {
-//      // TODO Auto-generated catch block
-//      e.printStackTrace();
-//    }
-//  }
-  
   /**
-   * Broadcasts a search packet on all nextwork interfaces. This method should
+   * Broadcasts a search packet on all network interfaces. This method should
    * really be a part of the Discovery class, but that's not my code...
    * 
    * @param searchTarget
@@ -186,13 +165,12 @@ public class SonosController implements ZoneListSelectionListener{
     // Check if we've already got this zone player
     for (ZonePlayer zone : zonePlayers.getAllZones()) {
       if (zone.getRootDevice().getUDN().equals(dev.getUDN())) {
-        // we have a dup
-        LOG.info("Ignoring duplicate zone " + dev);
-        return;
+    	return;
       }
     }
     ZonePlayer sd = new ZonePlayer(dev);
     zonePlayers.addZonePlayer(sd);
+    sd.getZoneGroupTopologyService().addZoneGroupTopologyListener(this);
   }
   
   /**
@@ -202,6 +180,7 @@ public class SonosController implements ZoneListSelectionListener{
   private void removeZonePlayer(final String udn) {
     ZonePlayer zp = zonePlayers.getById(udn);
     zonePlayers.remove(zp);
+    zp.getZoneGroupTopologyService().removeZoneGroupTopologyListener(this);
     zp.dispose();
   }
   
@@ -211,7 +190,14 @@ public class SonosController implements ZoneListSelectionListener{
   public ZonePlayerModel getZonePlayerModel() {
     return zonePlayers;
   }
-
+  
+  /**
+   * @return the ZoneGroupStateModel
+   */
+  public ZoneGroupStateModel getZoneGroupStateModel() {
+    return groups;
+  }
+  
   /**
    * @param zp
    *          a zone player
@@ -237,10 +223,6 @@ public class SonosController implements ZoneListSelectionListener{
     return EXECUTOR;
   }
 
-  public void zoneSelectionChangedTo(ZonePlayer newSelection) {
-//    setCurrentZonePlayer(newSelection);
-  }
-  
   public void dispose() {
     DiscoveryAdvertisement.getInstance().unRegisterEvent(DiscoveryAdvertisement.EVENT_SSDP_ALIVE, ZonePlayerConstants.SONOS_DEVICE_TYPE, discoveryHandler);
     DiscoveryAdvertisement.getInstance().unRegisterEvent(DiscoveryAdvertisement.EVENT_SSDP_BYE_BYE, ZonePlayerConstants.SONOS_DEVICE_TYPE, discoveryHandler);
@@ -249,4 +231,13 @@ public class SonosController implements ZoneListSelectionListener{
       zp.dispose();
     }
   }
+
+	/*
+	 * (non-Javadoc)
+	 * @see net.sf.janos.control.ZoneGroupTopologyListener#valuesChanged()
+	 */
+	@Override
+	public synchronized void zoneGroupTopologyChanged(ZoneGroupState groupState) {
+		groups.handleGroupUpdate(groupState);
+	}
 }

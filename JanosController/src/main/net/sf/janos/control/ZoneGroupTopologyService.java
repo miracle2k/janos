@@ -184,7 +184,7 @@ public class ZoneGroupTopologyService extends AbstractService {
   private void fireStateChanged() {
 	  synchronized (listeners) {
 		  for (ZoneGroupTopologyListener l : listeners) {
-			  l.valuesChanged();
+			  l.zoneGroupTopologyChanged(getGroupState());
 		  }
 	  }
   }
