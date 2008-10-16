@@ -37,7 +37,9 @@ import org.eclipse.swt.events.ControlEvent;
 import org.eclipse.swt.events.ControlListener;
 import org.eclipse.swt.events.MouseEvent;
 import org.eclipse.swt.events.MouseListener;
+import org.eclipse.swt.graphics.Color;
 import org.eclipse.swt.graphics.Image;
+import org.eclipse.swt.graphics.RGB;
 import org.eclipse.swt.layout.FillLayout;
 import org.eclipse.swt.layout.GridData;
 import org.eclipse.swt.layout.GridLayout;
@@ -53,9 +55,9 @@ import org.eclipse.swt.widgets.TableItem;
  * @author David Wheeler
  *
  */
-public class ZoneInfoDisplay extends Composite implements AVTransportListener {
+public class QueueDisplay extends Composite implements AVTransportListener {
 
-	private static final Log LOG = LogFactory.getLog(ZoneInfoDisplay.class);
+	private static final Log LOG = LogFactory.getLog(QueueDisplay.class);
 
 	/**
 	 * The maximum number of items to display in the queue
@@ -108,11 +110,13 @@ public class ZoneInfoDisplay extends Composite implements AVTransportListener {
 	 * @param style
 	 * @param controller
 	 */
-	public ZoneInfoDisplay(Composite parent, int style, ZonePlayer zone) {
+	public QueueDisplay(Composite parent, int style, ZonePlayer zone) {
 		super(parent, style);
 		this.currentZone = zone;
 
-		setLayout(new GridLayout(1, false));
+//		this.setBackground(new Color(parent.getDisplay(), new RGB(255, 0, 255)));
+//		this.getParent().setBackground(new Color(parent.getDisplay(), new RGB(0, 0, 255)));
+		setLayout(new GridLayout(1, true));
 
 		InputStream is = getClass().getResourceAsStream("/nowPlaying.png");
 		nowPlayingImage = new Image(getDisplay(), is);
@@ -120,7 +124,7 @@ public class ZoneInfoDisplay extends Composite implements AVTransportListener {
 			is.close();
 		} catch (IOException e) {
 		}
-		
+
 		is = getClass().getResourceAsStream("/empty.png");
 		emptyImage = new Image(getDisplay(), is);
 		try {
@@ -132,8 +136,6 @@ public class ZoneInfoDisplay extends Composite implements AVTransportListener {
 		queueModelListener = new TableUpdater();
 		queueModel.addQueueModelListener(queueModelListener);
 
-		this.setLayout(new FillLayout());
-	
 		queue = new Table(this, SWT.SINGLE | SWT.VIRTUAL);
 		queue.setLinesVisible(true);
 		queueMouseListener = new QueueMouseListener();
@@ -142,26 +144,28 @@ public class ZoneInfoDisplay extends Composite implements AVTransportListener {
 		queueColumn.setText("Queue Entries");
 		queue.addControlListener(tableResizer);
 		queue.addListener(SWT.SetData, queueDataFiller);
-		GridData queueData = new GridData(GridData.FILL, GridData.FILL, true, true);
-		this.setLayoutData(queueData);
+		GridData queueData = new GridData(GridData.CENTER, GridData.BEGINNING, false, false);
+		queueData.horizontalAlignment = GridData.FILL;
+		queueData.grabExcessHorizontalSpace = true;
+		queue.setLayoutData(queueData);
 
 		zone.getMediaRendererDevice().getAvTransportService().addAvTransportListener(this);
 	}
 
-	  static class TableResizer implements ControlListener {
-			@Override
-			public void controlMoved(ControlEvent arg0) {
-			}
+	static class TableResizer implements ControlListener {
+		@Override
+		public void controlMoved(ControlEvent arg0) {
+		}
 
-			@Override
-			public void controlResized(ControlEvent arg0) {
-				Table t = (Table)arg0.widget;
-				TableColumn c = t.getColumn(0);
-				c.setWidth(t.getClientArea().width);
-			}
-	  };
-	  static TableResizer tableResizer = new TableResizer();
-	  
+		@Override
+		public void controlResized(ControlEvent arg0) {
+			Table t = (Table)arg0.widget;
+			TableColumn c = t.getColumn(0);
+			c.setWidth(t.getClientArea().width);
+		}
+	};
+	static TableResizer tableResizer = new TableResizer();
+
 
 	/**
 	 * {@inheritDoc}
@@ -233,8 +237,8 @@ public class ZoneInfoDisplay extends Composite implements AVTransportListener {
 
 		public NowPlayingFetcher() {
 		}
-		
-    @Override
+
+		@Override
 		public void run() {
 			if (currentZone == null) {
 				return;
@@ -256,9 +260,9 @@ public class ZoneInfoDisplay extends Composite implements AVTransportListener {
 		}
 	}
 
-//	public void displayEmptyQueue() {
-//		getDisplay().asyncExec(new QueueUpdater(new ArrayList<Entry>()));
-//	}
+	//	public void displayEmptyQueue() {
+	//		getDisplay().asyncExec(new QueueUpdater(new ArrayList<Entry>()));
+	//	}
 
 	/**
 	 * Plays any queue entry on double click

@@ -18,29 +18,31 @@ package net.sf.janos.ui;
 import net.sf.janos.control.SonosController;
 
 import org.eclipse.swt.SWT;
+import org.eclipse.swt.custom.SashForm;
+import org.eclipse.swt.layout.FillLayout;
+import org.eclipse.swt.layout.FormAttachment;
+import org.eclipse.swt.layout.FormData;
+import org.eclipse.swt.layout.FormLayout;
 import org.eclipse.swt.layout.GridData;
 import org.eclipse.swt.layout.GridLayout;
+import org.eclipse.swt.layout.RowLayout;
 import org.eclipse.swt.widgets.Composite;
 import org.eclipse.swt.widgets.Display;
 import org.eclipse.swt.widgets.ExpandBar;
 import org.eclipse.swt.widgets.Label;
+import org.eclipse.swt.widgets.Sash;
 import org.eclipse.swt.widgets.Shell;
 
 public class SonosControllerShell {
 
-	public final static int ZONE_LIST_WIDTH = 200;
-	public final static int NOW_PLAYING_WIDTH = 250;
-
 	private final Display display;
-
 	private final Shell shell;
-
 	private final SonosController controller;
-	// private ZoneInfo zoneInfo;
 	private MusicLibraryTable music;
 	private SearchBar searchBar;
 	private UrlAdder urlAdder;
 	private ZoneControlList zoneControls;
+	private SashForm sashForm;
 	
 	public SonosControllerShell(Display display, SonosController controller) {
 		this.display = display;
@@ -64,56 +66,55 @@ public class SonosControllerShell {
 	private void buildComponents() {
 
 		shell.setText("SonosJ");
-		shell.setLayout(new GridLayout(2, false));
+		shell.setLayout(new FillLayout());
+
+		sashForm= new SashForm(shell,SWT.HORIZONTAL);
+		sashForm.setLayout(new FillLayout());
+		
 
 		
-		
-		ExpandBar bar = new ExpandBar(shell, SWT.V_SCROLL);
-		GridData zoneControlData = new GridData(GridData.FILL_VERTICAL);
-		zoneControlData.widthHint = 400;
-		zoneControlData.verticalSpan = 2;
-		bar.setLayoutData(zoneControlData);
+		ExpandBar bar = new ExpandBar(sashForm, SWT.NONE);
+//		GridData zoneControlData = new GridData(GridData.FILL_VERTICAL);
+//		zoneControlData.widthHint = 175;
+//		zoneControlData.verticalSpan = 2;
+//		bar.setLayoutData(zoneControlData);
 		zoneControls = new ZoneControlList(bar, controller);
 		
-		Composite topPanel = new Composite(shell, SWT.NONE);
+		Composite rightSide = new Composite(sashForm, SWT.NONE);
+		FormLayout layout = new FormLayout();
+		layout.marginWidth = 3;
+		layout.marginHeight = 3;
+		rightSide.setLayout(layout);
+		
+		Composite topPanel = new Composite(rightSide, SWT.NONE);
 		topPanel.setLayout(new GridLayout(4, false));
-		GridData topPanelData = new GridData();
-		topPanelData.grabExcessHorizontalSpace=true;
-		topPanelData.horizontalAlignment=GridData.HORIZONTAL_ALIGN_FILL;
-		topPanel.setLayoutData(topPanelData);
+		FormData data1 = new FormData();
+		data1.left = new FormAttachment(0, 0);
+		data1.top = new FormAttachment(0, 0);
+		topPanel.setLayoutData(data1);
+
 
 		Label searchLabel = new Label(topPanel, SWT.NONE);
 		searchLabel.setText("Search: ");
 		
 		searchBar = new SearchBar(topPanel, SWT.NONE, this);
-		GridData searchBarData = new GridData();
-		searchBarData.horizontalAlignment = GridData.HORIZONTAL_ALIGN_END;
-		searchBar.setLayoutData(searchBarData);
+
 
 		Label urlAdderLabel = new Label(topPanel, SWT.NONE);
 		urlAdderLabel.setText("URL Adder: ");
 		
 		urlAdder = new UrlAdder(topPanel, SWT.NONE);
-		GridData urlAdderData = new GridData();
-		urlAdderData.horizontalAlignment = GridData.HORIZONTAL_ALIGN_END;
-		searchBar.setLayoutData(urlAdderData);
 
+
+		music = new MusicLibraryTable(rightSide, SWT.NONE, this);
+		FormData data2 = new FormData();
+		data2.left = new FormAttachment(0, 0);
+		data2.right = new FormAttachment(100, 0);
+		data2.top = new FormAttachment(topPanel);
+		data2.bottom = new FormAttachment(100,0);
+		music.setLayoutData(data2);
 		
-
-		music = new MusicLibraryTable(shell, SWT.NONE, this);
-		GridData musicData = new GridData(SWT.FILL, SWT.FILL, true, true);
-		musicData.widthHint=400;
-		musicData.heightHint=400;
-		music.setLayoutData(musicData);
-
-//		zoneInfo = new ZoneInfo(shell, SWT.SINGLE | SWT.BORDER);
-//		GridData ziData = new GridData();
-//		ziData.widthHint=NOW_PLAYING_WIDTH;
-//		ziData.verticalAlignment=GridData.FILL;
-//		ziData.horizontalAlignment=GridData.FILL;
-//		ziData.grabExcessVerticalSpace=true;
-//		zoneInfo.setLayoutData(ziData);
-//		zoneControls.addSelectionListener(zoneInfo);
+		sashForm.setWeights(new int[] {30, 70} );
 	}
 
 	private void dispose() {

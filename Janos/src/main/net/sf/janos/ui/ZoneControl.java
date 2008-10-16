@@ -17,7 +17,7 @@ public class ZoneControl extends Composite implements ControlListener {
 	private final NowPlaying nowPlaying;
 	private final VolumeControl volumeControl;
 	private final Button subGroups;
-	
+	private final QueueDisplay queue;
 	
 	
 	public ZoneControl(Composite parent, ZoneGroup group) {
@@ -37,19 +37,27 @@ public class ZoneControl extends Composite implements ControlListener {
 		GridData volumeControlGD = new GridData(SWT.LEFT, SWT.CENTER, false, false);
 		volumeControl.setLayoutData(volumeControlGD);
 		
-		if (isMultiGroup) {
-			this.subGroups = new Button(this, SWT.NONE);
-			subGroups.setText("Group Members/Volume");
-			GridData subGroupGD = new GridData(SWT.RIGHT, SWT.CENTER, false, false);
-			subGroups.setLayoutData(subGroupGD);
 		
+		this.subGroups = new Button(this, SWT.NONE);
+		subGroups.setText("Group Members/Volume");
+		GridData subGroupGD = new GridData(SWT.RIGHT, SWT.CENTER, false, false);
+		subGroups.setLayoutData(subGroupGD);
+			
+		if (isMultiGroup) {
+			subGroups.setVisible(true);
 		} else {
-			this.subGroups = null;
+			subGroups.setVisible(false);
 		}
 		
-		GridLayout gridLayout = new GridLayout(2, false);
- 		setLayout(gridLayout);
-
+		// row 3
+		queue = new QueueDisplay(this, SWT.NONE, zone);
+		GridData queueGD = new GridData();
+		queueGD.horizontalSpan = 2;
+		queueGD.horizontalAlignment = GridData.FILL;
+		queueGD.grabExcessHorizontalSpace = true;
+		queue.setLayoutData(queueGD);
+		
+ 		setLayout(new GridLayout(2, true));
  		addControlListener(this);
 	}
 

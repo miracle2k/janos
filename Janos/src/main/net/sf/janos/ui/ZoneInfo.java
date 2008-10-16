@@ -29,7 +29,7 @@ public class ZoneInfo extends CTabFolder implements ZoneListSelectionListener {
 
 		// create the Zone Metadata Display if we don't already have one
 		if (! controls.containsKey(targetName)) {
-			ZoneInfoDisplay q = new ZoneInfoDisplay(this, 0, newSelection);
+			QueueDisplay q = new QueueDisplay(this, 0, newSelection);
 			q.showNowPlaying();
 			controls.put(targetName, q);
 		}
@@ -37,7 +37,7 @@ public class ZoneInfo extends CTabFolder implements ZoneListSelectionListener {
 		// fetch the underlying control and stick it in the display
 		Control control = controls.get(targetName);
 		{
-			ZoneInfoDisplay q = (ZoneInfoDisplay)control;
+			QueueDisplay q = (QueueDisplay)control;
 			q.showNowPlaying();
 		}
 
