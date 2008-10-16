@@ -37,6 +37,7 @@ public class ZoneControlList implements ExpandListener, ZoneGroupStateModelListe
 		this.controller = controller;
 		bar.addExpandListener(this);
 		controller.getZoneGroupStateModel().addListener(this);
+		addSearchingItem();
 
 		// I'd really like to set the background color to white so that the 
 		// Sonos ZP icons look better (they appear to be authored to look good 
@@ -61,9 +62,11 @@ public class ZoneControlList implements ExpandListener, ZoneGroupStateModelListe
 
 		ExpandItem item = (ExpandItem)arg0.item;
 		ZoneControl zc = (ZoneControl)item.getControl();
-		zc.getNowPlaying().showNowPlaying();
-		zc.layout(true);
-		setCurrentZone(zc.getZonePlayer());
+		if (zc!=null) {
+			zc.getNowPlaying().showNowPlaying();
+			zc.layout(true);
+			setCurrentZone(zc.getZonePlayer());
+		}
 	}
 
 	private void setIcon(final ExpandItem newItem, final ZonePlayer dev) {
@@ -163,8 +166,12 @@ public class ZoneControlList implements ExpandListener, ZoneGroupStateModelListe
 			}
 		});
 	}
-	
+
 	protected void addZone(ZoneGroup group, ZoneGroupStateModel source) {
+		
+		// clear search mode if necessary
+		removeSearchingItem();
+		
 		// extract the coordinator since he's the one we'll key off of
 		ZonePlayer coordinator = group.getCoordinator();
 		String coordinatorName = coordinator.getDevicePropertiesService().getZoneAttributes().getName();
@@ -210,7 +217,7 @@ public class ZoneControlList implements ExpandListener, ZoneGroupStateModelListe
 		item.setControl(zoneControl);
 		item.setExpanded(expand);
 	}
-	
+
 	protected void removeZone(ZoneGroup group, ZoneGroupStateModel source) {
 		String ID = group.getId();
 		for (ExpandItem i : bar.getItems()) {
@@ -223,9 +230,28 @@ public class ZoneControlList implements ExpandListener, ZoneGroupStateModelListe
 			} 
 		}
 	}
-	
+
 	protected void changeZone(ZoneGroup group, ZoneGroupStateModel source) {
 		removeZone(group, source);
 		addZone(group, source);
+	}
+	
+	protected static String searchingKey = new String("Searching");
+	
+	protected void addSearchingItem() {
+		ExpandItem item = new ExpandItem(bar, SWT.NONE, 0);
+		item.setText("Searching For Zone Players...");
+		item.setData(searchingKey, "1");
+		item.setControl(null);
+		item.setExpanded(false);
+	}
+
+	protected void removeSearchingItem() {
+		for (ExpandItem i : bar.getItems()) {
+			String val = (String)i.getData(searchingKey);
+			if (val != null) {
+				i.dispose();
+			} 
+		}
 	}
 }
