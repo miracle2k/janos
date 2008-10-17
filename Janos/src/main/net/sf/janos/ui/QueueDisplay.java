@@ -202,6 +202,9 @@ public class QueueDisplay extends Composite implements AVTransportListener {
 	 * {@inheritDoc}
 	 */
 	public void valuesChanged(Set<AVTransportEventType> events, AVTransportService source) {
+		if (isDisposed()) {
+			return;
+		}
 		new NowPlayingFetcher().start();
 	}
 

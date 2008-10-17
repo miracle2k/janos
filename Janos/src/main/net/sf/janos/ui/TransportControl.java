@@ -168,7 +168,8 @@ public class TransportControl extends Composite implements AVTransportListener {
 
 	public void valuesChanged(Set<AVTransportEventType> events, AVTransportService source) {
 		if (source == zone.getMediaRendererDevice().getAvTransportService() 
-				&& events.contains(AVTransportEventType.TransportState)) {
+				&& events.contains(AVTransportEventType.TransportState)
+				&& !isDisposed() ) {
 			getDisplay().asyncExec(new Runnable() {
 				public void run() {
 					setIsPlaying(isPlaying());

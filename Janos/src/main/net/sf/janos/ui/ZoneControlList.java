@@ -168,7 +168,7 @@ public class ZoneControlList implements ExpandListener, ZoneGroupStateModelListe
 		});
 	}
 
-	protected void addZone(ZoneGroup group, ZoneGroupStateModel source) {
+	protected ExpandItem addZone(ZoneGroup group, ZoneGroupStateModel source) {
 		
 		// clear search mode if necessary
 		removeSearchingItem();
@@ -225,24 +225,44 @@ public class ZoneControlList implements ExpandListener, ZoneGroupStateModelListe
 		setIcon(item, coordinator);
 		item.setControl(zoneControl);
 		item.setExpanded(expand);
+		
+		return item;
 	}
 
 	protected void removeZone(ZoneGroup group, ZoneGroupStateModel source) {
-		String ID = group.getId();
-		for (ExpandItem i : bar.getItems()) {
-			String thisID = (String)i.getData("GROUP_ID");
-			if (thisID.compareToIgnoreCase(ID) == 0) {
-				Control c = i.getControl();
-				i.setControl(null);
-				c.dispose();
-				i.dispose();
-			} 
+		ExpandItem i;
+		while ((i = findItemByZoneGroup(group)) != null ) {
+			Control c = i.getControl();
+			i.setControl(null);
+			c.dispose();
+			i.dispose();
 		}
 	}
 
 	protected void changeZone(ZoneGroup group, ZoneGroupStateModel source) {
+		
+		// find and remember the item expanded state
+		ExpandItem i = findItemByZoneGroup(group);
+		boolean expanded = i.getExpanded();
+		
 		removeZone(group, source);
-		addZone(group, source);
+		i = addZone(group, source);
+		
+		// reinstate the item expanded state
+		i.setExpanded(expanded);
+
+	}
+
+	protected ExpandItem findItemByZoneGroup(ZoneGroup group) {
+		String ID = group.getId();
+		for (ExpandItem i : bar.getItems()) {
+			String thisID = (String)i.getData("GROUP_ID");
+			if (thisID.compareToIgnoreCase(ID) == 0) {
+				return i;
+			} 
+		}
+
+		return null;
 	}
 	
 	protected static String searchingKey = new String("Searching");
