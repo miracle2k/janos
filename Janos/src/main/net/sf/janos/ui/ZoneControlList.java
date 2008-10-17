@@ -4,6 +4,8 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.net.URL;
 import java.util.ArrayList;
+import java.util.Collections;
+import java.util.LinkedList;
 import java.util.List;
 
 import net.sbbi.upnp.devices.DeviceIcon;
@@ -201,17 +203,23 @@ public class ZoneControlList implements ExpandListener, ZoneGroupStateModelListe
 
 		ExpandItem item = new ExpandItem(bar, 0, index);
 
-		// generate the title by concatenating zone names
-		String title = new String("");
+		// generate the title by alphabetizing and concatenating the zone names
+		LinkedList<String> names = new LinkedList<String>();
 		for (ZonePlayer zp : group.getMembers()) {
+			names.add(zp.getDevicePropertiesService().getZoneAttributes().getName());
+		}
+		Collections.sort(names);
+		
+		String title = new String("");
+		for (String name : names) {
 			if (title.compareTo("") != 0) {
 				title += ", ";
 			}
-			title += zp.getDevicePropertiesService().getZoneAttributes().getName();
+			title += name;
 		}
 
 		item.setText(title);
-		item.setData("SORT_KEY", coordinatorName);
+		item.setData("SORT_KEY", title);
 		item.setData("GROUP_ID", group.getId());
 		item.setHeight(zoneControl.computeSize(SWT.DEFAULT, SWT.DEFAULT, true).y);
 		setIcon(item, coordinator);
