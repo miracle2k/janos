@@ -111,8 +111,6 @@ public class QueueDisplay extends Composite implements AVTransportListener {
 		super(parent, style);
 		this.currentZone = zone;
 
-//		this.setBackground(new Color(parent.getDisplay(), new RGB(255, 0, 255)));
-//		this.getParent().setBackground(new Color(parent.getDisplay(), new RGB(0, 0, 255)));
 		setLayout(new GridLayout(1, true));
 
 		InputStream is = getClass().getResourceAsStream("/nowPlaying.png");
