@@ -171,6 +171,7 @@ public class SonosController implements ZoneGroupTopologyListener {
     ZonePlayer sd = new ZonePlayer(dev);
     zonePlayers.addZonePlayer(sd);
     sd.getZoneGroupTopologyService().addZoneGroupTopologyListener(this);
+    zoneGroupTopologyChanged(sd.getZoneGroupTopologyService().getGroupState());
   }
   
   /**
@@ -238,6 +239,9 @@ public class SonosController implements ZoneGroupTopologyListener {
 	 */
 	@Override
 	public synchronized void zoneGroupTopologyChanged(ZoneGroupState groupState) {
+		if (groupState == null) {
+			return;
+		}
 		groups.handleGroupUpdate(groupState);
 	}
 }

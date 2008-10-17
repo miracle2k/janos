@@ -22,6 +22,8 @@ import java.util.List;
 import net.sbbi.upnp.ServiceEventHandler;
 import net.sbbi.upnp.messages.ActionMessage;
 import net.sbbi.upnp.messages.ActionResponse;
+import net.sbbi.upnp.messages.StateVariableMessage;
+import net.sbbi.upnp.messages.StateVariableResponse;
 import net.sbbi.upnp.messages.UPNPResponseException;
 import net.sbbi.upnp.services.UPNPService;
 import net.sf.janos.model.UnresponsiveDeviceActionType;
@@ -69,7 +71,7 @@ public class ZoneGroupTopologyService extends AbstractService {
   };
   
 
-  private ZoneGroupState zoneGroup;
+  private ZoneGroupState zoneGroup = null;
   public ZoneGroupTopologyService(UPNPService service) {
     super(service, ZonePlayerConstants.SONOS_SERVICE_ZONE_GROUP_TOPOLOGY);
     registerServiceEventing(serviceEventHandler);
@@ -79,7 +81,22 @@ public class ZoneGroupTopologyService extends AbstractService {
    * @return an object representing the (perceived) group state.
    */
   public ZoneGroupState getGroupState() {
-    return zoneGroup;
+	  
+	  if (zoneGroup != null) {
+		  return zoneGroup;
+	  }
+	  
+	  // if we don't already have the zoneState, ask for it.
+	  // TODO: figure out why this returns 401
+	  StateVariableMessage groupMessage = messageFactory.getStateVariableMessage( ZonePlayerConstants.SONOS_VARIABLE_ZONE_GROUP_STATE );
+	  try {
+		  StateVariableResponse resp = groupMessage.service();
+		  zoneGroup = ResultParser.getGroupStateFromResult(SonosController.getInstance(), resp.getStateVariableValue());
+	  } catch ( Exception e ) {
+		  // e.printStackTrace();
+	  }
+	  
+	  return zoneGroup;
   }
   
   /*
