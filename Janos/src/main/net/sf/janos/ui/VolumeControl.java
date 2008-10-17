@@ -74,12 +74,13 @@ public class VolumeControl extends Composite implements RenderingControlListener
 			e1.printStackTrace();
 		}
 		
-		mute = new Button(this, SWT.TOGGLE);
+		mute = new Button(this, SWT.PUSH);
 		updateMuteButton();
 		mute.addSelectionListener(new SelectionAdapter() {
 			@Override
 			public void widgetSelected(SelectionEvent e) {
 				setMute(!getMute());
+				mute.setEnabled(false);
 			}
 		});
 
@@ -152,14 +153,18 @@ public class VolumeControl extends Composite implements RenderingControlListener
 		mute.setImage(getMute()?muted:notMuted);
 	}
 	
-	public void valuesChanged(Set<RenderingControlEventType> events, RenderingControlService source) {
-		if (events.contains(RenderingControlEventType.VOLUME_MASTER)) {
+	public void valuesChanged(final Set<RenderingControlEventType> events, RenderingControlService source) {
+		if (events.contains(RenderingControlEventType.VOLUME_MASTER) ||  events.contains(RenderingControlEventType.MUTE_MASTER) ) {
 			final int newVol = getVolume();
 			
 			getDisplay().asyncExec(new Runnable() {
 				public void run() {
 					volume.setSelection(newVol);
 					updateMuteButton();
+					
+					if (events.contains(RenderingControlEventType.MUTE_MASTER)) {
+						mute.setEnabled(true);
+					}
 				}
 			});
 		}
