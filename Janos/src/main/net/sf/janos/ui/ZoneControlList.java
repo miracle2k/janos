@@ -4,7 +4,6 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.net.URL;
 import java.util.ArrayList;
-import java.util.LinkedList;
 import java.util.List;
 
 import net.sbbi.upnp.devices.DeviceIcon;
@@ -64,7 +63,6 @@ public class ZoneControlList implements ExpandListener, ZoneGroupStateModelListe
 		ZoneControl zc = (ZoneControl)item.getControl();
 		if (zc!=null) {
 			zc.getNowPlaying().showNowPlaying();
-			zc.layout(true);
 			setCurrentZone(zc.getZonePlayer());
 		}
 	}
@@ -196,6 +194,7 @@ public class ZoneControlList implements ExpandListener, ZoneGroupStateModelListe
 		if (bar.getItemCount() == 0 ) {
 			setCurrentZone(coordinator);
 			expand = true;
+			zoneControl.getNowPlaying().showNowPlaying();
 		}
 
 		ExpandItem item = new ExpandItem(bar, 0, index);
