@@ -110,8 +110,6 @@ public class VolumeControl extends Composite implements RenderingControlListener
 		setLayout(layout);
 
 		zone.getMediaRendererDevice().getRenderingControlService().addListener(this);
-		
-		this.setBackground(new Color(parent.getDisplay(), new RGB(255, 0, 255)));
 	}
 
 
