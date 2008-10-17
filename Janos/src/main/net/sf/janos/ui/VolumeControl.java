@@ -27,7 +27,12 @@ import net.sf.janos.model.xml.RenderingControlEventHandler.RenderingControlEvent
 import org.eclipse.swt.SWT;
 import org.eclipse.swt.events.SelectionAdapter;
 import org.eclipse.swt.events.SelectionEvent;
+import org.eclipse.swt.graphics.Color;
 import org.eclipse.swt.graphics.Image;
+import org.eclipse.swt.graphics.RGB;
+import org.eclipse.swt.layout.FormAttachment;
+import org.eclipse.swt.layout.FormData;
+import org.eclipse.swt.layout.FormLayout;
 import org.eclipse.swt.layout.RowLayout;
 import org.eclipse.swt.widgets.Button;
 import org.eclipse.swt.widgets.Composite;
@@ -90,11 +95,23 @@ public class VolumeControl extends Composite implements RenderingControlListener
 			}
 		});
 
-		RowLayout layout = new RowLayout(SWT.HORIZONTAL);
-		layout.fill = true;
+		FormData data1 = new FormData();
+		data1.left = new FormAttachment(0, 0);
+		mute.setLayoutData(data1);
+		
+		FormData data2 = new FormData();
+		data2.left = new FormAttachment(mute, -10);
+		data2.right = new FormAttachment(100,0);
+		data2.top = new FormAttachment(0,0);
+		data2.bottom = new FormAttachment(100,0);
+		volume.setLayoutData(data2);
+		
+		FormLayout layout = new FormLayout();
 		setLayout(layout);
 
 		zone.getMediaRendererDevice().getRenderingControlService().addListener(this);
+		
+		this.setBackground(new Color(parent.getDisplay(), new RGB(255, 0, 255)));
 	}
 
 

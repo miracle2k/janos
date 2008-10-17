@@ -36,16 +36,18 @@ public class ZoneControl extends Composite {
 		nowPlaying.setLayoutData(data1);
 		
 		// Row 2
-		volumeControl = new VolumeControl(this, 0, zone); 
+		volumeControl = new VolumeControl(this, 0, zone);
+		subGroups = new Button(this, SWT.NONE);
+		
 		FormData data2 = new FormData();
 		data2.left = new FormAttachment(0, 0);
 		data2.top = new FormAttachment(nowPlaying);
+		data2.right = new FormAttachment(subGroups);
 		volumeControl.setLayoutData(data2);
 		
-		subGroups = new Button(this, SWT.NONE);
+		
 		subGroups.setText("Group Members/Volume");
 		FormData data3 = new FormData();
-		data3.left = new FormAttachment(volumeControl);
 		data3.right = new FormAttachment(100, 0);
 		data3.top = new FormAttachment(nowPlaying);
 		subGroups.setLayoutData(data3);
