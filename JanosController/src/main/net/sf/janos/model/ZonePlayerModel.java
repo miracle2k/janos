@@ -34,30 +34,10 @@ public class ZonePlayerModel {
    * @param zp
    */
   public void addZonePlayer(ZonePlayer zp) {
-	
-	  boolean alphabetical = false;
-	  
-	if (!alphabetical || zonePlayers.isEmpty()) {
-		zonePlayers.add(zp);
-	} else {
-		String newName = zp.getDevicePropertiesService().getZoneAttributes().getName(); 
-		boolean added = false;
-		for (int i=0; i<zonePlayers.size(); i++) {
-			String currentName = zonePlayers.get(i).getDevicePropertiesService().getZoneAttributes().getName();
-			if (currentName.compareToIgnoreCase(newName) > 0 ) {
-				zonePlayers.add(i, zp);
-				added = true;
-				break;
-			}
-		}
-		if (added == false ) {
-			zonePlayers.add(zp);
-		}
-	}
-
-    for (ZonePlayerModelListener l : listeners ) {
-   		l.zonePlayerAdded(zp, this);
-    }
+	  zonePlayers.add(zp);
+	  for (ZonePlayerModelListener l : listeners ) {
+		  l.zonePlayerAdded(zp, this);
+	  }
   }
   
   /**
