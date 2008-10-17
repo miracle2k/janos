@@ -21,7 +21,6 @@ public class ZoneControl extends Composite {
 	private final Button subGroups;
 	private final QueueDisplay queue;
 	
-	
 	public ZoneControl(Composite parent, ZoneGroup group) {
 		super(parent, 0);
 		this.group = group;
@@ -80,5 +79,9 @@ public class ZoneControl extends Composite {
 
 	public ZonePlayer getZonePlayer() {
 		return group.getCoordinator();
+	}
+	
+	public QueueDisplay getQueue() {
+		return queue;
 	}
 }

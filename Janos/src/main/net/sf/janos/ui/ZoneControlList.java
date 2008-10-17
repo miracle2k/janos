@@ -63,6 +63,7 @@ public class ZoneControlList implements ExpandListener, ZoneGroupStateModelListe
 		ZoneControl zc = (ZoneControl)item.getControl();
 		if (zc!=null) {
 			zc.getNowPlaying().showNowPlaying();
+			zc.getQueue().showNowPlaying();
 			setCurrentZone(zc.getZonePlayer());
 		}
 	}
@@ -195,6 +196,7 @@ public class ZoneControlList implements ExpandListener, ZoneGroupStateModelListe
 			setCurrentZone(coordinator);
 			expand = true;
 			zoneControl.getNowPlaying().showNowPlaying();
+			zoneControl.getQueue().showNowPlaying();
 		}
 
 		ExpandItem item = new ExpandItem(bar, 0, index);
