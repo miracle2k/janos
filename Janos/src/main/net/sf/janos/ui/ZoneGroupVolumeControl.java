@@ -18,6 +18,7 @@ package net.sf.janos.ui;
 import java.io.IOException;
 import java.io.InputStream;
 
+import net.sbbi.upnp.messages.UPNPResponseException;
 import net.sf.janos.control.ZonePlayer;
 import net.sf.janos.model.ZoneGroup;
 
@@ -78,29 +79,28 @@ public class ZoneGroupVolumeControl extends Composite {
 
 			protected void setVolume(final int vol) {
 				super.setVolume(vol);
+			
+				// update the hardware
+				new subZoneOperator() {
+					@Override
+					public void operate(ZonePlayer zone) {
+						try {
+							zone.getMediaRendererDevice().getRenderingControlService().setVolume(vol);
+						} catch (Exception e) {
+							e.printStackTrace();
+						}
+					}
+				}.iterate();
 				
-				if (getGroupMode()) {
-					new subControlOperator() {
-						public void operate(Control c) {
-							if (c instanceof VolumeControl) {
-								VolumeControl vc = (VolumeControl) c;
-								vc.setVolume(vol);
-							}
+				// update the UI
+				new subControlOperator() {
+					public void operate(Control c) {
+						if (c instanceof VolumeControl) {
+							VolumeControl vc = (VolumeControl) c;
+							vc.setVolume(vol);
 						}
-					} .iterate();
-				} else {
-					new subZoneOperator() {
-						@Override
-						public void operate(ZonePlayer zone) {
-							try {
-								zone.getMediaRendererDevice().getRenderingControlService().setVolume(vol);
-							} catch (Exception e) {
-								e.printStackTrace();
-							}
-						}
-						
-					}.iterate();
-				}
+					}
+				}.iterate();
 			}
 
 			protected int getVolume() {
@@ -111,8 +111,8 @@ public class ZoneGroupVolumeControl extends Composite {
 
 			protected void setMute(final boolean mute) {
 				super.setMute(mute);
-				
-				if(getGroupMode()) {
+
+				// update the hardware
 				new subControlOperator() {
 					public void operate(Control c) {
 						if (c instanceof VolumeControl) {
@@ -120,20 +120,20 @@ public class ZoneGroupVolumeControl extends Composite {
 							vc.setMute(mute);
 						}
 					}
-				} .iterate();
-				} else {
-					new subZoneOperator() {
-						@Override
-						public void operate(ZonePlayer zone) {
-							try {
-								zone.getMediaRendererDevice().getRenderingControlService().setMute(mute?1:0);
-							} catch (Exception e) {
-								e.printStackTrace();
-							}
+				}.iterate();
+				
+				// update the UI
+				new subZoneOperator() {
+					@Override
+					public void operate(ZonePlayer zone) {
+						try {
+							zone.getMediaRendererDevice().getRenderingControlService().setMute(mute?1:0);
+						} catch (Exception e) {
+							e.printStackTrace();
 						}
-						
-					}.iterate();
-				}
+					}
+					
+				}.iterate();
 			}
 
 			protected boolean getMute() {
@@ -170,6 +170,11 @@ public class ZoneGroupVolumeControl extends Composite {
 		expand.setLayoutData(data2);
 	}
 
+	public void updateUI() {
+		master.forceVolume(master.getVolume());
+		master.forceMute(master.getMute());
+	}
+	
 	protected void showSubControls() {
 
 		Control previousControl = master;
@@ -184,9 +189,43 @@ public class ZoneGroupVolumeControl extends Composite {
 			data1.top = new FormAttachment(previousControl);
 			sep.setLayoutData(data1);
 
-			// VolumeControl vc = new VolumeControl(this, SWT.NONE, zone.getDevicePropertiesService().getZoneAttributes().getName());
-			VolumeControl vc = new ZonePlayerVolumeControl(this, SWT.NONE, zone);
+			VolumeControl vc = new VolumeControl(this, SWT.NONE, zone.getDevicePropertiesService().getZoneAttributes().getName()) {
 
+				@Override
+				protected void setMute(boolean mute) {
+					super.setMute(mute);
+					
+					try {
+						getZone().getMediaRendererDevice().getRenderingControlService().setMute(mute?1:0);
+					} catch (Exception e) {
+						e.printStackTrace();
+					}
+					updateUI();
+				}
+
+				@Override
+				protected void setVolume(int volume) {
+					super.setVolume(volume);
+				
+					try {
+						getZone().getMediaRendererDevice().getRenderingControlService().setVolume(volume);
+					} catch (Exception e) {
+						e.printStackTrace();
+					}
+					updateUI();
+				}
+				
+				private ZonePlayer getZone() {
+					return (ZonePlayer)getData("ZONE");
+				}
+			};
+			vc.setData("ZONE", zone);
+			try {
+				vc.forceVolume(zone.getMediaRendererDevice().getRenderingControlService().getVolume());
+				vc.forceMute(zone.getMediaRendererDevice().getRenderingControlService().getMute());
+			} catch (Exception e) {
+				e.printStackTrace();
+			}
 			FormData data2 = new FormData();
 			data2.left = new FormAttachment(0,0);
 			data2.right = new FormAttachment(expand);
@@ -267,12 +306,15 @@ public class ZoneGroupVolumeControl extends Composite {
 		
 		public void iterate() {
 			super.iterate();
+//			System.out.println("divided by: "+ group.getMembers().size());
 			volume /= group.getMembers().size();
+//			System.out.println("equals: " + volume);
 		}
 		
 		public void operate(ZonePlayer zone) {
 			try {
 				volume += zone.getMediaRendererDevice().getRenderingControlService().getVolume();
+//				System.out.println("volume: " + volume);
 			} catch (Exception e) {
 				e.printStackTrace();
 			}

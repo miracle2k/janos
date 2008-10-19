@@ -125,24 +125,30 @@ public class VolumeControl extends Composite {
 		setLayout(layout);
 	}
 
-
+	
 
 	protected boolean getMute() {
 		return mute.getSelection();
 	}
 
 	protected void setMute(boolean mute) {
-		this.mute.setImage(mute?muted:notMuted);
+		forceMute(mute);
 	}
 
+	public void forceMute(boolean mute) {
+		this.mute.setImage(mute?muted:notMuted);
+	}
 
 	protected int getVolume() {
 		return volume.getSelection();
 	}
 
 	protected void setVolume(int volume) {
+		forceVolume(volume);
+	}
+	
+	public void forceVolume(int volume) {
 		this.volume.setSelection(volume);
-		return;
 	}
 
 	public static void main (String [] args) {
