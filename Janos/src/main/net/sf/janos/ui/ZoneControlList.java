@@ -17,6 +17,8 @@ import net.sf.janos.model.ZoneGroupStateModel;
 import net.sf.janos.model.ZoneGroupStateModelListener;
 
 import org.eclipse.swt.SWT;
+import org.eclipse.swt.events.ControlEvent;
+import org.eclipse.swt.events.ControlListener;
 import org.eclipse.swt.events.ExpandEvent;
 import org.eclipse.swt.events.ExpandListener;
 import org.eclipse.swt.graphics.Image;
@@ -169,16 +171,30 @@ public class ZoneControlList implements ExpandListener, ZoneGroupStateModelListe
 	}
 
 	protected ExpandItem addZone(ZoneGroup group, ZoneGroupStateModel source) {
-		
+
 		// clear search mode if necessary
 		removeSearchingItem();
-		
+
 		// extract the coordinator since he's the one we'll key off of
 		ZonePlayer coordinator = group.getCoordinator();
 		String coordinatorName = coordinator.getDevicePropertiesService().getZoneAttributes().getName();
 
 		// Create a new Now Playing display object
 		ZoneControl zoneControl = new ZoneControl(bar, group);
+		zoneControl.addControlListener( new ControlListener() {
+			@Override
+			public void controlMoved(ControlEvent arg0) {
+			}
+
+			@Override
+			public void controlResized(ControlEvent arg0) {
+				ZoneControl zoneControl = (ZoneControl)arg0.widget;
+				ExpandItem i = findItemByControl(zoneControl);
+				i.setHeight(zoneControl.computeSize(SWT.DEFAULT, SWT.DEFAULT, true).y);
+				bar.layout(true);
+			}
+		}
+		);
 
 		// Find out where in the ExpandBar to place it.  Current policy
 		// is to alphabetize, based on coordinator name.
@@ -209,7 +225,7 @@ public class ZoneControlList implements ExpandListener, ZoneGroupStateModelListe
 			names.add(zp.getDevicePropertiesService().getZoneAttributes().getName());
 		}
 		Collections.sort(names);
-		
+
 		String title = new String("");
 		for (String name : names) {
 			if (title.compareTo("") != 0) {
@@ -221,11 +237,10 @@ public class ZoneControlList implements ExpandListener, ZoneGroupStateModelListe
 		item.setText(title);
 		item.setData("SORT_KEY", title);
 		item.setData("GROUP_ID", group.getId());
-		item.setHeight(zoneControl.computeSize(SWT.DEFAULT, SWT.DEFAULT, true).y);
 		setIcon(item, coordinator);
 		item.setControl(zoneControl);
 		item.setExpanded(expand);
-		
+
 		return item;
 	}
 
@@ -240,14 +255,14 @@ public class ZoneControlList implements ExpandListener, ZoneGroupStateModelListe
 	}
 
 	protected void changeZone(ZoneGroup group, ZoneGroupStateModel source) {
-		
+
 		// find and remember the item expanded state
 		ExpandItem i = findItemByZoneGroup(group);
 		boolean expanded = i.getExpanded();
-		
+
 		removeZone(group, source);
 		i = addZone(group, source);
-		
+
 		// reinstate the item expanded state
 		i.setExpanded(expanded);
 
@@ -264,9 +279,18 @@ public class ZoneControlList implements ExpandListener, ZoneGroupStateModelListe
 
 		return null;
 	}
-	
+
+	protected ExpandItem findItemByControl(Control c) {
+		for (ExpandItem i : bar.getItems()) {
+			if (c.equals(i.getControl())) {
+				return i;
+			} 
+		}
+
+		return null;
+	}
 	protected static String searchingKey = new String("Searching");
-	
+
 	protected void addSearchingItem() {
 		ExpandItem item = new ExpandItem(bar, SWT.NONE, 0);
 		item.setText("Searching For Zone Players...");
@@ -283,4 +307,6 @@ public class ZoneControlList implements ExpandListener, ZoneGroupStateModelListe
 			} 
 		}
 	}
+
+
 }

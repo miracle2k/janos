@@ -9,23 +9,19 @@ import org.eclipse.swt.events.ControlListener;
 import org.eclipse.swt.layout.FormAttachment;
 import org.eclipse.swt.layout.FormData;
 import org.eclipse.swt.layout.FormLayout;
-import org.eclipse.swt.layout.GridData;
-import org.eclipse.swt.widgets.Button;
 import org.eclipse.swt.widgets.Composite;
 
-public class ZoneControl extends Composite {
+public class ZoneControl extends Composite implements ControlListener {
 
 	private final ZoneGroup group;
 	private final NowPlaying nowPlaying;
-	private final VolumeControl volumeControl;
-	private final Button subGroups;
+	private final ZoneGroupVolumeControl volumeControl;
 	private final QueueDisplay queue;
 	
 	public ZoneControl(Composite parent, ZoneGroup group) {
 		super(parent, 0);
 		this.group = group;
 		ZonePlayer zone = group.getCoordinator();
-		boolean isMultiGroup = group.getMembers().size()>1;
 		
 		// Row 1
 		nowPlaying = new NowPlaying(this, 0, zone);
@@ -35,27 +31,15 @@ public class ZoneControl extends Composite {
 		nowPlaying.setLayoutData(data1);
 		
 		// Row 2
-		volumeControl = new VolumeControl(this, 0, zone);
-		subGroups = new Button(this, SWT.NONE);
+		volumeControl = new ZoneGroupVolumeControl(this, 0, group);
 		
 		FormData data2 = new FormData();
 		data2.left = new FormAttachment(0, 0);
 		data2.top = new FormAttachment(nowPlaying);
-		data2.right = new FormAttachment(subGroups);
+		data2.right = new FormAttachment(100, 0);
 		volumeControl.setLayoutData(data2);
-		
-		
-		subGroups.setText("Group Members/Volume");
-		FormData data3 = new FormData();
-		data3.right = new FormAttachment(100, 0);
-		data3.top = new FormAttachment(nowPlaying);
-		subGroups.setLayoutData(data3);
-			
-		if (isMultiGroup) {
-			subGroups.setVisible(true);
-		} else {
-			subGroups.setVisible(false);
-		}
+
+		volumeControl.addControlListener(this);
 		
 		// row 3
 		queue = new QueueDisplay(this, SWT.NONE, zone);
@@ -83,5 +67,15 @@ public class ZoneControl extends Composite {
 	
 	public QueueDisplay getQueue() {
 		return queue;
+	}
+
+	@Override
+	public void controlMoved(ControlEvent arg0) {
+	}
+
+	@Override
+	public void controlResized(ControlEvent arg0) {
+		pack();
+		layout();
 	}
 }

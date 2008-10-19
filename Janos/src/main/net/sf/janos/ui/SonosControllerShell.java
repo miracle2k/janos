@@ -37,6 +37,7 @@ public class SonosControllerShell {
 	private final SonosController controller;
 	private MusicLibraryTable music;
 	private SearchBar searchBar;
+	@SuppressWarnings("unused")
 	private UrlAdder urlAdder;
 	private ZoneControlList zoneControls;
 	private SashForm sashForm;

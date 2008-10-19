@@ -1,61 +1,45 @@
-/*
-   Copyright 2007 David Wheeler
-
-   Licensed under the Apache License, Version 2.0 (the "License");
-   you may not use this file except in compliance with the License.
-   You may obtain a copy of the License at
-
-       http://www.apache.org/licenses/LICENSE-2.0
-
-   Unless required by applicable law or agreed to in writing, software
-   distributed under the License is distributed on an "AS IS" BASIS,
-   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-   See the License for the specific language governing permissions and
-   limitations under the License.
- */
 package net.sf.janos.ui;
 
 import java.io.IOException;
 import java.io.InputStream;
-import java.util.Set;
-
-import net.sf.janos.control.RenderingControlListener;
-import net.sf.janos.control.RenderingControlService;
-import net.sf.janos.control.ZonePlayer;
-import net.sf.janos.model.xml.RenderingControlEventHandler.RenderingControlEventType;
 
 import org.eclipse.swt.SWT;
+import org.eclipse.swt.events.MouseEvent;
+import org.eclipse.swt.events.MouseListener;
 import org.eclipse.swt.events.SelectionAdapter;
 import org.eclipse.swt.events.SelectionEvent;
-import org.eclipse.swt.graphics.Color;
 import org.eclipse.swt.graphics.Image;
-import org.eclipse.swt.graphics.RGB;
+import org.eclipse.swt.layout.FillLayout;
 import org.eclipse.swt.layout.FormAttachment;
 import org.eclipse.swt.layout.FormData;
 import org.eclipse.swt.layout.FormLayout;
-import org.eclipse.swt.layout.RowLayout;
 import org.eclipse.swt.widgets.Button;
 import org.eclipse.swt.widgets.Composite;
-import org.eclipse.swt.widgets.Slider;
+import org.eclipse.swt.widgets.Display;
+import org.eclipse.swt.widgets.Label;
+import org.eclipse.swt.widgets.ProgressBar;
+import org.eclipse.swt.widgets.Shell;
 
-/**
- * a UI component with actions for controlling the music eg. stop
- * 
- * @author David Wheeler
- * 
+/*
+ * An abstract base class which provides layout for a volume control.
+ * It is intended to be used as a parent class for a zone specific 
+ * volume control which represents and controls a single Zone.  In 
+ * addition, it is intended to be a parent class for a group volume control
+ * which looks similar to a zone-specific volume control, but a) implements
+ * it's methods over all the zones in a group (rather than a specific zone)
+ * and b) adds a control to show the sub zones of a group.
  */
-public class VolumeControl extends Composite implements RenderingControlListener {
+public class VolumeControl extends Composite {
 
-	private final ZonePlayer zone;
-	private final Slider volume;
 	private final Image muted;
 	private final Image notMuted;
-	private final Button mute;
-	
-	public VolumeControl(Composite parent, int style, ZonePlayer zone) {
-		super(parent, style);
-		this.zone = zone;
 
+	private final Label title;
+	private final Button mute;
+	private final ProgressBar volume;
+
+	public VolumeControl(Composite parent, int style, String titleText) {
+		super(parent, style);
 
 		InputStream is;
 		is = getClass().getResourceAsStream("/sound-16x16.png");
@@ -65,7 +49,7 @@ public class VolumeControl extends Composite implements RenderingControlListener
 		} catch (IOException e1) {
 			e1.printStackTrace();
 		}
-		
+
 		is = getClass().getResourceAsStream("/sound-off-16x16.png");
 		muted = new Image(getDisplay(), is);
 		try {
@@ -73,102 +57,108 @@ public class VolumeControl extends Composite implements RenderingControlListener
 		} catch (IOException e1) {
 			e1.printStackTrace();
 		}
-		
-		mute = new Button(this, SWT.PUSH);
-		updateMuteButton();
+
+		title = new Label(this, SWT.WRAP | SWT.RIGHT);
+		title.setText(titleText);
+
+		mute = new Button(this, SWT.TOGGLE);
+		mute.setImage(notMuted);
 		mute.addSelectionListener(new SelectionAdapter() {
 			@Override
 			public void widgetSelected(SelectionEvent e) {
 				setMute(!getMute());
-				mute.setEnabled(false);
 			}
 		});
 
-		volume = new Slider(this, SWT.HORIZONTAL);
+		volume = new ProgressBar(this, SWT.HORIZONTAL | SWT.SMOOTH );
 		volume.setMinimum(0);
 		volume.setMaximum(100);
 		volume.setSelection(getVolume());
 
-		volume.addSelectionListener(new SelectionAdapter() {
+		volume.addMouseListener( new MouseListener() {
+
 			@Override
-			public void widgetSelected(SelectionEvent e) {
-				setVolume(volume.getSelection());
+			public void mouseDoubleClick(MouseEvent arg0) {
+			}
+
+			@Override
+			public void mouseDown(MouseEvent arg0) {
+				volume.setCapture(true);
+			}
+
+			@Override
+			public void mouseUp(MouseEvent arg0) {
+				int val = Math.round((float)arg0.x * (float)100.0 / (float)(volume.getBounds().width));
+				if (val < volume.getMinimum()) { 
+					val = volume.getMinimum();	
+				}
+				if (val > volume.getMaximum()) {
+					val = volume.getMaximum();
+				}
+				setVolume(val);
+				volume.setCapture(false);
 			}
 		});
 
 		FormData data1 = new FormData();
-		data1.left = new FormAttachment(0, 0);
-		mute.setLayoutData(data1);
-		
+		data1.left = new FormAttachment(0,0);
+		data1.top = new FormAttachment(0, 0);
+		data1.bottom = new FormAttachment(100, 0);
+		data1.width = 50;
+		title.setLayoutData(data1);
+
 		FormData data2 = new FormData();
-		data2.left = new FormAttachment(mute, -10);
-		data2.right = new FormAttachment(100,0);
-		data2.top = new FormAttachment(0,0);
-		data2.bottom = new FormAttachment(100,0);
-		volume.setLayoutData(data2);
-		
+		data2.left = new FormAttachment(title);
+		data2.top = new FormAttachment(0, 0);
+		data2.bottom = new FormAttachment(100, 0);
+		mute.setLayoutData(data2);
+
+		FormData data3 = new FormData();
+		data3.left = new FormAttachment(mute);
+		data3.right = new FormAttachment(100,0);
+		data3.top = new FormAttachment(0, 0);
+		data3.bottom = new FormAttachment(100, 0);
+		volume.setLayoutData(data3);
+
 		FormLayout layout = new FormLayout();
+		layout.spacing = 10;
 		setLayout(layout);
-
-		zone.getMediaRendererDevice().getRenderingControlService().addListener(this);
 	}
 
 
-	protected void setVolume(int vol) {
-		try {
-			zone.getMediaRendererDevice().getRenderingControlService().setVolume(vol);
-		} catch (Exception e) {
-			e.printStackTrace();
-		}
+
+	protected boolean getMute() {
+		return mute.getSelection();
 	}
+
+	protected void setMute(boolean mute) {
+		this.mute.setImage(mute?muted:notMuted);
+	}
+
 
 	protected int getVolume() {
-		try {
-			return zone.getMediaRendererDevice().getRenderingControlService().getVolume();
-		} catch (Exception e) {
-			e.printStackTrace();
-		}
-		return 0;
-	}
-	
-	protected boolean getMute() {
-		boolean muted = false;
-		try {
-			muted = zone.getMediaRendererDevice().getRenderingControlService().getMute();
-		} catch (Exception e) {
-			e.printStackTrace();
-		}
-		return muted;
-	}
-	
-	protected void setMute(boolean mute) {
-		try {
-			zone.getMediaRendererDevice().getRenderingControlService().setMute(mute?1:0);
-		} catch (Exception e) {
-			e.printStackTrace();
-		}
+		return volume.getSelection();
 	}
 
-	protected void updateMuteButton() {
-		mute.setImage(getMute()?muted:notMuted);
+	protected void setVolume(int volume) {
+		this.volume.setSelection(volume);
+		return;
 	}
-	
-	public void valuesChanged(final Set<RenderingControlEventType> events, RenderingControlService source) {
-		if (events.contains(RenderingControlEventType.VOLUME_MASTER) ||  events.contains(RenderingControlEventType.MUTE_MASTER) ) {
-			final int newVol = getVolume();
-			
-			getDisplay().asyncExec(new Runnable() {
-				public void run() {
-					volume.setSelection(newVol);
-					updateMuteButton();
-					
-					if (events.contains(RenderingControlEventType.MUTE_MASTER)) {
-						mute.setEnabled(true);
-					}
-				}
-			});
+
+	public static void main (String [] args) {
+		Display display = new Display ();
+		Shell shell = new Shell(display);
+		shell.open ();
+
+		new VolumeControl(shell, SWT.NONE, "Group Volume");
+
+		shell.setLayout (new FillLayout ());
+		shell.pack ();
+
+		while (!shell.isDisposed ()) {
+			if (!display.readAndDispatch ()) display.sleep ();
 		}
-		// TODO other volumes?
+		display.dispose ();
 	}
 
 	@Override
@@ -178,3 +168,5 @@ public class VolumeControl extends Composite implements RenderingControlListener
 		super.dispose();
 	}
 }
+
+
