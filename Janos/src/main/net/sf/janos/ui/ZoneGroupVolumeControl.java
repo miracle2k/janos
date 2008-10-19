@@ -78,6 +78,7 @@ public class ZoneGroupVolumeControl extends Composite {
 					group.getCoordinator().getDevicePropertiesService().getZoneAttributes().getName() ) {
 
 			protected void setVolume(final int vol) {
+				System.out.println("MASTER SET: " + vol);
 				super.setVolume(vol);
 			
 				// update the hardware
@@ -200,7 +201,7 @@ public class ZoneGroupVolumeControl extends Composite {
 					} catch (Exception e) {
 						e.printStackTrace();
 					}
-					updateUI();
+//					updateUI();
 				}
 
 				@Override
@@ -212,7 +213,7 @@ public class ZoneGroupVolumeControl extends Composite {
 					} catch (Exception e) {
 						e.printStackTrace();
 					}
-					updateUI();
+//					updateUI();
 				}
 				
 				private ZonePlayer getZone() {
@@ -294,7 +295,9 @@ public class ZoneGroupVolumeControl extends Composite {
 		public boolean mute = true;
 		public void operate(ZonePlayer zone) {
 			try {
+//				System.out.print("pre: " + mute + " ");
 				mute &= zone.getMediaRendererDevice().getRenderingControlService().getMute();
+//				System.out.println("post: " + mute + " ");
 			} catch (Exception e) {
 				e.printStackTrace();
 			}
