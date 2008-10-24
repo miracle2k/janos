@@ -136,7 +136,6 @@ public class VolumeControl extends Composite {
 	}
 
 	public void forceMute(boolean mute) {
-		System.out.println("FORCING MUTE TO " + mute);
 		this.mute.setImage(mute?muted:notMuted);
 		this.mute.setData(Boolean.toString(mute));
 	}

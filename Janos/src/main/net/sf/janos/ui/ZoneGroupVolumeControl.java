@@ -77,7 +77,6 @@ public class ZoneGroupVolumeControl extends Composite {
 					group.getCoordinator().getDevicePropertiesService().getZoneAttributes().getName() ) {
 
 			protected void setVolume(final int vol) {
-				// System.out.println("MASTER SET: " + vol);
 				super.setVolume(vol);
 			
 				// update the hardware
@@ -343,9 +342,7 @@ public class ZoneGroupVolumeControl extends Composite {
 		public void operate(Control c) {
 			try {
 				VolumeControl vc = (VolumeControl)c;
-				System.out.print("M: was " + mute);
 				mute &= vc.getMute();
-				System.out.println(" is " + mute);
 			} catch (Exception e) {
 				// ignore bad casts, they are expected
 			}
