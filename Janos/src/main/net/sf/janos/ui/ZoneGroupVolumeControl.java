@@ -18,7 +18,6 @@ package net.sf.janos.ui;
 import java.io.IOException;
 import java.io.InputStream;
 
-import net.sbbi.upnp.messages.UPNPResponseException;
 import net.sf.janos.control.ZonePlayer;
 import net.sf.janos.model.ZoneGroup;
 
@@ -78,7 +77,7 @@ public class ZoneGroupVolumeControl extends Composite {
 					group.getCoordinator().getDevicePropertiesService().getZoneAttributes().getName() ) {
 
 			protected void setVolume(final int vol) {
-				System.out.println("MASTER SET: " + vol);
+				// System.out.println("MASTER SET: " + vol);
 				super.setVolume(vol);
 			
 				// update the hardware
@@ -104,8 +103,8 @@ public class ZoneGroupVolumeControl extends Composite {
 				}.iterate();
 			}
 
-			protected int getVolume() {
-				getVolumeOperator op = new getVolumeOperator();
+			public int getVolume() {
+				GetVolumeFromHWOperator op = new GetVolumeFromHWOperator();
 				op.iterate();
 				return op.volume;
 			}
@@ -113,7 +112,7 @@ public class ZoneGroupVolumeControl extends Composite {
 			protected void setMute(final boolean mute) {
 				super.setMute(mute);
 
-				// update the hardware
+				// update the UI
 				new subControlOperator() {
 					public void operate(Control c) {
 						if (c instanceof VolumeControl) {
@@ -123,7 +122,7 @@ public class ZoneGroupVolumeControl extends Composite {
 					}
 				}.iterate();
 				
-				// update the UI
+				// update the hardware
 				new subZoneOperator() {
 					@Override
 					public void operate(ZonePlayer zone) {
@@ -137,8 +136,8 @@ public class ZoneGroupVolumeControl extends Composite {
 				}.iterate();
 			}
 
-			protected boolean getMute() {
-				getMuteOperator op = new getMuteOperator();
+			public boolean getMute() {
+				GetMuteFromHWOperator op = new GetMuteFromHWOperator();
 				op.iterate();
 				return op.mute;
 			}
@@ -171,9 +170,19 @@ public class ZoneGroupVolumeControl extends Composite {
 		expand.setLayoutData(data2);
 	}
 
-	public void updateUI() {
+	public void updateMasterFromHW() {
 		master.forceVolume(master.getVolume());
 		master.forceMute(master.getMute());
+	}
+	
+	public void updateMasterFromUI() {
+		GetVolumeFromUIOperator volOp = new GetVolumeFromUIOperator();
+		volOp.iterate();
+		master.forceVolume(volOp.volume);
+		
+		GetMuteFromUIOperator muteOp = new GetMuteFromUIOperator();
+		muteOp.iterate();
+		master.forceMute(muteOp.mute);
 	}
 	
 	protected void showSubControls() {
@@ -201,7 +210,7 @@ public class ZoneGroupVolumeControl extends Composite {
 					} catch (Exception e) {
 						e.printStackTrace();
 					}
-//					updateUI();
+					updateMasterFromUI();
 				}
 
 				@Override
@@ -213,7 +222,7 @@ public class ZoneGroupVolumeControl extends Composite {
 					} catch (Exception e) {
 						e.printStackTrace();
 					}
-//					updateUI();
+					updateMasterFromUI();
 				}
 				
 				private ZonePlayer getZone() {
@@ -291,33 +300,63 @@ public class ZoneGroupVolumeControl extends Composite {
 		abstract public void operate(ZonePlayer zone);
 	}
 
-	class getMuteOperator extends subZoneOperator {
-		public boolean mute = true;
-		public void operate(ZonePlayer zone) {
-			try {
-//				System.out.print("pre: " + mute + " ");
-				mute &= zone.getMediaRendererDevice().getRenderingControlService().getMute();
-//				System.out.println("post: " + mute + " ");
-			} catch (Exception e) {
-				e.printStackTrace();
-			}
-		}
-	}
 
-	class getVolumeOperator extends subZoneOperator {
+
+	class GetVolumeFromHWOperator extends subZoneOperator {
 		public int volume = 0;
 		
 		public void iterate() {
 			super.iterate();
-//			System.out.println("divided by: "+ group.getMembers().size());
 			volume /= group.getMembers().size();
-//			System.out.println("equals: " + volume);
 		}
 		
 		public void operate(ZonePlayer zone) {
 			try {
 				volume += zone.getMediaRendererDevice().getRenderingControlService().getVolume();
-//				System.out.println("volume: " + volume);
+			} catch (Exception e) {
+				e.printStackTrace();
+			}
+		}
+	}
+	
+	class GetVolumeFromUIOperator extends subControlOperator {
+		public int volume = 0;
+		
+		public void iterate() {
+			super.iterate();
+			volume /= group.getMembers().size();
+		}
+		
+		public void operate(Control c) {
+			try {
+				VolumeControl vc = (VolumeControl)c;
+				volume += vc.getVolume();
+			} catch (Exception e) {
+				// ignore bad casts, they are expected
+			}
+		}
+	}
+	
+	class GetMuteFromUIOperator extends subControlOperator {
+		public boolean mute = true;
+		
+		public void operate(Control c) {
+			try {
+				VolumeControl vc = (VolumeControl)c;
+				System.out.print("M: was " + mute);
+				mute &= vc.getMute();
+				System.out.println(" is " + mute);
+			} catch (Exception e) {
+				// ignore bad casts, they are expected
+			}
+		}
+	}
+	
+	class GetMuteFromHWOperator extends subZoneOperator {
+		public boolean mute = true;
+		public void operate(ZonePlayer zone) {
+			try {
+				mute &= zone.getMediaRendererDevice().getRenderingControlService().getMute();
 			} catch (Exception e) {
 				e.printStackTrace();
 			}

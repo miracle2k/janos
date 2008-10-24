@@ -127,8 +127,8 @@ public class VolumeControl extends Composite {
 
 	
 
-	protected boolean getMute() {
-		return mute.getSelection();
+	public boolean getMute() {
+		return Boolean.parseBoolean((String)mute.getData());
 	}
 
 	protected void setMute(boolean mute) {
@@ -136,10 +136,12 @@ public class VolumeControl extends Composite {
 	}
 
 	public void forceMute(boolean mute) {
+		System.out.println("FORCING MUTE TO " + mute);
 		this.mute.setImage(mute?muted:notMuted);
+		this.mute.setData(Boolean.toString(mute));
 	}
 
-	protected int getVolume() {
+	public int getVolume() {
 		return volume.getSelection();
 	}
 

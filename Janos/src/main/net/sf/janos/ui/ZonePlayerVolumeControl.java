@@ -50,7 +50,7 @@ public class ZonePlayerVolumeControl extends VolumeControl implements RenderingC
 		}
 	}
 	
-	protected int getVolume() {
+	public int getVolume() {
 		int rv = 0;
 		try {
 			rv = zone.getMediaRendererDevice().getRenderingControlService().getVolume();
@@ -70,7 +70,7 @@ public class ZonePlayerVolumeControl extends VolumeControl implements RenderingC
 		}
 	}
 
-	protected boolean getMute() {
+	public boolean getMute() {
 		boolean rv = false;
 		try {
 			rv = zone.getMediaRendererDevice().getRenderingControlService().getMute();
