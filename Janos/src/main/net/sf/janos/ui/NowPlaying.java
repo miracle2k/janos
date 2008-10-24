@@ -311,6 +311,7 @@ public class NowPlaying extends Composite implements AVTransportListener {
 			this.artist = artist;
 			this.name = name;
 			this.groupTitle = groupTitle;
+			this.setName("NowPlaying:NowPlayingSetter: " + zone.getDevicePropertiesService().getZoneAttributes().getName());
 		}
 
 		public void run() {
@@ -343,6 +344,7 @@ public class NowPlaying extends Composite implements AVTransportListener {
 
 
 		public NowPlayingFetcher() {
+			this.setName("NowPlaying:NowPlayingFetcher:" + zone.getDevicePropertiesService().getZoneAttributes().getName());
 		}
 
 		public void run() {

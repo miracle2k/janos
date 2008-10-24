@@ -234,6 +234,7 @@ public class QueueDisplay extends Composite implements AVTransportListener {
 
 
 		public NowPlayingFetcher() {
+			this.setName("NowPlaying:NowPlayingFetcher:" + currentZone.getDevicePropertiesService().getZoneAttributes().getName());
 		}
 
 		@Override
