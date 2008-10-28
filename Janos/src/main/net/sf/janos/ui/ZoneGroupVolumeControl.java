@@ -17,9 +17,14 @@ package net.sf.janos.ui;
 
 import java.io.IOException;
 import java.io.InputStream;
+import java.util.Set;
 
+import net.sbbi.upnp.messages.UPNPResponseException;
+import net.sf.janos.control.RenderingControlListener;
+import net.sf.janos.control.RenderingControlService;
 import net.sf.janos.control.ZonePlayer;
 import net.sf.janos.model.ZoneGroup;
+import net.sf.janos.model.xml.RenderingControlEventHandler.RenderingControlEventType;
 
 import org.eclipse.swt.SWT;
 import org.eclipse.swt.events.SelectionAdapter;
@@ -39,7 +44,7 @@ import org.eclipse.swt.widgets.Label;
  * @author David Wheeler
  * 
  */
-public class ZoneGroupVolumeControl extends Composite {
+public class ZoneGroupVolumeControl extends Composite implements RenderingControlListener {
 
 	ZoneGroup group;
 	final Image up;
@@ -78,19 +83,15 @@ public class ZoneGroupVolumeControl extends Composite {
 
 			protected void setVolume(final int vol) {
 				super.setVolume(vol);
-			
+
 				// update the hardware
 				new subZoneOperator() {
 					@Override
-					public void operate(ZonePlayer zone) {
-						try {
-							zone.getMediaRendererDevice().getRenderingControlService().setVolume(vol);
-						} catch (Exception e) {
-							e.printStackTrace();
-						}
+					public void operate(ZonePlayer zone) throws IOException, UPNPResponseException {
+						zone.getMediaRendererDevice().getRenderingControlService().setVolume(vol);
 					}
 				}.iterate();
-				
+
 				// update the UI
 				new subControlOperator() {
 					public void operate(Control c) {
@@ -120,18 +121,14 @@ public class ZoneGroupVolumeControl extends Composite {
 						}
 					}
 				}.iterate();
-				
+
 				// update the hardware
 				new subZoneOperator() {
 					@Override
-					public void operate(ZonePlayer zone) {
-						try {
-							zone.getMediaRendererDevice().getRenderingControlService().setMute(mute?1:0);
-						} catch (Exception e) {
-							e.printStackTrace();
-						}
+					public void operate(ZonePlayer zone) throws IOException, UPNPResponseException {
+						zone.getMediaRendererDevice().getRenderingControlService().setMute(mute?1:0);
 					}
-					
+
 				}.iterate();
 			}
 
@@ -167,25 +164,53 @@ public class ZoneGroupVolumeControl extends Composite {
 		data2.right = new FormAttachment(100, 0);
 		data2.top = new FormAttachment(0, 0);
 		expand.setLayoutData(data2);
+
+		new AddListenersOperator(this).iterate();
 	}
 
-	public void updateMasterFromHW() {
-		master.forceVolume(master.getVolume());
-		master.forceMute(master.getMute());
+	@Override
+	public void dispose() {
+		new RemoveListenersOperator(this).iterate();
+		up.dispose();
+		down.dispose();
+		super.dispose();
 	}
-	
+
+
+	public void updateMasterFromHW() {
+
+		// update the subzone UIs (maybe null)
+		new subControlOperator() {
+			public void operate(Control c) {
+				if (c instanceof SubZoneVolumeControl) {
+					SubZoneVolumeControl vc = (SubZoneVolumeControl) c;
+					vc.updateValuesFromHardware();
+				}
+			}
+		}.iterate();
+
+		// Update the master control for Volume
+		GetVolumeFromHWOperator volOp = new GetVolumeFromHWOperator();
+		volOp.iterate();
+		master.forceVolume(volOp.volume);
+
+		// Update the master control for Mute		
+		GetMuteFromHWOperator muteOp = new GetMuteFromHWOperator();
+		muteOp.iterate();
+		master.forceMute(muteOp.mute);
+	}
+
 	public void updateMasterFromUI() {
 		GetVolumeFromUIOperator volOp = new GetVolumeFromUIOperator();
 		volOp.iterate();
 		master.forceVolume(volOp.volume);
-		
+
 		GetMuteFromUIOperator muteOp = new GetMuteFromUIOperator();
 		muteOp.iterate();
 		master.forceMute(muteOp.mute);
 	}
-	
-	protected void showSubControls() {
 
+	protected void showSubControls() {
 		Control previousControl = master;
 
 		for (ZonePlayer zone: group.getMembers()) {
@@ -198,43 +223,13 @@ public class ZoneGroupVolumeControl extends Composite {
 			data1.top = new FormAttachment(previousControl);
 			sep.setLayoutData(data1);
 
-			VolumeControl vc = new VolumeControl(this, SWT.NONE, zone.getDevicePropertiesService().getZoneAttributes().getName()) {
-
+			SubZoneVolumeControl vc = new SubZoneVolumeControl (this, zone) {
 				@Override
-				protected void setMute(boolean mute) {
-					super.setMute(mute);
-					
-					try {
-						getZone().getMediaRendererDevice().getRenderingControlService().setMute(mute?1:0);
-					} catch (Exception e) {
-						e.printStackTrace();
-					}
+				public void postSetCallback() {
 					updateMasterFromUI();
-				}
-
-				@Override
-				protected void setVolume(int volume) {
-					super.setVolume(volume);
-				
-					try {
-						getZone().getMediaRendererDevice().getRenderingControlService().setVolume(volume);
-					} catch (Exception e) {
-						e.printStackTrace();
-					}
-					updateMasterFromUI();
-				}
-				
-				private ZonePlayer getZone() {
-					return (ZonePlayer)getData("ZONE");
 				}
 			};
-			vc.setData("ZONE", zone);
-			try {
-				vc.forceVolume(zone.getMediaRendererDevice().getRenderingControlService().getVolume());
-				vc.forceMute(zone.getMediaRendererDevice().getRenderingControlService().getMute());
-			} catch (Exception e) {
-				e.printStackTrace();
-			}
+
 			FormData data2 = new FormData();
 			data2.left = new FormAttachment(0,0);
 			data2.right = new FormAttachment(expand);
@@ -248,7 +243,7 @@ public class ZoneGroupVolumeControl extends Composite {
 	}
 
 	protected void hideSubControls() {
-		
+
 		new subControlOperator() {
 			public void operate (Control c) {
 				c.dispose();
@@ -262,15 +257,10 @@ public class ZoneGroupVolumeControl extends Composite {
 		return (group.getMembers().size() > 1);
 	}
 
-	@Override
-	public void dispose() {
-		up.dispose();
-		down.dispose();
-		super.dispose();
-	}
 
-	
-	
+
+
+
 	/*
 	 * A class to operate on all the controls that are optionally present
 	 */
@@ -285,47 +275,47 @@ public class ZoneGroupVolumeControl extends Composite {
 
 		abstract public void operate(Control c);
 	}
-	
+
 	/*
 	 * A class to operate on all the zones which are members of the group
 	 */
 	abstract class subZoneOperator {
 		public void iterate() {
 			for (ZonePlayer zone : group.getMembers()) {
-				operate(zone);
+				try {
+					operate(zone);
+				} catch (Exception e) {
+					e.printStackTrace();
+				}
 			}
 		}
 
-		abstract public void operate(ZonePlayer zone);
+		abstract public void operate(ZonePlayer zone) throws Exception;
 	}
 
 
 
 	class GetVolumeFromHWOperator extends subZoneOperator {
 		public int volume = 0;
-		
+
 		public void iterate() {
 			super.iterate();
 			volume /= group.getMembers().size();
 		}
-		
-		public void operate(ZonePlayer zone) {
-			try {
-				volume += zone.getMediaRendererDevice().getRenderingControlService().getVolume();
-			} catch (Exception e) {
-				e.printStackTrace();
-			}
+
+		public void operate(ZonePlayer zone) throws IOException, UPNPResponseException {
+			volume += zone.getMediaRendererDevice().getRenderingControlService().getVolume();
 		}
 	}
-	
+
 	class GetVolumeFromUIOperator extends subControlOperator {
 		public int volume = 0;
-		
+
 		public void iterate() {
 			super.iterate();
 			volume /= group.getMembers().size();
 		}
-		
+
 		public void operate(Control c) {
 			try {
 				VolumeControl vc = (VolumeControl)c;
@@ -335,10 +325,10 @@ public class ZoneGroupVolumeControl extends Composite {
 			}
 		}
 	}
-	
+
 	class GetMuteFromUIOperator extends subControlOperator {
 		public boolean mute = true;
-		
+
 		public void operate(Control c) {
 			try {
 				VolumeControl vc = (VolumeControl)c;
@@ -348,15 +338,44 @@ public class ZoneGroupVolumeControl extends Composite {
 			}
 		}
 	}
-	
+
 	class GetMuteFromHWOperator extends subZoneOperator {
 		public boolean mute = true;
-		public void operate(ZonePlayer zone) {
-			try {
-				mute &= zone.getMediaRendererDevice().getRenderingControlService().getMute();
-			} catch (Exception e) {
-				e.printStackTrace();
-			}
+		public void operate(ZonePlayer zone) throws IOException, UPNPResponseException {
+			mute &= zone.getMediaRendererDevice().getRenderingControlService().getMute();
 		}
+	}
+
+	class AddListenersOperator extends subZoneOperator {
+		RenderingControlListener l;
+
+		AddListenersOperator(RenderingControlListener l) {
+			this.l = l;
+		}
+
+		public void operate(ZonePlayer zone) {
+			zone.getMediaRendererDevice().getRenderingControlService().addListener(l);
+		}
+	}
+
+	class RemoveListenersOperator extends subZoneOperator {
+		RenderingControlListener l;
+
+		RemoveListenersOperator(RenderingControlListener l) {
+			this.l = l;
+		}
+
+		public void operate(ZonePlayer zone) {
+			zone.getMediaRendererDevice().getRenderingControlService().removeListener(l);
+		}
+	}
+
+	@Override
+	public void valuesChanged(Set<RenderingControlEventType> events, RenderingControlService source) {
+		getDisplay().asyncExec(new Runnable() {
+			public void run() {
+				updateMasterFromHW();
+			}
+		});
 	}
 }
