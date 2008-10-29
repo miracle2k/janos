@@ -402,6 +402,14 @@ public class NowPlaying extends Composite implements AVTransportListener {
 					} catch (Exception e) {
 						setNowPlayingAsync("", "", "" , null, "No Music");
 					}
+				} else if (uri.startsWith("lastfm:")) {
+					// last.fm Station
+					try {
+						TrackMetaData i = posInfo.getTrackMetaData();
+						setNowPlayingAsync(i.getCreator(), i.getAlbum(), i.getTitle() , new URL(i.getAlbumArtUri()), "last.fm: " + mediaInfo.getCurrentURIMetaData().getTitle());
+					} catch (Exception e) {
+						setNowPlayingAsync("", "", "" , null, "No Music");
+					}
 				} else if (uri.startsWith("x-sonosapi-stream:")) {
 					// Local Radio
 					try {
