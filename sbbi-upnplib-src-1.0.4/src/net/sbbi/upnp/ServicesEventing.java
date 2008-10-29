@@ -364,7 +364,7 @@ public class ServicesEventing implements Runnable {
     
     // A temporary hack to work around the race-condition-on-startup
     // issue.
-    final private int wait = 250;
+    final private int wait = 500;
       
     public void run() {
       try {
