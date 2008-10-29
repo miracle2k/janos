@@ -82,23 +82,17 @@ public class ZoneGroupVolumeControl extends Composite implements RenderingContro
 					group.getCoordinator().getDevicePropertiesService().getZoneAttributes().getName() ) {
 
 			protected void setVolume(final int vol) {
-				super.setVolume(vol);
+				final int increment = vol - super.getVolume();
 
 				// update the hardware
 				new subZoneOperator() {
 					@Override
 					public void operate(ZonePlayer zone) throws IOException, UPNPResponseException {
-						zone.getMediaRendererDevice().getRenderingControlService().setVolume(vol);
-					}
-				}.iterate();
+						int newVol = zone.getMediaRendererDevice().getRenderingControlService().getVolume() + increment;
+						if (newVol<0) {	newVol = 0;	}
+						if (newVol>100) { newVol = 100; }
 
-				// update the UI
-				new subControlOperator() {
-					public void operate(Control c) {
-						if (c instanceof VolumeControl) {
-							VolumeControl vc = (VolumeControl) c;
-							vc.setVolume(vol);
-						}
+						zone.getMediaRendererDevice().getRenderingControlService().setVolume(newVol);
 					}
 				}.iterate();
 			}
