@@ -40,12 +40,18 @@ public class Entry {
     private final String parentId;
     private final String upnpClass;
     private final String res;
-    private String album;
-    private String albumArtUri;
-    private String creator;
-
+    private final String album;
+    private final String albumArtUri;
+    private final String creator;
+    private final int originalTrackNumber;
+    
     public Entry(String id, String title, String parentId, String album, String albumArtUri, 
-        String creator, String upnpClass, String res) {
+            String creator, String upnpClass, String res) {
+    	this(id, title, parentId, album, albumArtUri, creator, upnpClass, res, -1);
+    }
+    
+    public Entry(String id, String title, String parentId, String album, String albumArtUri, 
+        String creator, String upnpClass, String res, int originalTrackNumber) {
       this.id = id;
       this.title=title;
       this.parentId = parentId;
@@ -54,6 +60,7 @@ public class Entry {
       this.creator = creator;
       this.upnpClass = upnpClass;
       this.res = res;
+      this.originalTrackNumber = originalTrackNumber;
     }
     
     /**
@@ -134,6 +141,10 @@ public class Entry {
      */
     public String getCreator() {
       return creator;
+    }
+    
+    public int getOriginalTrackNumber() {
+    	return originalTrackNumber;
     }
     
 }

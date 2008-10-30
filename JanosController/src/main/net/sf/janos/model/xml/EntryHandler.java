@@ -34,7 +34,8 @@ public class EntryHandler extends DefaultHandler {
     ALBUM, 
     ALBUM_ART_URI,
     CREATOR,
-    RES
+    RES,
+    TRACK_NUMBER
   }
   
   // Maintain a set of elements about which it is unuseful to complain about.
@@ -49,6 +50,7 @@ public class EntryHandler extends DefaultHandler {
   private StringBuilder album = new StringBuilder();
   private StringBuilder albumArtUri = new StringBuilder();
   private StringBuilder creator = new StringBuilder();
+  private StringBuilder trackNumber = new StringBuilder();
   private Element element = null;
   
   private List<Entry> artists = new ArrayList<Entry>();
@@ -74,6 +76,8 @@ public class EntryHandler extends DefaultHandler {
       element = Element.ALBUM;
     } else if (qName.equals("upnp:albumArtURI")) {
       element = Element.ALBUM_ART_URI;
+    } else if (qName.equals("upnp:originalTrackNumber")) {
+      element = Element.TRACK_NUMBER;
     } else {
       if (ignore == null) {
     	  ignore = new ArrayList<String>();
@@ -111,6 +115,9 @@ public class EntryHandler extends DefaultHandler {
       case CREATOR:
         creator.append(ch, start, length);
         break;
+      case TRACK_NUMBER:
+        trackNumber.append(ch, start, length);
+        break;
       // no default
     }
   }
@@ -119,14 +126,22 @@ public class EntryHandler extends DefaultHandler {
   public void endElement(String uri, String localName, String qName) throws SAXException {
     if (qName.equals("container") || qName.equals("item")) {
       element = null;
+      
+      int trackNumberVal = 0;
+      try {
+    	  trackNumberVal = Integer.parseInt(trackNumber.toString());
+      } catch (Exception e) {
+      }
+      
       artists.add(new Entry(id, title.toString(), parentId, album.toString(), 
-          albumArtUri.toString(), creator.toString(), upnpClass.toString(), res.toString()));
+          albumArtUri.toString(), creator.toString(), upnpClass.toString(), res.toString(), trackNumberVal));
       title= new StringBuilder();
       upnpClass = new StringBuilder();
       res = new StringBuilder();
       album = new StringBuilder();
       albumArtUri = new StringBuilder();
       creator = new StringBuilder();
+      trackNumber = new StringBuilder();
     }
   }
   
