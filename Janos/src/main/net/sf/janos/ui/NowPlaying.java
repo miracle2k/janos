@@ -127,9 +127,7 @@ public class NowPlaying extends Composite implements AVTransportListener {
 
 		artwork = new Label(nowPlaying, 0);
 		GridData gd = new GridData();
-		gd.verticalSpan = 4;	// Notice that this is 4, even though there are only 3 
-		// Vertical spans of interest.  This makes the last
-		// invisible row consume the excess space.
+		gd.verticalSpan = 4;	
 		gd.widthHint = 128;
 		gd.heightHint = 128;
 		artwork.setLayoutData(gd);
@@ -166,8 +164,10 @@ public class NowPlaying extends Composite implements AVTransportListener {
 		transportControl = new TransportControl(nowPlaying, SWT.NONE, zone);
 		GridData transportGridData = new GridData (GridData.HORIZONTAL_ALIGN_BEGINNING );
 		transportGridData.horizontalSpan = 2;
+		transportGridData.horizontalAlignment = GridData.FILL;
+		transportGridData.grabExcessHorizontalSpace = true;
 		transportControl.setLayoutData(transportGridData);
-
+		
 		artworkWorker = new ArtworkWorker(new SingleWorkQueue());
 		artworkWorker.start();
 		zone.getMediaRendererDevice().getAvTransportService().addAvTransportListener(this);
