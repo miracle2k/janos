@@ -64,8 +64,7 @@ public class ZoneControlList implements ExpandListener, ZoneGroupStateModelListe
 		ExpandItem item = (ExpandItem)arg0.item;
 		ZoneControl zc = (ZoneControl)item.getControl();
 		if (zc!=null) {
-			zc.getNowPlaying().showNowPlaying();
-			zc.getQueue().showNowPlaying();
+			refreshItem(item);
 			setCurrentZone(zc.getZonePlayer());
 		}
 	}
@@ -211,12 +210,10 @@ public class ZoneControlList implements ExpandListener, ZoneGroupStateModelListe
 		if (bar.getItemCount() == 0 ) {
 			setCurrentZone(coordinator);
 			expand = true;
-			zoneControl.getNowPlaying().showNowPlaying();
-			zoneControl.getQueue().showNowPlaying();
 		}
 
 		ExpandItem item = new ExpandItem(bar, 0, index);
-
+		
 		// generate the title by alphabetizing and concatenating the zone names
 		LinkedList<String> names = new LinkedList<String>();
 		for (ZonePlayer zp : group.getMembers()) {
@@ -238,6 +235,9 @@ public class ZoneControlList implements ExpandListener, ZoneGroupStateModelListe
 		setIcon(item, coordinator);
 		item.setControl(zoneControl);
 		item.setExpanded(expand);
+		if (expand) {
+			refreshItem(item);
+		}
 
 		return item;
 	}
@@ -258,8 +258,10 @@ public class ZoneControlList implements ExpandListener, ZoneGroupStateModelListe
 		ExpandItem i = findItemByZoneGroup(group);
 		boolean expanded = i.getExpanded();
 
+		// remove the old group and add a new one
 		removeZone(group, source);
 		i = addZone(group, source);
+		refreshItem(i);
 
 		// reinstate the item expanded state
 		i.setExpanded(expanded);
@@ -306,5 +308,9 @@ public class ZoneControlList implements ExpandListener, ZoneGroupStateModelListe
 		}
 	}
 
-
+	private void refreshItem(ExpandItem item) {
+		ZoneControl zc = (ZoneControl)item.getControl();
+		zc.getNowPlaying().showNowPlaying();
+		zc.getQueue().showNowPlaying();
+	}
 }
