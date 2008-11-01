@@ -52,7 +52,7 @@ public class ZoneGroupVolumeControl extends Composite implements RenderingContro
 
 	VolumeControl master;
 	Button expand;
-
+	
 	public ZoneGroupVolumeControl(Composite parent, int style, ZoneGroup group) {
 		super(parent, style);
 		this.group = group;
@@ -149,13 +149,20 @@ public class ZoneGroupVolumeControl extends Composite implements RenderingContro
 			}
 		});
 
+		FormAttachment rightHandSide;
+		if (getGroupMode()) {
+			rightHandSide = new FormAttachment(expand); 
+		} else {
+			rightHandSide = new FormAttachment(100,-5);
+		}
+
 		FormData data1 = new FormData();
 		data1.left = new FormAttachment(0,0);
-		data1.right = new FormAttachment(expand);
+		data1.right = rightHandSide;
 		master.setLayoutData(data1);
 
 		FormData data2 = new FormData();
-		data2.right = new FormAttachment(100, 0);
+		data2.right = new FormAttachment(100, -5);
 		data2.top = new FormAttachment(0, 0);
 		expand.setLayoutData(data2);
 
