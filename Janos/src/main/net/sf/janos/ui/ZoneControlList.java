@@ -33,11 +33,9 @@ public class ZoneControlList implements ExpandListener, ZoneGroupStateModelListe
 	private final List<ZoneListSelectionListener> selectionListeners = new ArrayList<ZoneListSelectionListener>();
 	private ExpandBar bar;
 	private ZonePlayer currentZone;
-	private SonosController controller;
 
 	public ZoneControlList(ExpandBar bar, SonosController controller) {
 		this.bar = bar;
-		this.controller = controller;
 		bar.addExpandListener(this);
 		controller.getZoneGroupStateModel().addListener(this);
 		addSearchingItem();

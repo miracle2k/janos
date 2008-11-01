@@ -192,6 +192,7 @@ public class TransportControl extends Composite implements AVTransportListener {
 
 	@Override
 	public void dispose() {
+		zone.getMediaRendererDevice().getAvTransportService().removeAvTransportListener(this);
 		super.dispose();
 	}
 

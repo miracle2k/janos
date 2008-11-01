@@ -180,6 +180,8 @@ public class NowPlaying extends Composite implements AVTransportListener {
 	@Override
 	public void dispose() {
 		zone.getMediaRendererDevice().getAvTransportService().removeAvTransportListener(this);
+		artworkWorker.q.addWork(artworkWorker.NO_MORE_WORK);
+		transportControl.dispose();
 		super.dispose();
 	}
 

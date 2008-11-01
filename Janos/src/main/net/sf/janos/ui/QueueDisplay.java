@@ -69,7 +69,7 @@ public class QueueDisplay extends Composite implements AVTransportListener {
 	/**
 	 * The current zone
 	 */
-	private ZonePlayer currentZone;
+	private ZonePlayer zone;
 
 	/**
 	 * The mouse listener for the queue table
@@ -109,7 +109,7 @@ public class QueueDisplay extends Composite implements AVTransportListener {
 	 */
 	public QueueDisplay(Composite parent, int style, ZonePlayer zone) {
 		super(parent, style);
-		this.currentZone = zone;
+		this.zone = zone;
 
 		setLayout(new GridLayout(1, true));
 
@@ -167,6 +167,9 @@ public class QueueDisplay extends Composite implements AVTransportListener {
 	 */
 	@Override
 	public void dispose() {
+		
+		zone.getMediaRendererDevice().getAvTransportService().removeAvTransportListener(this);
+		
 		if (nowPlayingImage != null) {
 			nowPlayingImage.dispose();
 		}
@@ -176,6 +179,11 @@ public class QueueDisplay extends Composite implements AVTransportListener {
 		if (queueModel != null) {
 			queueModel.removeQueueModelListener(queueModelListener);
 		}
+		
+		queue.removeMouseListener(queueMouseListener);
+		queue.removeControlListener(tableResizer);
+		queue.removeListener(SWT.SetData, queueDataFiller);
+
 		super.dispose();
 	}
 
@@ -202,9 +210,6 @@ public class QueueDisplay extends Composite implements AVTransportListener {
 	 * {@inheritDoc}
 	 */
 	public void valuesChanged(Set<AVTransportEventType> events, AVTransportService source) {
-		if (isDisposed()) {
-			return;
-		}
 		new NowPlayingFetcher().start();
 	}
 
@@ -234,23 +239,23 @@ public class QueueDisplay extends Composite implements AVTransportListener {
 
 
 		public NowPlayingFetcher() {
-			this.setName("NowPlaying:NowPlayingFetcher:" + currentZone.getDevicePropertiesService().getZoneAttributes().getName());
+			this.setName("NowPlaying:NowPlayingFetcher:" + zone.getDevicePropertiesService().getZoneAttributes().getName());
 		}
 
 		@Override
 		public void run() {
-			if (currentZone == null) {
+			if (zone == null) {
 				return;
 			}
 			try {
-				MediaInfo mediaInfo = currentZone.getMediaRendererDevice().getAvTransportService().getMediaInfo();
-				PositionInfo posInfo = currentZone.getMediaRendererDevice().getAvTransportService().getPositionInfo();
+				MediaInfo mediaInfo = zone.getMediaRendererDevice().getAvTransportService().getMediaInfo();
+				PositionInfo posInfo = zone.getMediaRendererDevice().getAvTransportService().getPositionInfo();
 				String uri = mediaInfo.getCurrentURI();
 
 				if (uri == null || posInfo == null) {
-					setQueueEntry(null, currentZone);
+					setQueueEntry(null, zone);
 				} else {
-					setQueueEntry(posInfo, currentZone);
+					setQueueEntry(posInfo, zone);
 					queueModel.setNowPlaying(posInfo.getTrackNum() -1);
 				} 
 			} catch (Exception e) {
@@ -272,7 +277,7 @@ public class QueueDisplay extends Composite implements AVTransportListener {
 		public void mouseDoubleClick(MouseEvent e) {
 			int queueIndex = ((Table)e.getSource()).getSelectionIndex();
 			try {
-				currentZone.playQueueEntry(queueIndex + 1);
+				zone.playQueueEntry(queueIndex + 1);
 			} catch (Exception exception) {
 				exception.printStackTrace();
 			}

@@ -78,4 +78,13 @@ public class ZoneControl extends Composite implements ControlListener {
 		pack();
 		layout();
 	}
+	
+	@Override
+	public void dispose() {
+		nowPlaying.dispose();
+		volumeControl.dispose();
+		queue.dispose();
+		super.dispose();
+	}
+
 }
