@@ -117,7 +117,7 @@ public class VolumeControl extends Composite {
 		data3.left = new FormAttachment(mute);
 		data3.right = new FormAttachment(100,0);
 		data3.top = new FormAttachment(0, 0);
-		data3.bottom = new FormAttachment(100, 0);
+		// data3.bottom = new FormAttachment(100, 0);
 		volume.setLayoutData(data3);
 
 		FormLayout layout = new FormLayout();
