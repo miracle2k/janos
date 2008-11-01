@@ -15,12 +15,16 @@
  */
 package net.sf.janos.ui;
 
+import java.io.IOException;
 import java.io.InputStream;
+import java.util.Collection;
 import java.util.Set;
 
+import net.sbbi.upnp.messages.UPNPResponseException;
 import net.sf.janos.control.AVTransportListener;
 import net.sf.janos.control.AVTransportService;
 import net.sf.janos.control.ZonePlayer;
+import net.sf.janos.model.TransportAction;
 import net.sf.janos.model.TransportInfo.TransportState;
 import net.sf.janos.model.xml.AVTransportEventHandler.AVTransportEventType;
 
@@ -183,11 +187,19 @@ public class TransportControl extends Composite implements AVTransportListener {
 		// TODO: update enabledness based on the service type.  For example,
 		// Rhapsody and Pandora stations do not allow rewind or skip back while
 		// playback from the queue should allow these functions.
-		skipBackward.setEnabled(true);
-		rewind.setEnabled(false);
-		play.setEnabled(true);
-		fastForward.setEnabled(false);
-		skipForward.setEnabled(true);
+		
+		try {
+			Collection<TransportAction> actions = zone.getMediaRendererDevice().getAvTransportService().getCurrentTransportActions();
+			skipBackward.setEnabled(actions.contains(TransportAction.Previous));
+			rewind.setEnabled(actions.contains(TransportAction.Seek));
+			play.setEnabled(actions.contains(TransportAction.Play) || actions.contains(TransportAction.Pause));
+			fastForward.setEnabled(actions.contains(TransportAction.Seek));
+			skipForward.setEnabled(actions.contains(TransportAction.Next));
+		} catch (Exception e) {
+			e.printStackTrace();
+		}
+		
+
 	}
 
 	@Override
