@@ -15,16 +15,22 @@
  */
 package net.sf.janos.ui;
 
+import java.io.IOException;
 import java.io.InputStream;
 import java.util.Collection;
 import java.util.Set;
+import java.util.Timer;
+import java.util.TimerTask;
 
+import net.sbbi.upnp.messages.UPNPResponseException;
 import net.sf.janos.control.AVTransportListener;
 import net.sf.janos.control.AVTransportService;
 import net.sf.janos.control.ZonePlayer;
+import net.sf.janos.model.PositionInfo;
 import net.sf.janos.model.TransportAction;
 import net.sf.janos.model.TransportInfo.TransportState;
 import net.sf.janos.model.xml.AVTransportEventHandler.AVTransportEventType;
+import net.sf.janos.util.TimeUtilities;
 
 import org.eclipse.swt.SWT;
 import org.eclipse.swt.events.MouseAdapter;
@@ -54,6 +60,8 @@ public class TransportControl extends Composite implements AVTransportListener {
 	private final Button skipForward;
 	private final Button skipBackward;
 	private final Label progressText;
+	private final Timer updateTimer;
+	private UpdateHandler updateHandler;
 
 	private enum Images { 
 		PLAY			("/play-16x16.png"),
@@ -121,7 +129,7 @@ public class TransportControl extends Composite implements AVTransportListener {
 		rewData.left = new FormAttachment(skipBackward);
 		rewData.top = new FormAttachment(progressBar);
 		rewind.setLayoutData(rewData);
-		
+
 
 		play = new Button(this, SWT.PUSH);
 		play.setImage(Images.PLAY.image());
@@ -136,7 +144,7 @@ public class TransportControl extends Composite implements AVTransportListener {
 		playData.left = new FormAttachment(rewind);
 		playData.top = new FormAttachment(progressBar);
 		play.setLayoutData(playData);
-		
+
 
 		fastForward = new Button(this, SWT.PUSH);
 		fastForward.setImage(Images.FAST_FORWARD.image());
@@ -150,7 +158,7 @@ public class TransportControl extends Composite implements AVTransportListener {
 		ffData.left = new FormAttachment(play);
 		ffData.top = new FormAttachment(progressBar);
 		fastForward.setLayoutData(ffData);
-		
+
 		skipForward = new Button(this, SWT.PUSH);
 		skipForward.setImage(Images.SKIP_FORWARD.image());
 		skipForward.addMouseListener(new MouseAdapter() {
@@ -163,7 +171,7 @@ public class TransportControl extends Composite implements AVTransportListener {
 		sfData.left = new FormAttachment(fastForward);
 		sfData.top = new FormAttachment(progressBar);
 		skipForward.setLayoutData(sfData);
-		
+
 		progressText = new Label(this, SWT.RIGHT);
 		progressText.setText("0:00/0:00");
 		FormData progressTextData = new FormData();
@@ -171,14 +179,16 @@ public class TransportControl extends Composite implements AVTransportListener {
 		progressTextData.right = new FormAttachment(100,0);
 		progressTextData.top = new FormAttachment(progressBar);
 		progressText.setLayoutData(progressTextData);
-		
+
 		FormLayout layout = new FormLayout();
 		//layout.spacing = 0;
 		setLayout(layout);
-		
+
 		updateEnabledness();
-		
+
 		zone.getMediaRendererDevice().getAvTransportService().addAvTransportListener(this);
+		updateTimer = new Timer("Timer Task:" + zone.getDevicePropertiesService().getZoneAttributes().getName(), true);
+		updateTimers();
 	}
 
 	public void updateEnabledness() {
@@ -192,13 +202,25 @@ public class TransportControl extends Composite implements AVTransportListener {
 		} catch (Exception e) {
 			e.printStackTrace();
 		}
-		
+	}
 
+	public void updateTimers() {
+		if (updateHandler != null) {
+			updateHandler.cancel();
+		}
+		if (isPlaying()) {
+			updateHandler = new UpdateHandler();
+			updateTimer.scheduleAtFixedRate(updateHandler, 1000, 1000);
+		}
 	}
 
 	@Override
 	public void dispose() {
 		zone.getMediaRendererDevice().getAvTransportService().removeAvTransportListener(this);
+		if (updateHandler != null) {
+			updateHandler.cancel();
+		}
+		updateTimer.cancel();		
 		super.dispose();
 	}
 
@@ -212,6 +234,8 @@ public class TransportControl extends Composite implements AVTransportListener {
 				}
 			});
 		}
+
+		updateTimers();
 	}
 
 
@@ -258,6 +282,34 @@ public class TransportControl extends Composite implements AVTransportListener {
 			zone.getMediaRendererDevice().getAvTransportService().next();
 		} catch (Exception e) {
 			e.printStackTrace();
+		}
+	}
+
+	class UpdateHandler extends TimerTask {
+		@Override
+		public void run() {
+			try {
+				PositionInfo posInfo = zone.getMediaRendererDevice().getAvTransportService().getPositionInfo();
+
+				final long currentTime = posInfo.getRelTime();
+				final long duration = posInfo.getTrackDuration();
+				final String label = TimeUtilities.convertLongToDuration(posInfo.getRelTime()) + "/" + TimeUtilities.convertLongToDuration(posInfo.getTrackDuration());
+
+//				System.out.println("Position For " + zone.getDevicePropertiesService().getZoneAttributes().getName() + ": " + label	);
+
+				if (!isDisposed()) {
+					getDisplay().asyncExec(new Runnable() {
+						public void run() {
+							progressText.setText(label);
+
+							progressBar.setMaximum((int)(duration/1000));
+							progressBar.setSelection((int)(currentTime/1000));
+						}
+					});
+				}
+			} catch (Exception e) {
+				e.printStackTrace();
+			}
 		}
 	}
 }
