@@ -184,10 +184,6 @@ public class TransportControl extends Composite implements AVTransportListener {
 	}
 
 	public void updateEnabledness() {
-		// TODO: update enabledness based on the service type.  For example,
-		// Rhapsody and Pandora stations do not allow rewind or skip back while
-		// playback from the queue should allow these functions.
-		
 		try {
 			Collection<TransportAction> actions = zone.getMediaRendererDevice().getAvTransportService().getCurrentTransportActions();
 			skipBackward.setEnabled(actions.contains(TransportAction.Previous));
