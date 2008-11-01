@@ -202,9 +202,6 @@ public class NowPlaying extends Composite implements AVTransportListener {
 	 * @param artworkUrl
 	 */
 	protected void setNowPlayingAsync(final String artist, final String album, final String name, final URL artworkUrl, final String groupTitle) {
-		if (isDisposed()) {
-			return;
-		}
 		getDisplay().asyncExec(new NowPlayingSetter(album, artworkUrl, artist, name, groupTitle));
 	}
 
