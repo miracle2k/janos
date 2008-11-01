@@ -217,7 +217,7 @@ public class ActionMessage {
     int readen = 0;
     StringBuffer content = new StringBuffer( 256 );
     while ( ( readen = in.read( buffer ) ) != -1 ) {
-      content.append( new String( buffer, 0 , readen ) );
+      content.append( new String( buffer, 0 , readen, "UTF-8" ) );
     }
     // some devices add \0 chars at XML message end
     // which causes XML parsing errors...

@@ -77,6 +77,8 @@ public class ActionMessageResponseParser extends org.xml.sax.helpers.DefaultHand
   private boolean parseOutputParams = false;
   private ActionResponse result;
   private ServiceActionArgument parsedResultOutArg;
+  
+  private StringBuffer parsedResultBuilder = new StringBuffer();
 
   protected ActionMessageResponseParser( ServiceAction serviceAction ) {
     this.serviceAction = serviceAction;
@@ -94,13 +96,7 @@ public class ActionMessageResponseParser extends org.xml.sax.helpers.DefaultHand
   public void characters( char[] ch, int start, int length ) {
     if ( parseOutputParams ) {
       if ( parsedResultOutArg != null ) {
-        String origChars = result.getOutActionArgumentValue( parsedResultOutArg.getName() );
-        String newChars =  new String( ch, start, length );
-        if ( origChars == null ) {
-          result.addResult( parsedResultOutArg, newChars );
-        } else {
-          result.addResult( parsedResultOutArg, origChars + newChars );
-        }
+        parsedResultBuilder.append(ch, start, length);
       } 
     } else if ( readFaultCode ) {
       msgEx.faultCode = new String( ch, start, length );
@@ -152,7 +148,9 @@ public class ActionMessageResponseParser extends org.xml.sax.helpers.DefaultHand
 
   public void endElement( String uri, String localName, String qName ) {
     if ( parsedResultOutArg != null && parsedResultOutArg.getName().equals( localName ) ) {
+      result.addResult(parsedResultOutArg, parsedResultBuilder.toString());
       parsedResultOutArg = null;
+      parsedResultBuilder = new StringBuffer();
     } else if ( localName.equals( bodyElementName ) ) {
       parseOutputParams = false;
     }
