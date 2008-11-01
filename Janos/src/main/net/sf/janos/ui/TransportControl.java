@@ -28,6 +28,9 @@ import org.eclipse.swt.SWT;
 import org.eclipse.swt.events.MouseAdapter;
 import org.eclipse.swt.events.MouseEvent;
 import org.eclipse.swt.graphics.Image;
+import org.eclipse.swt.layout.FormAttachment;
+import org.eclipse.swt.layout.FormData;
+import org.eclipse.swt.layout.FormLayout;
 import org.eclipse.swt.layout.GridData;
 import org.eclipse.swt.layout.GridLayout;
 import org.eclipse.swt.widgets.Button;
@@ -77,10 +80,6 @@ public class TransportControl extends Composite implements AVTransportListener {
 		super(parent, style);
 		this.zone = zone;
 
-		GridLayout layout = new GridLayout();
-		layout.numColumns = 6;
-		setLayout(layout);
-
 		for (Images i : Images.values()) {
 			try {
 				InputStream is;
@@ -92,10 +91,10 @@ public class TransportControl extends Composite implements AVTransportListener {
 		}
 
 		progressBar = new ProgressBar(this, SWT.NONE);
-		GridData barGridData = new GridData(GridData.FILL_HORIZONTAL);
-		barGridData.horizontalSpan = 6;
-		barGridData.grabExcessHorizontalSpace = true;
-		progressBar.setLayoutData(barGridData);
+		FormData pbData = new FormData();
+		pbData.left = new FormAttachment(0, 0);
+		pbData.right = new FormAttachment(100,0);
+		progressBar.setLayoutData(pbData);
 
 		skipBackward = new Button(this, SWT.PUSH);
 		skipBackward.setImage(Images.SKIP_BACKWARD.image());
@@ -105,6 +104,10 @@ public class TransportControl extends Composite implements AVTransportListener {
 				previous();
 			}
 		});
+		FormData sbData = new FormData();
+		sbData.left = new FormAttachment(0, 0);
+		sbData.top = new FormAttachment(progressBar);
+		skipBackward.setLayoutData(sbData);
 
 		rewind = new Button(this, SWT.PUSH);
 		rewind.setImage(Images.REWIND.image());
@@ -114,6 +117,11 @@ public class TransportControl extends Composite implements AVTransportListener {
 				// previous();
 			}
 		});
+		FormData rewData = new FormData();
+		rewData.left = new FormAttachment(skipBackward);
+		rewData.top = new FormAttachment(progressBar);
+		rewind.setLayoutData(rewData);
+		
 
 		play = new Button(this, SWT.PUSH);
 		play.setImage(Images.PLAY.image());
@@ -124,6 +132,11 @@ public class TransportControl extends Composite implements AVTransportListener {
 			}
 		});
 		setIsPlaying(isPlaying());
+		FormData playData = new FormData();
+		playData.left = new FormAttachment(rewind);
+		playData.top = new FormAttachment(progressBar);
+		play.setLayoutData(playData);
+		
 
 		fastForward = new Button(this, SWT.PUSH);
 		fastForward.setImage(Images.FAST_FORWARD.image());
@@ -133,6 +146,11 @@ public class TransportControl extends Composite implements AVTransportListener {
 				// previous();
 			}
 		});
+		FormData ffData = new FormData();
+		ffData.left = new FormAttachment(play);
+		ffData.top = new FormAttachment(progressBar);
+		fastForward.setLayoutData(ffData);
+		
 		skipForward = new Button(this, SWT.PUSH);
 		skipForward.setImage(Images.SKIP_FORWARD.image());
 		skipForward.addMouseListener(new MouseAdapter() {
@@ -141,12 +159,25 @@ public class TransportControl extends Composite implements AVTransportListener {
 				next();
 			}
 		});
-
-		progressText = new Label(this, SWT.NONE);
+		FormData sfData = new FormData();
+		sfData.left = new FormAttachment(fastForward);
+		sfData.top = new FormAttachment(progressBar);
+		skipForward.setLayoutData(sfData);
+		
+		progressText = new Label(this, SWT.RIGHT);
 		progressText.setText("0:00/0:00");
-
+		FormData progressTextData = new FormData();
+		progressTextData.left = new FormAttachment(skipForward);
+		progressTextData.right = new FormAttachment(100,0);
+		progressTextData.top = new FormAttachment(progressBar);
+		progressText.setLayoutData(progressTextData);
+		
+		FormLayout layout = new FormLayout();
+		//layout.spacing = 0;
+		setLayout(layout);
+		
 		updateEnabledness();
-
+		
 		zone.getMediaRendererDevice().getAvTransportService().addAvTransportListener(this);
 	}
 
