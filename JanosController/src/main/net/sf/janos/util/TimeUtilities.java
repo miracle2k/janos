@@ -37,10 +37,9 @@ public class TimeUtilities {
     PeriodFormatterBuilder builder = new PeriodFormatterBuilder();
 
     // TODO this will not work for fractional millis. which are stupid anyway.
-    periodFormatter = builder.printZeroNever()
+    periodFormatter = builder.printZeroAlways()
         .appendHours()
-        .printZeroAlways()
-        .minimumPrintedDigits(1)
+        .minimumPrintedDigits(2)
         .maximumParsedDigits(2)
         .appendSeparator(":")
         .minimumPrintedDigits(2)
