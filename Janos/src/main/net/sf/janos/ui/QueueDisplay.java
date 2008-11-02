@@ -17,14 +17,17 @@ package net.sf.janos.ui;
 
 import java.io.IOException;
 import java.io.InputStream;
+import java.util.ArrayList;
+import java.util.Collection;
 import java.util.List;
 import java.util.Set;
 
 import net.sf.janos.control.AVTransportListener;
 import net.sf.janos.control.AVTransportService;
+import net.sf.janos.control.BrowseHandle;
+import net.sf.janos.control.EntryCallback;
 import net.sf.janos.control.ZonePlayer;
 import net.sf.janos.model.Entry;
-import net.sf.janos.model.MediaInfo;
 import net.sf.janos.model.PositionInfo;
 import net.sf.janos.model.QueueModel;
 import net.sf.janos.model.QueueModelListener;
@@ -54,12 +57,8 @@ import org.eclipse.swt.widgets.TableItem;
  */
 public class QueueDisplay extends Composite implements AVTransportListener {
 
+	@SuppressWarnings("unused")
 	private static final Log LOG = LogFactory.getLog(QueueDisplay.class);
-
-	/**
-	 * The maximum number of items to display in the queue
-	 */
-	public static final int QUEUE_LENGTH = 100;
 
 	/**
 	 * The queue
@@ -192,7 +191,7 @@ public class QueueDisplay extends Composite implements AVTransportListener {
 	 * @param zone
 	 */
 	public void showNowPlaying() {
-		new NowPlayingFetcher().start();
+		setQueueEntries(null, zone);
 	}
 
 
@@ -201,16 +200,47 @@ public class QueueDisplay extends Composite implements AVTransportListener {
 	 * @param posInfo
 	 * @param zone
 	 */
-	private void setQueueEntry(PositionInfo posInfo, final ZonePlayer zone) {
-		final List<Entry> queueEntries = zone.getMediaServerDevice().getContentDirectoryService().getQueue(0,QUEUE_LENGTH);
-		getDisplay().asyncExec(new QueueUpdater(queueEntries));
+	private void setQueueEntries(PositionInfo posInfo, final ZonePlayer zone) {
+
+		zone.getMediaServerDevice().getContentDirectoryService().getAllEntriesAsync(new EntryCallback() {
+
+			final List<Entry> queueEntries = new ArrayList<Entry>();
+			
+			@Override
+			public void addEntries(BrowseHandle handle, Collection<Entry> entries) {
+				queueEntries.addAll(entries);
+			}
+
+			@Override
+			public void retrievalComplete(BrowseHandle handle, boolean completedSuccessfully) {
+				if (completedSuccessfully) {
+					getDisplay().asyncExec(new QueueUpdater(queueEntries));
+				} else {
+					getDisplay().asyncExec(new QueueUpdater(new ArrayList<Entry>()));
+				}
+				
+
+				try {
+					PositionInfo posInfo = zone.getMediaRendererDevice().getAvTransportService().getPositionInfo();
+					queueModel.setNowPlaying(posInfo.getTrackNum() -1);
+				} catch (Exception e) {
+					e.printStackTrace();
+				}
+			}
+
+			@Override
+			public void updateCount(BrowseHandle handle, int count) {
+			}
+			
+		}, "Q:0");
+		
 	}
 
 	/**
 	 * {@inheritDoc}
 	 */
 	public void valuesChanged(Set<AVTransportEventType> events, AVTransportService source) {
-		new NowPlayingFetcher().start();
+		setQueueEntries(null, zone);
 	}
 
 	/**
@@ -227,46 +257,6 @@ public class QueueDisplay extends Composite implements AVTransportListener {
 			queueModel.setEntries(entries);
 		}
 	}
-
-
-
-	/**
-	 * A Runnable that requests the currently playing track and applies the info to this QueueDisplay
-	 * @author David Wheeler
-	 *
-	 */
-	protected class NowPlayingFetcher extends Thread {
-
-
-		public NowPlayingFetcher() {
-			this.setName("NowPlaying:NowPlayingFetcher:" + zone.getDevicePropertiesService().getZoneAttributes().getName());
-		}
-
-		@Override
-		public void run() {
-			if (zone == null) {
-				return;
-			}
-			try {
-				MediaInfo mediaInfo = zone.getMediaRendererDevice().getAvTransportService().getMediaInfo();
-				PositionInfo posInfo = zone.getMediaRendererDevice().getAvTransportService().getPositionInfo();
-				String uri = mediaInfo.getCurrentURI();
-
-				if (uri == null || posInfo == null) {
-					setQueueEntry(null, zone);
-				} else {
-					setQueueEntry(posInfo, zone);
-					queueModel.setNowPlaying(posInfo.getTrackNum() -1);
-				} 
-			} catch (Exception e) {
-				LOG.error("Couldn't load queue", e);
-			}
-		}
-	}
-
-	//	public void displayEmptyQueue() {
-	//		getDisplay().asyncExec(new QueueUpdater(new ArrayList<Entry>()));
-	//	}
 
 	/**
 	 * Plays any queue entry on double click

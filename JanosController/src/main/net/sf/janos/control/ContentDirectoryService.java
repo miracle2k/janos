@@ -243,7 +243,7 @@ public class ContentDirectoryService extends AbstractService {
             callback.addEntries(this, ResultParser.getEntriesFromStringResult(response.getOutActionArgumentValue("Result")));
           }
         }
-        completedSuccessfully = isCancelled;
+        completedSuccessfully = !isCancelled;
       } catch (IOException e) {
         // TODO Auto-generated catch block
         e.printStackTrace();
