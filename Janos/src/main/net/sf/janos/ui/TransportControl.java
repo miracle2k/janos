@@ -15,26 +15,26 @@
  */
 package net.sf.janos.ui;
 
-import java.io.IOException;
 import java.io.InputStream;
 import java.util.Collection;
 import java.util.Set;
 import java.util.Timer;
 import java.util.TimerTask;
 
-import net.sbbi.upnp.messages.UPNPResponseException;
 import net.sf.janos.control.AVTransportListener;
 import net.sf.janos.control.AVTransportService;
 import net.sf.janos.control.ZonePlayer;
 import net.sf.janos.model.PositionInfo;
+import net.sf.janos.model.SeekTarget;
+import net.sf.janos.model.SeekTargetFactory;
 import net.sf.janos.model.TransportAction;
 import net.sf.janos.model.TransportInfo.TransportState;
 import net.sf.janos.model.xml.AVTransportEventHandler.AVTransportEventType;
-import net.sf.janos.util.TimeUtilities;
 
 import org.eclipse.swt.SWT;
 import org.eclipse.swt.events.MouseAdapter;
 import org.eclipse.swt.events.MouseEvent;
+import org.eclipse.swt.events.MouseListener;
 import org.eclipse.swt.graphics.Image;
 import org.eclipse.swt.layout.FormAttachment;
 import org.eclipse.swt.layout.FormData;
@@ -43,6 +43,9 @@ import org.eclipse.swt.widgets.Button;
 import org.eclipse.swt.widgets.Composite;
 import org.eclipse.swt.widgets.Label;
 import org.eclipse.swt.widgets.ProgressBar;
+import org.joda.time.Period;
+import org.joda.time.format.PeriodFormatter;
+import org.joda.time.format.PeriodFormatterBuilder;
 
 /**
  * a UI component with actions for controlling the music eg. stop
@@ -99,6 +102,30 @@ public class TransportControl extends Composite implements AVTransportListener {
 		}
 
 		progressBar = new ProgressBar(this, SWT.NONE);
+		progressBar.addMouseListener( new MouseListener() {
+
+			@Override
+			public void mouseDoubleClick(MouseEvent arg0) {
+			}
+
+			@Override
+			public void mouseDown(MouseEvent arg0) {
+				progressBar.setCapture(true);
+			}
+
+			@Override
+			public void mouseUp(MouseEvent arg0) {
+				int val = Math.round((float)arg0.x * (float)100.0 / (float)(progressBar.getBounds().width));
+				if (val < progressBar.getMinimum()) { 
+					val = progressBar.getMinimum();	
+				}
+				if (val > progressBar.getMaximum()) {
+					val = progressBar.getMaximum();
+				}
+				seekToPercent(val);
+				progressBar.setCapture(false);
+			}
+		});
 		FormData pbData = new FormData();
 		pbData.left = new FormAttachment(0, 0);
 		pbData.right = new FormAttachment(100,0);
@@ -252,6 +279,19 @@ public class TransportControl extends Composite implements AVTransportListener {
 		play.setData(isPlaying ? "Pause" : "Play" );
 	}
 
+	private boolean seekIsEnabled() {
+		boolean rv = false;
+		Collection<TransportAction> actions;
+		try {
+			actions = zone.getMediaRendererDevice().getAvTransportService().getCurrentTransportActions();
+			rv = actions.contains(TransportAction.Seek);
+		} catch (Exception e) {
+			e.printStackTrace();
+		} 
+		
+		return rv;
+	}
+	
 	protected void previous() {
 		try {
 			// TODO: previous() should behave such that a request to skip backwards
@@ -285,6 +325,42 @@ public class TransportControl extends Composite implements AVTransportListener {
 		}
 	}
 
+	public void seekToPercent(int percent) {
+		if (!seekIsEnabled()) {
+			return;
+		}
+		
+		try {
+			PositionInfo posInfo = zone.getMediaRendererDevice().getAvTransportService().getPositionInfo();
+			final long duration = posInfo.getTrackDuration();
+			SeekTarget target = SeekTargetFactory.createRelTimeSeekTarget((long)(((double)duration * (double)percent) / (double)100));
+			zone.getMediaRendererDevice().getAvTransportService().seek(target);
+		} catch (Exception e) {
+			e.printStackTrace();
+		}
+	}
+	
+	private static final PeriodFormatter periodFormatter;
+	static {
+		PeriodFormatterBuilder builder = new PeriodFormatterBuilder();
+		
+		periodFormatter = builder.printZeroNever()
+		.appendHours()
+		.maximumParsedDigits(2)
+		.appendSeparator(":")
+		.printZeroAlways()
+		.minimumPrintedDigits(1)
+		.appendMinutes()
+		.appendSeparator(":")
+		.minimumPrintedDigits(2)
+		.appendSecondsWithOptionalMillis().toFormatter();
+	}
+
+	public static String convertLongToDuration(long duration) {
+		Period period = new Period(duration);
+		return periodFormatter.print(period);
+	}
+	
 	class UpdateHandler extends TimerTask {
 		@Override
 		public void run() {
@@ -293,9 +369,7 @@ public class TransportControl extends Composite implements AVTransportListener {
 
 				final long currentTime = posInfo.getRelTime();
 				final long duration = posInfo.getTrackDuration();
-				final String label = TimeUtilities.convertLongToDuration(posInfo.getRelTime()) + "/" + TimeUtilities.convertLongToDuration(posInfo.getTrackDuration());
-
-//				System.out.println("Position For " + zone.getDevicePropertiesService().getZoneAttributes().getName() + ": " + label	);
+				final String label = convertLongToDuration(posInfo.getRelTime()) + "/" + convertLongToDuration(posInfo.getTrackDuration());
 
 				if (!isDisposed()) {
 					getDisplay().asyncExec(new Runnable() {
