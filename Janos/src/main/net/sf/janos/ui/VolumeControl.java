@@ -6,6 +6,7 @@ import java.io.InputStream;
 import org.eclipse.swt.SWT;
 import org.eclipse.swt.events.MouseEvent;
 import org.eclipse.swt.events.MouseListener;
+import org.eclipse.swt.events.MouseMoveListener;
 import org.eclipse.swt.events.SelectionAdapter;
 import org.eclipse.swt.events.SelectionEvent;
 import org.eclipse.swt.graphics.Image;
@@ -88,16 +89,18 @@ public class VolumeControl extends Composite {
 
 			@Override
 			public void mouseUp(MouseEvent arg0) {
-				int val = Math.round((float)arg0.x * (float)100.0 / (float)(volume.getBounds().width));
-				if (val < volume.getMinimum()) { 
-					val = volume.getMinimum();	
-				}
-				if (val > volume.getMaximum()) {
-					val = volume.getMaximum();
-				}
-				setVolume(val);
+				setVolume(getValFromX(arg0.x));
 				volume.setCapture(false);
 			}
+		});
+		
+		volume.addMouseMoveListener( new MouseMoveListener() {
+
+			@Override
+			public void mouseMove(MouseEvent arg0) {
+				volume.setToolTipText("" + getValFromX(arg0.x));
+			}
+			
 		});
 
 		FormData data1 = new FormData();
@@ -125,7 +128,16 @@ public class VolumeControl extends Composite {
 		setLayout(layout);
 	}
 
-	
+	protected int getValFromX(int x) {
+		int val = Math.round((float)x * (float)100.0 / (float)(volume.getBounds().width));
+		if (val < volume.getMinimum()) { 
+			val = volume.getMinimum();	
+		}
+		if (val > volume.getMaximum()) {
+			val = volume.getMaximum();
+		}
+		return val;
+	}
 
 	public boolean getMute() {
 		return Boolean.parseBoolean((String)mute.getData());
