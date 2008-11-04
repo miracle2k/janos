@@ -35,6 +35,7 @@ import org.eclipse.swt.SWT;
 import org.eclipse.swt.events.MouseAdapter;
 import org.eclipse.swt.events.MouseEvent;
 import org.eclipse.swt.events.MouseListener;
+import org.eclipse.swt.events.MouseMoveListener;
 import org.eclipse.swt.graphics.Image;
 import org.eclipse.swt.layout.FormAttachment;
 import org.eclipse.swt.layout.FormData;
@@ -63,8 +64,9 @@ public class TransportControl extends Composite implements AVTransportListener {
 	private final Button skipForward;
 	private final Button skipBackward;
 	private final Label progressText;
-	private final Timer updateTimer;
+	private final Timer transportTimer;
 	private UpdateHandler updateHandler;
+	private FFREWHandler ffrewHandler; 
 
 	private enum Images { 
 		PLAY			("/play-16x16.png"),
@@ -115,16 +117,21 @@ public class TransportControl extends Composite implements AVTransportListener {
 
 			@Override
 			public void mouseUp(MouseEvent arg0) {
-				int val = Math.round((float)arg0.x * (float)100.0 / (float)(progressBar.getBounds().width));
-				if (val < progressBar.getMinimum()) { 
-					val = progressBar.getMinimum();	
-				}
-				if (val > progressBar.getMaximum()) {
-					val = progressBar.getMaximum();
-				}
-				seekToPercent(val);
+				seekToPercent(getPercentageFromX(arg0.x));
 				progressBar.setCapture(false);
 			}
+		});
+		
+		progressBar.addMouseMoveListener( new MouseMoveListener() {
+
+			@Override
+			public void mouseMove(MouseEvent arg0) {
+				String target = getSeekTargetFromPercentage(getPercentageFromX(arg0.x)).getTarget();
+				int end = target.lastIndexOf(".");
+				if (end == -1) { end = target.length(); }
+				progressBar.setToolTipText(target.substring(0, end));
+			}
+			
 		});
 		FormData pbData = new FormData();
 		pbData.left = new FormAttachment(0, 0);
@@ -149,7 +156,12 @@ public class TransportControl extends Composite implements AVTransportListener {
 		rewind.addMouseListener(new MouseAdapter() {
 			@Override
 			public void mouseUp(MouseEvent e) {
-				// previous();
+				stopFFREW();
+			}
+
+			@Override
+			public void mouseDown(MouseEvent e) {
+				startFFREW(-1000);
 			}
 		});
 		FormData rewData = new FormData();
@@ -178,7 +190,12 @@ public class TransportControl extends Composite implements AVTransportListener {
 		fastForward.addMouseListener(new MouseAdapter() {
 			@Override
 			public void mouseUp(MouseEvent e) {
-				// previous();
+				stopFFREW();
+			}
+
+			@Override
+			public void mouseDown(MouseEvent e) {
+				startFFREW(1000);
 			}
 		});
 		FormData ffData = new FormData();
@@ -208,13 +225,12 @@ public class TransportControl extends Composite implements AVTransportListener {
 		progressText.setLayoutData(progressTextData);
 
 		FormLayout layout = new FormLayout();
-		//layout.spacing = 0;
 		setLayout(layout);
 
 		updateEnabledness();
 
 		zone.getMediaRendererDevice().getAvTransportService().addAvTransportListener(this);
-		updateTimer = new Timer("Timer Task:" + zone.getDevicePropertiesService().getZoneAttributes().getName(), true);
+		transportTimer = new Timer("Timer Task:" + zone.getDevicePropertiesService().getZoneAttributes().getName(), true);
 		updateTimers();
 	}
 
@@ -237,7 +253,7 @@ public class TransportControl extends Composite implements AVTransportListener {
 		}
 		if (isPlaying()) {
 			updateHandler = new UpdateHandler();
-			updateTimer.scheduleAtFixedRate(updateHandler, 1000, 1000);
+			transportTimer.scheduleAtFixedRate(updateHandler, 1000, 1000);
 		}
 	}
 
@@ -247,7 +263,7 @@ public class TransportControl extends Composite implements AVTransportListener {
 		if (updateHandler != null) {
 			updateHandler.cancel();
 		}
-		updateTimer.cancel();		
+		transportTimer.cancel();		
 		super.dispose();
 	}
 
@@ -325,15 +341,47 @@ public class TransportControl extends Composite implements AVTransportListener {
 		}
 	}
 
+	private int getPercentageFromX(int x) {
+		int val = Math.round((float)x * (float)100.0 / (float)(progressBar.getBounds().width));
+		if (val < progressBar.getMinimum()) { 
+			val = progressBar.getMinimum();	
+		}
+		if (val > progressBar.getMaximum()) {
+			val = progressBar.getMaximum();
+		}
+		return val;
+	}
+	
+	private SeekTarget getSeekTargetFromPercentage(int percent) {
+		try {
+			PositionInfo posInfo = zone.getMediaRendererDevice().getAvTransportService().getPositionInfo();
+			final long duration = posInfo.getTrackDuration();
+			return SeekTargetFactory.createRelTimeSeekTarget((long)(((double)duration * (double)percent) / (double)100));
+		} catch (Exception e) {
+		}
+		return SeekTargetFactory.createRelTimeSeekTarget(0);
+	}
+	
 	public void seekToPercent(int percent) {
 		if (!seekIsEnabled()) {
 			return;
 		}
 		
 		try {
+			zone.getMediaRendererDevice().getAvTransportService().seek(getSeekTargetFromPercentage(percent));
+		} catch (Exception e) {
+			e.printStackTrace();
+		}
+	}
+	
+	public void seekToIncrement(int increment) {
+		if (!seekIsEnabled()) {
+			return;
+		}
+		
+		try {
 			PositionInfo posInfo = zone.getMediaRendererDevice().getAvTransportService().getPositionInfo();
-			final long duration = posInfo.getTrackDuration();
-			SeekTarget target = SeekTargetFactory.createRelTimeSeekTarget((long)(((double)duration * (double)percent) / (double)100));
+			SeekTarget target = SeekTargetFactory.createRelTimeSeekTarget(posInfo.getRelTime() + increment);
 			zone.getMediaRendererDevice().getAvTransportService().seek(target);
 		} catch (Exception e) {
 			e.printStackTrace();
@@ -384,6 +432,50 @@ public class TransportControl extends Composite implements AVTransportListener {
 			} catch (Exception e) {
 				e.printStackTrace();
 			}
+		}
+	}
+	
+	public void startFFREW(int increment) {
+		if (ffrewHandler != null) {
+			ffrewHandler.cancel();
+		}
+		if (updateHandler != null) {
+			updateHandler.cancel();
+		}
+		ffrewHandler = new FFREWHandler();
+		
+		ffrewHandler.setIncrement(increment);
+		transportTimer.scheduleAtFixedRate(ffrewHandler, 0, 250);
+	}
+	
+	public void stopFFREW() {
+		ffrewHandler.cancel();
+		updateTimers();
+	}	
+	
+	class FFREWHandler extends TimerTask {
+		private int increment;
+		
+		FFREWHandler() {
+			increment = 0;
+		}
+		
+		@Override
+		public void run() {
+			try {
+				System.out.println("Updating Position");
+				seekToIncrement(getIncrement());
+			} catch (Exception e) {
+				e.printStackTrace();
+			}
+		}
+		
+		public int getIncrement() {
+			return increment;
+		}
+
+		public void setIncrement(int increment) {
+			this.increment = increment;
 		}
 	}
 }
