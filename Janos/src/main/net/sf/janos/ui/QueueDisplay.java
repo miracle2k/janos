@@ -53,11 +53,14 @@ import org.eclipse.swt.dnd.TransferData;
 import org.eclipse.swt.dnd.URLTransfer;
 import org.eclipse.swt.events.ControlEvent;
 import org.eclipse.swt.events.ControlListener;
+import org.eclipse.swt.events.KeyAdapter;
+import org.eclipse.swt.events.KeyEvent;
 import org.eclipse.swt.events.MouseEvent;
 import org.eclipse.swt.events.MouseListener;
 import org.eclipse.swt.graphics.Image;
 import org.eclipse.swt.layout.GridData;
 import org.eclipse.swt.layout.GridLayout;
+import org.eclipse.swt.widgets.Button;
 import org.eclipse.swt.widgets.Composite;
 import org.eclipse.swt.widgets.Event;
 import org.eclipse.swt.widgets.Listener;
@@ -72,7 +75,7 @@ import org.eclipse.swt.widgets.TableItem;
  */
 public class QueueDisplay extends Composite implements AVTransportListener {
 
-	private static final Log LOG = LogFactory.getLog(QueueDisplay.class);
+  private static final Log LOG = LogFactory.getLog(QueueDisplay.class);
 
 	/**
 	 * The queue
@@ -170,6 +173,14 @@ public class QueueDisplay extends Composite implements AVTransportListener {
     ApplicationContext.getInstance().getShell().getToolTipHandler().activateHoverHelp(queue);
     
 		zone.getMediaRendererDevice().getAvTransportService().addAvTransportListener(this);
+		
+		Composite buttonPanel = new Composite(this, SWT.None);
+		Button clearButton = new Button(buttonPanel, SWT.FLAT);
+		clearButton.setText("Clear");
+		Button deleteButton = new Button(buttonPanel, SWT.FLAT);
+		deleteButton.setText("Remove");
+		
+		queue.addKeyListener(new DeleteListener());
 	}
 
 	static TableResizer tableResizer = new TableResizer();
@@ -204,16 +215,15 @@ public class QueueDisplay extends Composite implements AVTransportListener {
 	 * @param zone
 	 */
 	public void showNowPlaying() {
-		setQueueEntries(null, zone);
+		setQueueEntries(zone);
 	}
 
 
 	/**
 	 * Signifies that a queue is being played at the provided positionInfo
-	 * @param posInfo
 	 * @param zone
 	 */
-	private void setQueueEntries(PositionInfo posInfo, final ZonePlayer zone) {
+	private void setQueueEntries(final ZonePlayer zone) {
 
 		zone.getMediaServerDevice().getContentDirectoryService().getAllEntriesAsync(new EntryCallback() {
 
@@ -245,12 +255,26 @@ public class QueueDisplay extends Composite implements AVTransportListener {
 		}, "Q:0");
 		
 	}
+	
+	/**
+	 * Deletes the currently selected entries
+	 */
+	private void deleteSelection() {
+	  int[] selection = queue.getSelectionIndices();
+	  try {
+	    for (Integer index : selection) {
+	      zone.getMediaRendererDevice().getAvTransportService().removeTrackFromQueue(queueModel.getEntryAt(index));
+	    }
+	  } catch (Exception e) {
+	    LOG.debug("Couldn't delete queue entry : ", e);
+	  }
+	}
 
 	/**
 	 * {@inheritDoc}
 	 */
 	public void valuesChanged(Set<AVTransportEventType> events, AVTransportService source) {
-		setQueueEntries(null, zone);
+		setQueueEntries(zone);
 	}
 
 	/**
@@ -424,28 +448,46 @@ public class QueueDisplay extends Composite implements AVTransportListener {
 	  }
 
 	  private class QueueDragListener extends DragSourceAdapter {
+	    
+      private int[] tableSelection;
+
+      @Override
+      public void dragStart(DragSourceEvent event) {
+        DragSource ds = (DragSource) event.widget;
+        Table table = (Table) ds.getControl();
+        int[] selection = table.getSelectionIndices();
+        if (selection.length < 1) {
+          event.doit = false;
+        } else {
+          tableSelection = selection;
+          /*
+           * TODO: there's a bizarre bug where dragging over an SWT table
+           * deselects any selected entry in that table. we may need to
+           * preserve the selection of ALL tables here (yuk!)
+           */
+        }
+      }
+
 	    @Override
 	    public void dragFinished(DragSourceEvent event) {
 	      if (event.detail == DND.DROP_NONE || event.doit == false) {
 	        LogFactory.getLog(getClass()).debug("No DnD performed");
 	      }
+	      tableSelection = null;
 	    }
 
 	    @Override
 	    public void dragSetData(DragSourceEvent event) {
 	      // Get the selected items in the drag source
-	      DragSource ds = (DragSource) event.widget;
-	      Table table = (Table) ds.getControl();
-	      int[] selection = table.getSelectionIndices();
 	      if (EntryTransfer.getInstance().isSupportedType(event.dataType)) {
-	        Entry[] entries = new Entry[selection.length];
-	        for (int i=0;i<selection.length;i++) {
-	          entries[i] = queueModel.getEntryAt(selection[i]);
+	        Entry[] entries = new Entry[tableSelection.length];
+	        for (int i=0;i<tableSelection.length;i++) {
+	          entries[i] = queueModel.getEntryAt(tableSelection[i]);
 	        }
 
 	        event.data = entries;
 	      } else if (QueueItemTransfer.getInstance().isSupportedType(event.dataType)) {
-	        event.data = selection;
+	        event.data = tableSelection;
 	      }
 	    }
 	  }
@@ -461,4 +503,22 @@ public class QueueDisplay extends Composite implements AVTransportListener {
 	    }
 	  };
 
+	  /**
+	   * @author David Wheeler
+	   *
+	   */
+	  public class DeleteListener extends KeyAdapter {
+	    
+	    /**
+	     * {@inheritDoc}
+	     */
+	    @Override
+	    public void keyPressed(KeyEvent e) {
+	      if (e.character == SWT.BS || e.character == SWT.DEL) {
+	        // delete or backspace pressed
+	        deleteSelection();
+	      }
+	    }
+	  }
+	  
 }

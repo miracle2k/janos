@@ -12,6 +12,8 @@ Change Log
 - Browse requests now cancelled when table is disposed
 - Added Search bar
 - Added URL adder bar
+- Added Tooltips to library & queue entries
+- Added Drag & Drop support
 
 0.1
 Initial Release. 
