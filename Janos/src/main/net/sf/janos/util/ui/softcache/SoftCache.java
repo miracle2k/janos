@@ -13,7 +13,7 @@
    See the License for the specific language governing permissions and
    limitations under the License.
  */
-package net.sf.janos.util.ui;
+package net.sf.janos.util.ui.softcache;
 
 import java.lang.ref.ReferenceQueue;
 import java.lang.ref.SoftReference;
@@ -33,23 +33,28 @@ public final class SoftCache<K,V> {
 
   private Map<K,SoftReference<V>> map = new HashMap<K, SoftReference<V>>();
   
-  private ReferenceQueue<Entry<K, V>> queue = new ReferenceQueue<Entry<K, V>>();
+  private ReferenceQueue<V> queue = new ReferenceQueue<V>();
   
   /**
    * @param key The key
-   * @return the value corresponding to <code>key</code> or null
+   * @return the value corresponding to <code>key</code> (may be null)
+   * @throws NoSuchKeyException if the key is not present in the cache
    */
-  public final V get(K key) {
+  public final V get(K key) throws NoSuchKeyException {
     expungeStaleEntries();
     SoftReference<V> ref = map.get(key);
     if (ref != null) {
-      // we have to maintain a reference to val so it doesn't get removed after we test for null
+      /*
+       * we have to maintain a reference to val so it doesn't get removed after
+       * we test for enqueued-ness (indicating a garbage collect since the start
+       * of the method)
+       */
       V val = ref.get();
-      if (val != null) {
+      if (!ref.isEnqueued()) {
         return val;
       }
     }
-    return null;
+    throw new NoSuchKeyException("There is no entry for this key in the map (perhaps it's been garbage collected?)");
   }
   
   /**
@@ -82,8 +87,8 @@ public final class SoftCache<K,V> {
   private static class Entry<K, V> extends SoftReference<V>{
     private K key;
 
-    public Entry(K key, V value, ReferenceQueue<Entry<K, V>> queue) {
-      super(value);
+    public Entry(K key, V value, ReferenceQueue<V> queue) {
+      super(value, queue);
       this.key = key;
     }
 

@@ -21,6 +21,8 @@ import java.io.InputStream;
 import java.net.URL;
 
 import net.sf.janos.ApplicationContext;
+import net.sf.janos.util.ui.softcache.NoSuchKeyException;
+import net.sf.janos.util.ui.softcache.SoftCache;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -89,9 +91,11 @@ public class ImageUtilities {
     }
     ImageData data = null;
     synchronized (IMAGE_DATA_CACHE) {
-      data = IMAGE_DATA_CACHE.get(resource);
-      if (data != null) {
+      try {
+        data = IMAGE_DATA_CACHE.get(resource);
         return data;
+      } catch (NoSuchKeyException e) {
+        // fall through
       }
     }
     InputStream is = null;
@@ -104,6 +108,9 @@ public class ImageUtilities {
     } catch (FileNotFoundException e) {
       Log log = LogFactory.getLog(ImageUtilities.class);
       log.debug("Image file " + resource + " does not exist");
+      synchronized (IMAGE_DATA_CACHE) {
+        IMAGE_DATA_CACHE.put(resource, null);
+      }
     } catch (IOException e) {
       Log log = LogFactory.getLog(ImageUtilities.class);
       log.error("Couldn't load image from " + resource, e);
@@ -127,9 +134,13 @@ public class ImageUtilities {
     
     // look up cache to see if we actually need to load the image
     synchronized (IMAGE_DATA_CACHE) {
-      ImageData data = IMAGE_DATA_CACHE.get(resource);
-      if (data != null) {
+      ImageData data;
+      try {
+        data = IMAGE_DATA_CACHE.get(resource);
         callback.imageLoaded(data);
+        return;
+      } catch (NoSuchKeyException e) {
+        // fall through
       }
     }
     
