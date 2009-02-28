@@ -228,6 +228,7 @@ public class NowPlaying extends Composite implements AVTransportListener {
 			this.setDaemon(true);
 		}
 
+		@Override
 		public void run() {
 			try {
 				while (true) {
@@ -247,6 +248,8 @@ public class NowPlaying extends Composite implements AVTransportListener {
 					}
 				}
 			} catch (InterruptedException e) {
+			  LOG.debug("image loading interrupted.");
+			  Thread.currentThread().interrupt();
 			}
 		}
 
@@ -313,6 +316,7 @@ public class NowPlaying extends Composite implements AVTransportListener {
 			this.setName("NowPlaying:NowPlayingSetter: " + zone.getDevicePropertiesService().getZoneAttributes().getName());
 		}
 
+		@Override
 		public void run() {
 			trackArtist.setText(artist);
 			trackAlbum.setText(album);
@@ -346,6 +350,7 @@ public class NowPlaying extends Composite implements AVTransportListener {
 			this.setName("NowPlaying:NowPlayingFetcher:" + zone.getDevicePropertiesService().getZoneAttributes().getName());
 		}
 
+		@Override
 		public void run() {
 			if (zone == null) {
 				return;

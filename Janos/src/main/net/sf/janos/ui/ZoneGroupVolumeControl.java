@@ -81,6 +81,7 @@ public class ZoneGroupVolumeControl extends Composite implements RenderingContro
 				"Group Volume" : 
 					group.getCoordinator().getDevicePropertiesService().getZoneAttributes().getName() ) {
 
+		  @Override
 			protected void setVolume(final int vol) {
 				final int increment = vol - super.getVolume();
 
@@ -97,17 +98,20 @@ public class ZoneGroupVolumeControl extends Composite implements RenderingContro
 				}.iterate();
 			}
 
+      @Override
 			public int getVolume() {
 				GetVolumeFromHWOperator op = new GetVolumeFromHWOperator();
 				op.iterate();
 				return op.volume;
 			}
 
+      @Override
 			protected void setMute(final boolean mute) {
 				super.setMute(mute);
 
 				// update the UI
 				new subControlOperator() {
+		      @Override
 					public void operate(Control c) {
 						if (c instanceof VolumeControl) {
 							VolumeControl vc = (VolumeControl) c;
@@ -126,6 +130,7 @@ public class ZoneGroupVolumeControl extends Composite implements RenderingContro
 				}.iterate();
 			}
 
+      @Override
 			public boolean getMute() {
 				GetMuteFromHWOperator op = new GetMuteFromHWOperator();
 				op.iterate();
@@ -182,6 +187,7 @@ public class ZoneGroupVolumeControl extends Composite implements RenderingContro
 
 		// update the subzone UIs (maybe null)
 		new subControlOperator() {
+      @Override
 			public void operate(Control c) {
 				if (c instanceof SubZoneVolumeControl) {
 					SubZoneVolumeControl vc = (SubZoneVolumeControl) c;
@@ -246,6 +252,7 @@ public class ZoneGroupVolumeControl extends Composite implements RenderingContro
 	protected void hideSubControls() {
 
 		new subControlOperator() {
+      @Override
 			public void operate (Control c) {
 				c.dispose();
 			}
@@ -299,11 +306,13 @@ public class ZoneGroupVolumeControl extends Composite implements RenderingContro
 	class GetVolumeFromHWOperator extends subZoneOperator {
 		public int volume = 0;
 
+    @Override
 		public void iterate() {
 			super.iterate();
 			volume /= group.getMembers().size();
 		}
 
+    @Override
 		public void operate(ZonePlayer zone) throws IOException, UPNPResponseException {
 			volume += zone.getMediaRendererDevice().getRenderingControlService().getVolume();
 		}
@@ -312,11 +321,13 @@ public class ZoneGroupVolumeControl extends Composite implements RenderingContro
 	class GetVolumeFromUIOperator extends subControlOperator {
 		public int volume = 0;
 
+    @Override
 		public void iterate() {
 			super.iterate();
 			volume /= group.getMembers().size();
 		}
 
+    @Override
 		public void operate(Control c) {
 			try {
 				VolumeControl vc = (VolumeControl)c;
@@ -330,6 +341,7 @@ public class ZoneGroupVolumeControl extends Composite implements RenderingContro
 	class GetMuteFromUIOperator extends subControlOperator {
 		public boolean mute = true;
 
+    @Override
 		public void operate(Control c) {
 			try {
 				VolumeControl vc = (VolumeControl)c;
@@ -342,6 +354,7 @@ public class ZoneGroupVolumeControl extends Composite implements RenderingContro
 
 	class GetMuteFromHWOperator extends subZoneOperator {
 		public boolean mute = true;
+    @Override
 		public void operate(ZonePlayer zone) throws IOException, UPNPResponseException {
 			mute &= zone.getMediaRendererDevice().getRenderingControlService().getMute();
 		}
@@ -354,6 +367,7 @@ public class ZoneGroupVolumeControl extends Composite implements RenderingContro
 			this.l = l;
 		}
 
+    @Override
 		public void operate(ZonePlayer zone) {
 			zone.getMediaRendererDevice().getRenderingControlService().addListener(l);
 		}
@@ -366,12 +380,12 @@ public class ZoneGroupVolumeControl extends Composite implements RenderingContro
 			this.l = l;
 		}
 
+    @Override
 		public void operate(ZonePlayer zone) {
 			zone.getMediaRendererDevice().getRenderingControlService().removeListener(l);
 		}
 	}
 
-	@Override
 	public void valuesChanged(Set<RenderingControlEventType> events, RenderingControlService source) {
 		getDisplay().asyncExec(new Runnable() {
 			public void run() {

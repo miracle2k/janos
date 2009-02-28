@@ -16,13 +16,13 @@
 package net.sf.janos.ui;
 
 import net.sf.janos.control.SonosController;
+import net.sf.janos.ui.tooltip.EntryToolTipHandler;
+import net.sf.janos.ui.tooltip.ToolTipHandler;
 
 import org.eclipse.swt.SWT;
 import org.eclipse.swt.custom.SashForm;
 import org.eclipse.swt.layout.FillLayout;
-import org.eclipse.swt.layout.FormAttachment;
-import org.eclipse.swt.layout.FormData;
-import org.eclipse.swt.layout.FormLayout;
+import org.eclipse.swt.layout.GridData;
 import org.eclipse.swt.layout.GridLayout;
 import org.eclipse.swt.widgets.Composite;
 import org.eclipse.swt.widgets.Display;
@@ -32,20 +32,21 @@ import org.eclipse.swt.widgets.Shell;
 
 public class SonosControllerShell {
 
-	private final Display display;
+  private final Display display;
 	private final Shell shell;
 	private final SonosController controller;
 	private MusicLibraryTable music;
 	private SearchBar searchBar;
-	@SuppressWarnings("unused")
 	private UrlAdder urlAdder;
 	private ZoneControlList zoneControls;
 	private SashForm sashForm;
+  private ToolTipHandler toolTipHandler;
 	
 	public SonosControllerShell(Display display, SonosController controller) {
 		this.display = display;
 		this.shell = new Shell(display);
 		this.controller = controller;
+		this.toolTipHandler = new EntryToolTipHandler(shell);
 		buildComponents();
 	}
 
@@ -67,50 +68,56 @@ public class SonosControllerShell {
 		shell.setLayout(new FillLayout());
 
 		sashForm= new SashForm(shell,SWT.HORIZONTAL);
-		sashForm.setLayout(new FillLayout());
+//		sashForm.setLayout(new FillLayout());
 		
 		ExpandBar bar = new ExpandBar(sashForm, SWT.NONE);
 		zoneControls = new ZoneControlList(bar, controller);
 		
 		Composite rightSide = new Composite(sashForm, SWT.NONE);
-		FormLayout layout = new FormLayout();
-		layout.marginWidth = 3;
-		layout.marginHeight = 3;
+		GridLayout layout = new GridLayout(4, false);
 		rightSide.setLayout(layout);
 		
-		Composite topPanel = new Composite(rightSide, SWT.NONE);
-		topPanel.setLayout(new GridLayout(4, false));
-		FormData data1 = new FormData();
-		data1.left = new FormAttachment(0, 0);
-		data1.top = new FormAttachment(0, 0);
-		topPanel.setLayoutData(data1);
+//		Composite topPanel = new Composite(rightSide, SWT.NONE);
+//		topPanel.setLayout(new GridLayout(4, false));
+//		GridData data1 = new GridData();
+//		data1.grabExcessHorizontalSpace = true;
+//		data1.horizontalAlignment = SWT.FILL;
+//		topPanel.setLayoutData(data1);
 
 
-		Label searchLabel = new Label(topPanel, SWT.NONE);
-		searchLabel.setText("Search: ");
-		
-		searchBar = new SearchBar(topPanel, SWT.NONE, this);
-
-
-		Label urlAdderLabel = new Label(topPanel, SWT.NONE);
+		Label urlAdderLabel = new Label(rightSide, SWT.NONE);
 		urlAdderLabel.setText("URL Adder: ");
 		
-		urlAdder = new UrlAdder(topPanel, SWT.NONE);
+		urlAdder = new UrlAdder(rightSide, SWT.NONE);
+		GridData adderData = new GridData();
+		adderData.grabExcessHorizontalSpace = true;
+		adderData.horizontalAlignment = SWT.FILL;
+		urlAdder.setLayoutData(adderData);
+
+    Label searchLabel = new Label(rightSide, SWT.NONE);
+    searchLabel.setText("Search: ");
+    
+    searchBar = new SearchBar(rightSide, SWT.NONE, this);
+    GridData data3 = new GridData();
+    data3.horizontalAlignment = SWT.END;
+    searchBar.setLayoutData(data3);
 
 
 		music = new MusicLibraryTable(rightSide, SWT.NONE, this);
-		FormData data2 = new FormData();
-		data2.left = new FormAttachment(0, 0);
-		data2.right = new FormAttachment(100, 0);
-		data2.top = new FormAttachment(topPanel);
-		data2.bottom = new FormAttachment(100,0);
+		GridData data2 = new GridData();
+		data2.grabExcessHorizontalSpace = true;
+		data2.grabExcessVerticalSpace = true;
+		data2.verticalAlignment = SWT.FILL;
+		data2.horizontalAlignment = SWT.FILL;
+		data2.horizontalSpan = 4;
 		music.setLayoutData(data2);
 		
-		sashForm.setWeights(new int[] {30, 70} );
+		sashForm.setWeights(new int[] {40, 60} );
 	}
 
 	private void dispose() {
 		searchBar.dispose();
+		urlAdder.dispose();
 		music.dispose();
 		shell.dispose();
 	}
@@ -125,5 +132,9 @@ public class SonosControllerShell {
 	
 	public ZoneControlList getZoneList() {
 		return zoneControls;
+	}
+	
+	public ToolTipHandler getToolTipHandler() {
+	  return this.toolTipHandler;
 	}
 }

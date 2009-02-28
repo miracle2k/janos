@@ -3,9 +3,9 @@
 	<classpathentry kind="src" path="src/main"/>
 	<classpathentry kind="con" path="org.eclipse.jdt.launching.JRE_CONTAINER"/>
 	<classpathentry kind="lib" path="lib/commons-logging-api.jar"/>
-	<classpathentry kind="lib" path="lib/commons-lang-2.3.jar"/>
 	<classpathentry kind="lib" path="lib/commons-jxpath-1.1.jar"/>
 	<classpathentry kind="lib" path="lib/joda-time-1.5.2.jar" sourcepath="lib/joda-time-1.5.2-sources.jar"/>
-	<classpathentry combineaccessrules="false" kind="src" path="/UPNPLib"/>
+	<classpathentry kind="lib" path="lib/commons-lang-2.3.jar"/>
+	<classpathentry combineaccessrules="false" kind="src" path="/sbbi-upnplib-src-1.0.4"/>
 	<classpathentry kind="output" path="bin"/>
 </classpath>

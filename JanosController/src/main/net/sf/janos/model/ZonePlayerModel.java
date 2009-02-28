@@ -65,7 +65,7 @@ public class ZonePlayerModel {
    */
   public ZonePlayer getById(String id) {
     for (ZonePlayer zp : zonePlayers) {
-      if (zp.getRootDevice().getUDN().substring(5).equals(id)) {
+      if (zp.getId().equals(id)) {
         return zp;
       }
     }

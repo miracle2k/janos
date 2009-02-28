@@ -175,38 +175,43 @@ public class ZonePlayer {
    * 
    * @param entry
    *          the entry to enqueue.
+   * @throws UPNPResponseException 
+   * @throws IOException 
    */
-  public void enqueueEntry(Entry entry) {
-    try {
-      AVTransportService serv = getMediaRendererDevice().getAvTransportService();
-      int index = serv.addToQueue(entry);
-      if (serv.getMediaInfo().getCurrentURI().startsWith("x-rincon-queue:")) {
-        playQueueEntry(index - 1);
-      }
-      if (!serv.getTransportInfo().getState().equals(TransportState.PLAYING)) {
-        serv.play();
-      }
-    } catch (IOException e) {
-      // TODO Auto-generated catch block
-      e.printStackTrace();
-    } catch (UPNPResponseException e) {
-      // TODO Auto-generated catch block
-      e.printStackTrace();
-    } catch (SAXException e) {
-      // TODO Auto-generated catch block
-      e.printStackTrace();
-    }
+  public int enqueueEntry(Entry entry) throws IOException, UPNPResponseException {
+    AVTransportService serv = getMediaRendererDevice().getAvTransportService();
+    int index = serv.addToQueue(entry);
+    return index;
+  }
+  
+  /**
+   * Enqueues the given entry, skips to it and ensure the zone is playing.
+   * @param entry
+   * @throws IOException
+   * @throws UPNPResponseException
+   * @throws SAXException
+   */
+  public void enqueueAndPlayEntry(Entry entry) throws IOException, UPNPResponseException, SAXException {
+    playQueueEntry(enqueueEntry(entry));
   }
 
   /**
-   * Seeks to the given entry in the queue (1 is the first entry in the queue)
+   * Seeks to the given entry in the queue (0 is the first entry in the queue).
+   * 
    * @param index
    * @throws IOException
    * @throws UPNPResponseException
+   * @throws SAXException 
    */
-  public void playQueueEntry(int index) throws IOException, UPNPResponseException {
+  public void playQueueEntry(int index) throws IOException, UPNPResponseException, SAXException {
     AVTransportService serv = getMediaRendererDevice().getAvTransportService();
+    if (!serv.getMediaInfo().getCurrentURI().startsWith("x-rincon-queue:")) {
+      serv.setAvTransportUriToQueue(getId());
+    }
     serv.seek(SeekTargetFactory.createTrackSeekTarget(index));
+    if (!serv.getTransportInfo().getState().equals(TransportState.PLAYING)) {
+      serv.play();
+    }
   }
 
   /**
@@ -233,7 +238,13 @@ public class ZonePlayer {
     return new URL("http", getIP().getHostAddress(), getPort(), url);
   }
   
-  // TODO is UDN a sensible choice for identity?
+  /**
+   * @return A string of characters identifying this sonos to other sonos
+   */
+  public String getId() {
+    return getRootDevice().getUDN().substring(5);
+  }
+  
   @Override
   public boolean equals(Object obj) {
     if (obj == null) {

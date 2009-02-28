@@ -18,10 +18,11 @@ package net.sf.janos.ui;
 import java.io.IOException;
 
 import net.sbbi.upnp.messages.UPNPResponseException;
+import net.sf.janos.ApplicationContext;
 import net.sf.janos.control.AVTransportService;
-import net.sf.janos.control.ZoneListSelectionListener;
 import net.sf.janos.control.ZonePlayer;
 import net.sf.janos.model.Entry;
+import net.sf.janos.util.EntryHelper;
 import net.sf.janos.util.ui.ImageUtilities;
 
 import org.eclipse.swt.SWT;
@@ -33,11 +34,12 @@ import org.eclipse.swt.layout.GridLayout;
 import org.eclipse.swt.widgets.Button;
 import org.eclipse.swt.widgets.Composite;
 import org.eclipse.swt.widgets.Text;
+import org.xml.sax.SAXException;
 
-public class UrlAdder extends Composite implements ZoneListSelectionListener {
+public class UrlAdder extends Composite { //implements ZoneListSelectionListener {
 
   private Text urlField;
-  private ZonePlayer currentZone;
+//  private ZonePlayer currentZone;
 
   public UrlAdder(Composite parent, int style) {
     super(parent, style);
@@ -55,6 +57,7 @@ public class UrlAdder extends Composite implements ZoneListSelectionListener {
       }
       public void widgetSelected(SelectionEvent e) {
         Entry entry = createEntry(urlField.getText());
+        ZonePlayer currentZone = ApplicationContext.getInstance().getShell().getZoneList().getSelectedZone();
         AVTransportService service = currentZone.getMediaRendererDevice().getAvTransportService();
         int index;
         try {
@@ -67,6 +70,9 @@ public class UrlAdder extends Composite implements ZoneListSelectionListener {
         } catch (UPNPResponseException e1) {
           // TODO Auto-generated catch block
           e1.printStackTrace();
+        } catch (SAXException e1) {
+          // TODO Auto-generated catch block
+          e1.printStackTrace();
         }
       }
     };
@@ -75,6 +81,7 @@ public class UrlAdder extends Composite implements ZoneListSelectionListener {
     Button playNowButton = new Button(this, SWT.None);
     playNowButton.setImage(new Image(getDisplay(), ImageUtilities.loadImageDataFromSystemClasspath("nowPlaying.png")));
     playNowButton.addSelectionListener(playNowAction);
+    playNowButton.setToolTipText("Play URL now");
 
     SelectionListener addToQueueAction = new SelectionListener() {
       public void widgetDefaultSelected(SelectionEvent e) {
@@ -82,6 +89,7 @@ public class UrlAdder extends Composite implements ZoneListSelectionListener {
       }
       public void widgetSelected(SelectionEvent e) {
         Entry entry = createEntry(urlField.getText());
+        ZonePlayer currentZone = ApplicationContext.getInstance().getShell().getZoneList().getSelectedZone();
         AVTransportService service = currentZone.getMediaRendererDevice().getAvTransportService();
         try {
           service.addToQueue(entry);
@@ -99,24 +107,16 @@ public class UrlAdder extends Composite implements ZoneListSelectionListener {
     Button addToQueueButton = new Button(this, SWT.None);
     addToQueueButton.setImage(new Image(getDisplay(), ImageUtilities.loadImageDataFromSystemClasspath("plus.png")));
     addToQueueButton.addSelectionListener(addToQueueAction);
+    addToQueueButton.setToolTipText("Add URL to queue");
   }
 
   protected Entry createEntry(String text) {
-    String res;
-    if (text.startsWith("http:")) {
-      // replace protocol part
-      res = "x-rincon-mp3radio:" + text.substring(5);
-    } else if (text.startsWith("//")) {
-      res = "x-rincon-mp3radio:" + text;
-    } else {
-      res = "x-rincon-mp3radio://" + text;
-    }
-    return new Entry("URL:" + text, text, "URL:", "URL", "", "", "object.item.audioItem.audioBroadcast", res);
+    return EntryHelper.createEntryForUrl(text);
   }
 
-  public void zoneSelectionChangedTo(ZonePlayer newSelection) {
-    this.currentZone = newSelection;
-  }
+//  public void zoneSelectionChangedTo(ZonePlayer newSelection) {
+//    this.currentZone = newSelection;
+//  }
 
   
 }

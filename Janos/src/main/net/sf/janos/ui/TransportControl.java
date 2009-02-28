@@ -103,19 +103,16 @@ public class TransportControl extends Composite implements AVTransportListener {
 			}
 		}
 
-		progressBar = new ProgressBar(this, SWT.NONE);
+		progressBar = new ProgressBar(this, SWT.PUSH | SWT.FLAT);
 		progressBar.addMouseListener( new MouseListener() {
 
-			@Override
 			public void mouseDoubleClick(MouseEvent arg0) {
 			}
 
-			@Override
 			public void mouseDown(MouseEvent arg0) {
 				progressBar.setCapture(true);
 			}
 
-			@Override
 			public void mouseUp(MouseEvent arg0) {
 				seekToPercent(getPercentageFromX(arg0.x));
 				progressBar.setCapture(false);
@@ -124,7 +121,6 @@ public class TransportControl extends Composite implements AVTransportListener {
 		
 		progressBar.addMouseMoveListener( new MouseMoveListener() {
 
-			@Override
 			public void mouseMove(MouseEvent arg0) {
 				String target = getSeekTargetFromPercentage(getPercentageFromX(arg0.x)).getTarget();
 				int end = target.lastIndexOf(".");
@@ -138,7 +134,7 @@ public class TransportControl extends Composite implements AVTransportListener {
 		pbData.right = new FormAttachment(100,0);
 		progressBar.setLayoutData(pbData);
 
-		skipBackward = new Button(this, SWT.PUSH);
+		skipBackward = new Button(this, SWT.PUSH | SWT.FLAT);
 		skipBackward.setImage(Images.SKIP_BACKWARD.image());
 		skipBackward.addMouseListener(new MouseAdapter() {
 			@Override
@@ -151,7 +147,7 @@ public class TransportControl extends Composite implements AVTransportListener {
 		sbData.top = new FormAttachment(progressBar);
 		skipBackward.setLayoutData(sbData);
 
-		rewind = new Button(this, SWT.PUSH);
+		rewind = new Button(this, SWT.PUSH | SWT.FLAT);
 		rewind.setImage(Images.REWIND.image());
 		rewind.addMouseListener(new MouseAdapter() {
 			@Override
@@ -169,8 +165,7 @@ public class TransportControl extends Composite implements AVTransportListener {
 		rewData.top = new FormAttachment(progressBar);
 		rewind.setLayoutData(rewData);
 
-
-		play = new Button(this, SWT.PUSH);
+		play = new Button(this, SWT.PUSH | SWT.FLAT);
 		play.setImage(Images.PLAY.image());
 		play.addMouseListener(new MouseAdapter() {
 			@Override
@@ -184,8 +179,7 @@ public class TransportControl extends Composite implements AVTransportListener {
 		playData.top = new FormAttachment(progressBar);
 		play.setLayoutData(playData);
 
-
-		fastForward = new Button(this, SWT.PUSH);
+		fastForward = new Button(this, SWT.PUSH | SWT.FLAT);
 		fastForward.setImage(Images.FAST_FORWARD.image());
 		fastForward.addMouseListener(new MouseAdapter() {
 			@Override
@@ -203,7 +197,7 @@ public class TransportControl extends Composite implements AVTransportListener {
 		ffData.top = new FormAttachment(progressBar);
 		fastForward.setLayoutData(ffData);
 
-		skipForward = new Button(this, SWT.PUSH);
+		skipForward = new Button(this, SWT.PUSH | SWT.FLAT);
 		skipForward.setImage(Images.SKIP_FORWARD.image());
 		skipForward.addMouseListener(new MouseAdapter() {
 			@Override
@@ -422,10 +416,12 @@ public class TransportControl extends Composite implements AVTransportListener {
 				if (!isDisposed()) {
 					getDisplay().asyncExec(new Runnable() {
 						public void run() {
-							progressText.setText(label);
+						  if (!isDisposed()) {
+						    progressText.setText(label);
 
-							progressBar.setMaximum((int)(duration/1000));
-							progressBar.setSelection((int)(currentTime/1000));
+						    progressBar.setMaximum((int)(duration/1000));
+						    progressBar.setSelection((int)(currentTime/1000));
+						  }
 						}
 					});
 				}

@@ -90,7 +90,21 @@ public class AVTransportService extends AbstractService implements ServiceEventH
     super(service, ZonePlayerConstants.SONOS_SERVICE_AV_TRANSPORT);
     registerServiceEventing(this);
   }
-  
+
+  /**
+   * Sets the AV Transport URI to be the queue on the zone player indicated by
+   * <code>zoneId</code>.
+   * 
+   * @param zoneId
+   *          the zone player whose queue we are going to play (see
+   *          {@link ZonePlayer#getId()})
+   * @throws IOException
+   * @throws UPNPResponseException
+   */
+  public void setAvTransportUriToQueue(String zoneId) throws IOException, UPNPResponseException {
+    setAvTransportUri(new Entry("", "", "", "", "", "", "", "x-rincon-queue:"+zoneId+"#0"));
+  }
+
   /**
    * Sets the item currently playing. Does not modify the queue.
    * 
@@ -148,25 +162,37 @@ public class AVTransportService extends AbstractService implements ServiceEventH
    * @throws UPNPResponseException
    */
   public int addToQueue(Entry entry) throws IOException, UPNPResponseException {
+    return addToQueue(entry, -2); // converted to -1 one-relative
+  }
+
+  /**
+   * Adds the given entry to the end of the queue
+   * @param entry
+   * @param position the desired position in the queue (zero-relative)
+   * @return the position of the entry in the queue (zero-relative)
+   * @throws IOException
+   * @throws UPNPResponseException
+   */
+  public int addToQueue(Entry entry, int position) throws IOException, UPNPResponseException {
     ActionMessage message = messageFactory.getMessage("AddURIToQueue");
     message.setInputParameter("InstanceID", 0);
     message.setInputParameter("EnqueuedURI", entry.getRes());
     message.setInputParameter("EnqueuedURIMetaData", compileMetadataString(entry));
-    message.setInputParameter("DesiredFirstTrackNumberEnqueued", -1);
+    message.setInputParameter("DesiredFirstTrackNumberEnqueued", position+1);
     message.setInputParameter("EnqueueAsNext", true);
     ActionResponse resp = message.service();
-    return Integer.parseInt(resp.getOutActionArgumentValue("FirstTrackNumberEnqueued"));
+    return Integer.parseInt(resp.getOutActionArgumentValue("FirstTrackNumberEnqueued")) -1;
   }
   
   /**
    * Moves a selection of tracks in the queue.
    * 
    * @param startAt
-   *          the index of the first track
+   *          the index of the first track (zero-relative)
    * @param num
    *          the number of tracks to move
    * @param insertBefore
-   *          the position to place the tracks
+   *          the position to place the tracks (zero-relative)
    * @throws IOException
    * @throws UPNPResponseException
    */
@@ -174,9 +200,9 @@ public class AVTransportService extends AbstractService implements ServiceEventH
       throws IOException, UPNPResponseException {
     ActionMessage message = messageFactory.getMessage("ReorderTracksInQueue");
     message.setInputParameter("InstanceID", 0);
-    message.setInputParameter("StartingIndex", startAt);
+    message.setInputParameter("StartingIndex", startAt+1);
     message.setInputParameter("NumberOfTracks", num);
-    message.setInputParameter("InsertBefore", insertBefore);
+    message.setInputParameter("InsertBefore", insertBefore+1);
     message.service();
   }
   

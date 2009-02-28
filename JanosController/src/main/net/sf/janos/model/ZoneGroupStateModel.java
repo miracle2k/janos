@@ -3,8 +3,6 @@ package net.sf.janos.model;
 import java.util.ArrayList;
 import java.util.List;
 
-import net.sf.janos.control.ZonePlayer;
-
 public class ZoneGroupStateModel {
 	private ZoneGroupState oldGroupState = new ZoneGroupState(new ArrayList<ZoneGroup>());
 	private final List<ZoneGroupStateModelListener> listeners = new ArrayList<ZoneGroupStateModelListener>();

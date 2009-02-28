@@ -48,6 +48,14 @@ public class QueueModel {
   }
   
   /**
+   * @param index
+   * @return the entry at the given index
+   */
+  public Entry getEntryAt(int index) {
+    return entries.get(index);
+  }
+  
+  /**
    * Sets the index of the entry now playing
    * @param i the new index
    */
@@ -81,6 +89,20 @@ public class QueueModel {
    */
   public int getSize() {
     return entries.size();
+  }
+  
+  /**
+   * @param target
+   * @return the index of the entry matching the given Entry
+   */
+  public int indexOf(Entry target) {
+    for (int i=0; i<getSize(); i++) {
+      Entry entry = getEntryAt(i);
+      if (entry.getId().equals(target)) {
+        return i;
+      }
+    }
+    return -1;
   }
 
   /**

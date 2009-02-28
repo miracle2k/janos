@@ -15,15 +15,29 @@
  */
 package net.sf.janos.util.ui;
 
+import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.InputStream;
+import java.net.URL;
 
+import net.sf.janos.ApplicationContext;
+
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
 import org.eclipse.swt.SWT;
 import org.eclipse.swt.graphics.GC;
 import org.eclipse.swt.graphics.Image;
 import org.eclipse.swt.graphics.ImageData;
 
 public class ImageUtilities {
+
+  /**
+   * A cache for image data retrieved from remote resources.
+   * <p>
+   * NOTE: Having URL as the key can require a DNS lookup each time a URL is
+   * hashed. This may not be a problem for URLs with ips as hostname
+   */
+  private static final SoftCache<URL, ImageData> IMAGE_DATA_CACHE = new SoftCache<URL, ImageData>();
   
   /**
    * Scales the given image to the given size.
@@ -54,10 +68,91 @@ public class ImageUtilities {
   public static ImageData loadImageDataFromSystemClasspath(String resource) {
     InputStream is = ClassLoader.getSystemClassLoader().getResourceAsStream(resource);
     ImageData data;
+    if (is == null) {
+      throw new RuntimeException("Resource " + resource + " does not exist: could not load image");
+    }
     data = new ImageData(is);
     try {
       is.close();
     } catch (IOException e) {}
     return data;
+  }
+  
+  /**
+   * Loads an image from the provided resource
+   * @param resource the image to load
+   * @return the loaded image, or null if an error occurred
+   */
+  public static ImageData loadImageData(URL resource) {
+    if (resource == null) {
+      return null;
+    }
+    ImageData data = null;
+    synchronized (IMAGE_DATA_CACHE) {
+      data = IMAGE_DATA_CACHE.get(resource);
+      if (data != null) {
+        return data;
+      }
+    }
+    InputStream is = null;
+    try {
+      is = resource.openStream();
+      data = new ImageData(is);
+      synchronized (IMAGE_DATA_CACHE) {
+        IMAGE_DATA_CACHE.put(resource, data);
+      }
+    } catch (FileNotFoundException e) {
+      Log log = LogFactory.getLog(ImageUtilities.class);
+      log.debug("Image file " + resource + " does not exist");
+    } catch (IOException e) {
+      Log log = LogFactory.getLog(ImageUtilities.class);
+      log.error("Couldn't load image from " + resource, e);
+    } finally {
+      try {
+        is.close();
+      } catch (Exception e) {}
+    }
+    return data;
+  }
+  
+  /**
+   * Loads the given image in a background thread, providing
+   * <code>callback</code> with the results when completed. NOTE: callback may
+   * be notified in a background thread.
+   */
+  public static void loadImageAsync(final URL resource, final Callback callback) {
+    if (resource == null) {
+      callback.imageLoaded(null);
+    }
+    
+    // look up cache to see if we actually need to load the image
+    synchronized (IMAGE_DATA_CACHE) {
+      ImageData data = IMAGE_DATA_CACHE.get(resource);
+      if (data != null) {
+        callback.imageLoaded(data);
+      }
+    }
+    
+    // No shortcuts. just load the image
+    ApplicationContext.getInstance().getController().getExecutor().execute(new Runnable() {
+      public void run() {
+        final ImageData imageData = loadImageData(resource);
+        callback.imageLoaded(imageData);
+      }
+    });
+  }
+  
+  /**
+   * A callback to be notified when the image is loaded
+   * 
+   * @author David Wheeler
+   * 
+   */
+  public interface Callback {
+    /**
+     * Called when the image has been loaded. Note that this method may be called from any thread
+     * @param data the ImageData requested, or null if it could not be loaded
+     */
+    void imageLoaded(ImageData data);
   }
 }

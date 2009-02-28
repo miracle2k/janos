@@ -1,0 +1,3 @@
+The files in this package are from http://www.java2s.com/Code/Java/SWT-JFace-Eclipse/HowtoimplementhoverhelpfeedbackusingtheMouseTrackListener.htm
+
+Licence details unknown.

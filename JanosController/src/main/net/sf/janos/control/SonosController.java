@@ -54,7 +54,6 @@ public class SonosController implements ZoneGroupTopologyListener {
   
   private static final Log LOG = LogFactory.getLog(SonosController.class);
 
-  
   private static SonosController INSTANCE;
   
   private final Executor EXECUTOR = Executors.newFixedThreadPool(3, new ThreadFactory() {
@@ -107,7 +106,7 @@ public class SonosController implements ZoneGroupTopologyListener {
    * @return the singleton instance of SonosController
    */
   // TODO I hate singletons
-  public static SonosController getInstance() {
+  public synchronized static SonosController getInstance() {
     if (INSTANCE == null) {
       INSTANCE = new SonosController();
     }
@@ -233,11 +232,9 @@ public class SonosController implements ZoneGroupTopologyListener {
     }
   }
 
-	/*
-	 * (non-Javadoc)
+	/**
 	 * @see net.sf.janos.control.ZoneGroupTopologyListener#valuesChanged()
 	 */
-	@Override
 	public synchronized void zoneGroupTopologyChanged(ZoneGroupState groupState) {
 		if (groupState == null) {
 			return;

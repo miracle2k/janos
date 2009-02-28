@@ -48,11 +48,9 @@ public class ZoneControlList implements ExpandListener, ZoneGroupStateModelListe
 		//		bar.setBackground(new Color(bar.getDisplay(), new RGB(0, 0, 0)));
 	}
 
-	@Override
 	public void itemCollapsed(ExpandEvent arg0) {
 	}
 
-	@Override
 	public void itemExpanded(ExpandEvent arg0) {
 
 		for (ExpandItem i : bar.getItems()) {
@@ -140,7 +138,6 @@ public class ZoneControlList implements ExpandListener, ZoneGroupStateModelListe
 		}
 	}
 
-	@Override
 	public void zoneGroupAdded(final ZoneGroup group, final ZoneGroupStateModel source) {
 		bar.getDisplay().asyncExec(new Runnable() {
 			public void run() {
@@ -149,7 +146,6 @@ public class ZoneControlList implements ExpandListener, ZoneGroupStateModelListe
 		});
 	}
 
-	@Override
 	public void zoneGroupMembersChanged(final ZoneGroup group, final ZoneGroupStateModel source) {
 		bar.getDisplay().asyncExec(new Runnable() {
 			public void run() {
@@ -158,7 +154,6 @@ public class ZoneControlList implements ExpandListener, ZoneGroupStateModelListe
 		});
 	}
 
-	@Override
 	public void zoneGroupRemoved(final ZoneGroup group, final ZoneGroupStateModel source) {
 		bar.getDisplay().asyncExec(new Runnable() {
 			public void run() {
@@ -179,11 +174,9 @@ public class ZoneControlList implements ExpandListener, ZoneGroupStateModelListe
 		// Create a new Now Playing display object
 		ZoneControl zoneControl = new ZoneControl(bar, group);
 		zoneControl.addControlListener( new ControlListener() {
-			@Override
 			public void controlMoved(ControlEvent arg0) {
 			}
 
-			@Override
 			public void controlResized(ControlEvent arg0) {
 				ZoneControl zoneControl = (ZoneControl)arg0.widget;
 				ExpandItem i = findItemByControl(zoneControl);

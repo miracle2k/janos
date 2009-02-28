@@ -15,6 +15,7 @@
  */
 package net.sf.janos.model;
 
+import java.io.Serializable;
 import java.net.MalformedURLException;
 import java.net.URL;
 
@@ -31,9 +32,9 @@ import org.apache.commons.logging.LogFactory;
  * @author David Wheeler
  * 
  */
-public class Entry {
+public class Entry implements Serializable {
   private static final Log LOG = LogFactory.getLog(Entry.class);
-
+  private static final long serialVersionUID = 1987394879345l;
   
     private final String id;
     private final String title;

@@ -15,10 +15,14 @@
  */
 package net.sf.janos.ui;
 
+import java.io.IOException;
 import java.util.Collection;
 import java.util.LinkedList;
 import java.util.ListIterator;
 
+import net.sbbi.upnp.messages.UPNPResponseException;
+import net.sf.janos.ApplicationContext;
+import net.sf.janos.control.AVTransportService;
 import net.sf.janos.control.SonosController;
 import net.sf.janos.control.ZonePlayer;
 import net.sf.janos.model.Entry;
@@ -27,10 +31,16 @@ import net.sf.janos.model.MusicLibraryListener;
 import net.sf.janos.model.MusicLibraryModel;
 import net.sf.janos.model.ZonePlayerModel;
 import net.sf.janos.model.ZonePlayerModelListener;
+import net.sf.janos.ui.dnd.EntryTransfer;
 import net.sf.janos.util.ui.ImageUtilities;
 
 import org.apache.commons.logging.LogFactory;
 import org.eclipse.swt.SWT;
+import org.eclipse.swt.dnd.DND;
+import org.eclipse.swt.dnd.DragSource;
+import org.eclipse.swt.dnd.DragSourceAdapter;
+import org.eclipse.swt.dnd.DragSourceEvent;
+import org.eclipse.swt.dnd.Transfer;
 import org.eclipse.swt.events.ControlEvent;
 import org.eclipse.swt.events.ControlListener;
 import org.eclipse.swt.events.MouseEvent;
@@ -130,7 +140,7 @@ public class MusicLibraryTable extends Composite implements ZonePlayerModelListe
     if (zoneModel.getAllZones().isEmpty()) {
       clearMusicLibrary();
     } else {
-      populateMusicLibraryFrom(zoneModel.get(0));
+//      populateMusicLibraryFrom(zoneModel.get(0));
     }
     
   }
@@ -165,20 +175,22 @@ public class MusicLibraryTable extends Composite implements ZonePlayerModelListe
       typeTable.addControlListener(tableResizer);
     }
   }
+
+  private void createToolTipper(final Table typeTable) {
+    ApplicationContext.getInstance().getShell().getToolTipHandler().activateHoverHelp(typeTable);
+  }
   
   static class TableResizer implements ControlListener {
-		@Override
 		public void controlMoved(ControlEvent arg0) {
 		}
 
-		@Override
 		public void controlResized(ControlEvent arg0) {
-			Table t = (Table)arg0.widget;
-			TableColumn c = t.getColumn(0);
-			c.setWidth(t.getClientArea().width);
+			Table table = (Table)arg0.widget;
+			TableColumn column = table.getColumn(0);
+			column.setWidth(table.getClientArea().width);
 		}
   };
-  static TableResizer tableResizer = new TableResizer();
+  private static TableResizer tableResizer = new TableResizer();
   
   
   /**
@@ -365,11 +377,11 @@ public class MusicLibraryTable extends Composite implements ZonePlayerModelListe
       }
       
       if (parentTable != null && entryIndex >= 0) {
-        // TODO multi selection
         Entry entry = parentTable.getModel().getEntryAt(entryIndex);
         if (entry.getUpnpClass().startsWith("object.container")) {
           final MusicLibraryModel lib = createLibraryFor(entry);
           final Table table = new Table(MusicLibraryTable.this, SWT.MULTI |SWT.FULL_SELECTION| SWT.VIRTUAL | SWT.BORDER);
+          createToolTipper(table);
           TableUpdater musicLibraryListener = new TableUpdater(table, lib);
           lib.addListener(musicLibraryListener);
           TableLibraryAdapter listener = new TableLibraryAdapter(lib);
@@ -386,6 +398,50 @@ public class MusicLibraryTable extends Composite implements ZonePlayerModelListe
           table.addMouseListener(tableMouseListener);
           table.addSelectionListener(tableSelectionListener);
           table.addControlListener(tableResizer);
+          // Set up Drag & Drop
+          DragSource dragSource = new DragSource(table, DND.DROP_COPY | DND.DROP_LINK);
+          dragSource.setTransfer(new Transfer[] {EntryTransfer.getInstance()});
+          dragSource.addDragListener(new DragSourceAdapter() {
+
+            private int[] tableSelection;
+
+            @Override
+            public void dragStart(DragSourceEvent event) {
+              DragSource ds = (DragSource) event.widget;
+              Table table = (Table) ds.getControl();
+              int[] selection = table.getSelectionIndices();
+              if (selection.length < 1) {
+                event.doit = false;
+              } else {
+                tableSelection = selection;
+                /*
+                 * TODO: there's a bizarre bug where dragging over an SWT table
+                 * deselects any selected entry in that table. we may need to
+                 * preserve the selection of ALL tables here (yuk!)
+                 */
+              }
+            }
+            
+            @Override
+            public void dragFinished(DragSourceEvent event) {
+              if (event.detail == DND.DROP_NONE || event.doit == false) {
+                LogFactory.getLog(getClass()).debug("No DnD performed");
+              }
+            }
+
+            @Override
+            public void dragSetData(DragSourceEvent event) {
+              // Get the selected items in the drag source
+              int[] selection = tableSelection;
+              Entry[] entries = new Entry[selection.length];
+              for (int i=0;i<selection.length;i++) {
+                entries[i] = lib.getEntryAt(selection[i]);
+              }
+
+              event.data = entries;
+            }
+          });
+          
           layout();
         }
       }
@@ -420,9 +476,24 @@ public class MusicLibraryTable extends Composite implements ZonePlayerModelListe
             if (sel >= 0) {
               Entry entry = table.getModel().getEntryAt(sel);
               ZonePlayer zone = SonosController.getCoordinatorForZonePlayer(controller.getZoneList().getSelectedZone());
-              // TODO This is a better way to do it when Drag and Drop has been implemented
-//              zone.getMediaRendererDevice().getAvTransportService().setAvTransportUri(entry);
-              zone.enqueueEntry(entry);
+              try {
+                if (entry.getUpnpClass().equals("object.item.audioItem.audioBroadcast")
+                    || entry.getRes().startsWith("x-rincon-stream:")) {
+                  // rather than enqueue streams, we set them as current URI
+                  AVTransportService avTransportService = zone.getMediaRendererDevice().getAvTransportService();
+                  avTransportService.setAvTransportUri(entry);
+                  // previous action causes a stop
+                  avTransportService.play();
+                } else {
+                  zone.enqueueEntry(entry);
+                }
+              } catch (IOException e1) {
+                // TODO Auto-generated catch block
+                e1.printStackTrace();
+              } catch (UPNPResponseException e1) {
+                // TODO Auto-generated catch block
+                e1.printStackTrace();
+              }
               
             }
             return;
@@ -482,6 +553,8 @@ public class MusicLibraryTable extends Composite implements ZonePlayerModelListe
         Entry entry = lib.getEntryAt(event.index);
         item.setText(entry.getTitle());
         item.setImage(createImage(item.getDisplay(), entry));
+        item.setData("ENTRY", entry);
+        item.setData("ENTRY_INDEX", event.index);
       } else {
         item.setText("<loading..>");
       }
@@ -547,5 +620,5 @@ public class MusicLibraryTable extends Composite implements ZonePlayerModelListe
       return table;
     }
   }
-
+  
 }

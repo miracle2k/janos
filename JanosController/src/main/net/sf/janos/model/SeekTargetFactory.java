@@ -26,11 +26,11 @@ public class SeekTargetFactory {
 
   /**
    * 
-   * @param track
+   * @param track zero-relative track number to seek to
    * @return a SeekTarget to seek to the given track number
    */
   public static SeekTarget createTrackSeekTarget(int track) {
-    return new SeekTarget(SeekMode.TRACK_NR, Integer.toString(track));
+    return new SeekTarget(SeekMode.TRACK_NR, Integer.toString(track+1));
   }
   
   /**
@@ -53,20 +53,20 @@ public class SeekTargetFactory {
   
   /**
    * 
-   * @param target
+   * @param target zero-relative absolute index to seek to
    * @return
    */
   public static SeekTarget createAbsCountSeekTarget(int target) {
-    return new SeekTarget(SeekMode.ABS_COUNT, Integer.toString(target));
+    return new SeekTarget(SeekMode.ABS_COUNT, Integer.toString(target+1));
   }
 
   /**
    * 
-   * @param target
+   * @param target zero-relative context relative index to seek to
    * @return
    */
   public static SeekTarget createRelCountSeekTarget(int target) {
-    return new SeekTarget(SeekMode.REL_COUNT, Integer.toString(target));
+    return new SeekTarget(SeekMode.REL_COUNT, Integer.toString(target+1));
   }
   
   // TODO the other SeekModes...

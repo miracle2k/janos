@@ -336,7 +336,7 @@ public class ServicesEventing implements Runnable {
     while ( inService ) {
       try {
         Socket skt = server.accept();
-        Thread handler = new Thread( new RequestProcessor( skt ) );
+        Thread handler = new Thread( new RequestProcessor( skt ) , "RequestProcessor");
         handler.start();
       } catch ( Exception e ) {
         if ( inService ) {

@@ -6,9 +6,8 @@ import net.sf.janos.model.ZoneGroup;
 import org.eclipse.swt.SWT;
 import org.eclipse.swt.events.ControlEvent;
 import org.eclipse.swt.events.ControlListener;
-import org.eclipse.swt.layout.FormAttachment;
-import org.eclipse.swt.layout.FormData;
-import org.eclipse.swt.layout.FormLayout;
+import org.eclipse.swt.layout.GridData;
+import org.eclipse.swt.layout.GridLayout;
 import org.eclipse.swt.widgets.Composite;
 
 public class ZoneControl extends Composite implements ControlListener {
@@ -23,38 +22,64 @@ public class ZoneControl extends Composite implements ControlListener {
 		this.group = group;
 		ZonePlayer zone = group.getCoordinator();
 		
-		// Row 1
+//		// Row 1
+//		nowPlaying = new NowPlaying(this, 0, zone);
+//		FormData data1 = new FormData();
+//		data1.left = new FormAttachment(0, 0);
+//		data1.right = new FormAttachment(100, 0);
+//		nowPlaying.setLayoutData(data1);
+//		
+//		// Row 2
+//		volumeControl = new ZoneGroupVolumeControl(this, 0, group);
+//		
+//		FormData data2 = new FormData();
+//		data2.left = new FormAttachment(0, 0);
+//		data2.top = new FormAttachment(nowPlaying);
+//		data2.right = new FormAttachment(100, 0);
+//		volumeControl.setLayoutData(data2);
+//
+//		volumeControl.addControlListener(this);
+//		
+//		// row 3
+//		queue = new QueueDisplay(this, SWT.NONE, zone);
+//		FormData data4 = new FormData();
+//		data4.left = new FormAttachment(0, 0);
+//		data4.right = new FormAttachment(100, 0);
+//		data4.top = new FormAttachment(volumeControl);
+//		data4.bottom = new FormAttachment(100,0);
+//		data4.height = 100;
+//		queue.setLayoutData(data4);
+//		
+//		FormLayout layout = new FormLayout();
+//		layout.marginWidth = 3;
+//		layout.marginHeight = 3;
+//		setLayout(layout);
+		
+		
+		setLayout(new GridLayout(1, false));
 		nowPlaying = new NowPlaying(this, 0, zone);
-		FormData data1 = new FormData();
-		data1.left = new FormAttachment(0, 0);
-		data1.right = new FormAttachment(100, 0);
-		nowPlaying.setLayoutData(data1);
+		GridData nowPlayingData = new GridData();
+		nowPlayingData.grabExcessHorizontalSpace =true;
+		nowPlayingData.horizontalAlignment=SWT.FILL;
+		nowPlayingData.verticalAlignment = SWT.TOP;
+		nowPlaying.setLayoutData(nowPlayingData);
 		
-		// Row 2
 		volumeControl = new ZoneGroupVolumeControl(this, 0, group);
+		GridData volumeControlData = new GridData();
+		volumeControlData.grabExcessHorizontalSpace=true;
+		volumeControlData.horizontalAlignment=SWT.FILL;
+		volumeControlData.verticalAlignment=SWT.TOP;
+		volumeControl.setLayoutData(volumeControlData);
 		
-		FormData data2 = new FormData();
-		data2.left = new FormAttachment(0, 0);
-		data2.top = new FormAttachment(nowPlaying);
-		data2.right = new FormAttachment(100, 0);
-		volumeControl.setLayoutData(data2);
-
-		volumeControl.addControlListener(this);
-		
-		// row 3
 		queue = new QueueDisplay(this, SWT.NONE, zone);
-		FormData data4 = new FormData();
-		data4.left = new FormAttachment(0, 0);
-		data4.right = new FormAttachment(100, 0);
-		data4.top = new FormAttachment(volumeControl);
-		data4.bottom = new FormAttachment(100,0);
-		data4.height = 100;
-		queue.setLayoutData(data4);
-		
-		FormLayout layout = new FormLayout();
-		layout.marginWidth = 3;
-		layout.marginHeight = 3;
-		setLayout(layout);
+    GridData queueData = new GridData();
+    queueData.grabExcessHorizontalSpace=true;
+    queueData.grabExcessVerticalSpace=true;
+    queueData.horizontalAlignment=SWT.FILL;
+    queueData.verticalAlignment=SWT.FILL;
+    queueData.minimumHeight=100;
+    queueData.heightHint = 50;
+    queue.setLayoutData(queueData);
  	}
 
 	public NowPlaying getNowPlaying() {
@@ -69,11 +94,9 @@ public class ZoneControl extends Composite implements ControlListener {
 		return queue;
 	}
 
-	@Override
 	public void controlMoved(ControlEvent arg0) {
 	}
 
-	@Override
 	public void controlResized(ControlEvent arg0) {
 		pack();
 		layout();

@@ -3,10 +3,11 @@
 	<classpathentry kind="src" output="build/main" path="src/main"/>
 	<classpathentry kind="src" output="build/test" path="src/test"/>
 	<classpathentry kind="con" path="org.eclipse.jdt.launching.JRE_CONTAINER"/>
-	<classpathentry combineaccessrules="false" kind="src" path="/UPNPLib"/>
-	<classpathentry kind="lib" path="lib/swt.jar" sourcepath="/Users/davidwheeler/Desktop/Recent Downloads/swt-3-macosx/src.zip"/>
+	<classpathentry kind="lib" path="lib/swt.jar" sourcepath="/Previous Systems.localized/2009-01-09_2210/Users/davidwheeler/Downloads/swt-3-macosx/src.zip"/>
 	<classpathentry kind="lib" path="lib/commons-logging-api.jar"/>
-	<classpathentry kind="lib" path="lib/log4j-1.2.15.jar"/>
+	<classpathentry kind="lib" path="lib/joda-time-1.5.2.jar"/>
 	<classpathentry combineaccessrules="false" kind="src" path="/JanosController"/>
+	<classpathentry kind="lib" path="lib/log4j-1.2.15.jar"/>
+	<classpathentry combineaccessrules="false" kind="src" path="/sbbi-upnplib-src-1.0.4"/>
 	<classpathentry kind="output" path="build"/>
 </classpath>

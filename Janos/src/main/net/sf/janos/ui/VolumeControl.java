@@ -78,16 +78,13 @@ public class VolumeControl extends Composite {
 
 		volume.addMouseListener( new MouseListener() {
 
-			@Override
 			public void mouseDoubleClick(MouseEvent arg0) {
 			}
 
-			@Override
 			public void mouseDown(MouseEvent arg0) {
 				volume.setCapture(true);
 			}
 
-			@Override
 			public void mouseUp(MouseEvent arg0) {
 				setVolume(getValFromX(arg0.x));
 				volume.setCapture(false);
@@ -96,7 +93,6 @@ public class VolumeControl extends Composite {
 		
 		volume.addMouseMoveListener( new MouseMoveListener() {
 
-			@Override
 			public void mouseMove(MouseEvent arg0) {
 				volume.setToolTipText("" + getValFromX(arg0.x));
 			}

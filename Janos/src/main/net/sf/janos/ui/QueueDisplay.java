@@ -22,6 +22,8 @@ import java.util.Collection;
 import java.util.List;
 import java.util.Set;
 
+import net.sbbi.upnp.messages.UPNPResponseException;
+import net.sf.janos.ApplicationContext;
 import net.sf.janos.control.AVTransportListener;
 import net.sf.janos.control.AVTransportService;
 import net.sf.janos.control.BrowseHandle;
@@ -32,10 +34,23 @@ import net.sf.janos.model.PositionInfo;
 import net.sf.janos.model.QueueModel;
 import net.sf.janos.model.QueueModelListener;
 import net.sf.janos.model.xml.AVTransportEventHandler.AVTransportEventType;
+import net.sf.janos.ui.dnd.EntryTransfer;
+import net.sf.janos.ui.dnd.QueueItemTransfer;
+import net.sf.janos.util.EntryHelper;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.eclipse.swt.SWT;
+import org.eclipse.swt.dnd.DND;
+import org.eclipse.swt.dnd.DragSource;
+import org.eclipse.swt.dnd.DragSourceAdapter;
+import org.eclipse.swt.dnd.DragSourceEvent;
+import org.eclipse.swt.dnd.DropTarget;
+import org.eclipse.swt.dnd.DropTargetAdapter;
+import org.eclipse.swt.dnd.DropTargetEvent;
+import org.eclipse.swt.dnd.Transfer;
+import org.eclipse.swt.dnd.TransferData;
+import org.eclipse.swt.dnd.URLTransfer;
 import org.eclipse.swt.events.ControlEvent;
 import org.eclipse.swt.events.ControlListener;
 import org.eclipse.swt.events.MouseEvent;
@@ -57,7 +72,6 @@ import org.eclipse.swt.widgets.TableItem;
  */
 public class QueueDisplay extends Composite implements AVTransportListener {
 
-	@SuppressWarnings("unused")
 	private static final Log LOG = LogFactory.getLog(QueueDisplay.class);
 
 	/**
@@ -130,7 +144,7 @@ public class QueueDisplay extends Composite implements AVTransportListener {
 		queueModelListener = new TableUpdater();
 		queueModel.addQueueModelListener(queueModelListener);
 
-		queue = new Table(this, SWT.SINGLE | SWT.VIRTUAL);
+		queue = new Table(this, SWT.MULTI | SWT.VIRTUAL);
 		queue.setLinesVisible(true);
 		queueMouseListener = new QueueMouseListener();
 		queue.addMouseListener(queueMouseListener);
@@ -142,24 +156,23 @@ public class QueueDisplay extends Composite implements AVTransportListener {
 		queueData.horizontalAlignment = GridData.FILL;
 		queueData.grabExcessHorizontalSpace = true;
 		queue.setLayoutData(queueData);
+		
+    // Set up Drag & Drop
+    DragSource dragSource = new DragSource(queue, DND.DROP_MOVE);
+    dragSource.setTransfer(new Transfer[] {QueueItemTransfer.getInstance(), EntryTransfer.getInstance()});
+    dragSource.addDragListener(new QueueDragListener());
+    
+    DropTarget dropTarget = new DropTarget(queue, DND.DROP_MOVE | DND.DROP_COPY | DND.DROP_LINK);
+    dropTarget.setTransfer(new Transfer[] {QueueItemTransfer.getInstance(), EntryTransfer.getInstance(), URLTransfer.getInstance()});
+    dropTarget.addDropListener(new QueueDropListener());
 
+    // Set up tooltips
+    ApplicationContext.getInstance().getShell().getToolTipHandler().activateHoverHelp(queue);
+    
 		zone.getMediaRendererDevice().getAvTransportService().addAvTransportListener(this);
 	}
 
-	static class TableResizer implements ControlListener {
-		@Override
-		public void controlMoved(ControlEvent arg0) {
-		}
-
-		@Override
-		public void controlResized(ControlEvent arg0) {
-			Table t = (Table)arg0.widget;
-			TableColumn c = t.getColumn(0);
-			c.setWidth(t.getClientArea().width);
-		}
-	};
 	static TableResizer tableResizer = new TableResizer();
-
 
 	/**
 	 * {@inheritDoc}
@@ -206,12 +219,10 @@ public class QueueDisplay extends Composite implements AVTransportListener {
 
 			final List<Entry> queueEntries = new ArrayList<Entry>();
 			
-			@Override
 			public void addEntries(BrowseHandle handle, Collection<Entry> entries) {
 				queueEntries.addAll(entries);
 			}
 
-			@Override
 			public void retrievalComplete(BrowseHandle handle, boolean completedSuccessfully) {
 				if (completedSuccessfully) {
 					getDisplay().asyncExec(new QueueUpdater(queueEntries));
@@ -228,7 +239,6 @@ public class QueueDisplay extends Composite implements AVTransportListener {
 				}
 			}
 
-			@Override
 			public void updateCount(BrowseHandle handle, int count) {
 			}
 			
@@ -267,7 +277,7 @@ public class QueueDisplay extends Composite implements AVTransportListener {
 		public void mouseDoubleClick(MouseEvent e) {
 			int queueIndex = ((Table)e.getSource()).getSelectionIndex();
 			try {
-				zone.playQueueEntry(queueIndex + 1);
+				zone.playQueueEntry(queueIndex);
 			} catch (Exception exception) {
 				exception.printStackTrace();
 			}
@@ -290,6 +300,7 @@ public class QueueDisplay extends Composite implements AVTransportListener {
 		public void handleEvent(Event event) {
 			TableItem row = (TableItem) event.item;
 			row.setText(queueModel.getTitle(event.index));
+			row.setData("ENTRY", queueModel.getEntryAt(event.index));
 			if (queueModel.isNowPlaying(event.index)) {
 				row.setImage(nowPlayingImage);
 			}
@@ -310,7 +321,7 @@ public class QueueDisplay extends Composite implements AVTransportListener {
 			public void run() {
 				queue.setItemCount(queueModel.getSize());
 				queue.clearAll();
-				if (queueModel.getNowPlaying() > -1) {
+				if (queueModel.getNowPlaying() > -1 && queueModel.getSize() > 0) {
 					queue.showItem(queue.getItem(queueModel.getNowPlaying()));
 				}
 			}
@@ -326,4 +337,128 @@ public class QueueDisplay extends Composite implements AVTransportListener {
 			queue.getDisplay().asyncExec(updater);
 		}
 	}
+	
+	 private class QueueDropListener extends DropTargetAdapter {
+	    @Override
+	    public void dragEnter(DropTargetEvent event) {
+	      for (TransferData dataType : event.dataTypes) {
+	        if (QueueItemTransfer.getInstance().isSupportedType(dataType) && 
+	            (event.operations & DND.DROP_MOVE) != 0) {
+	          event.detail = DND.DROP_MOVE;
+	          event.currentDataType = dataType;
+	          // this is preferred choice, don't check the others.
+	          break;
+	        } else if (EntryTransfer.getInstance().isSupportedType(dataType) &&
+	            (event.operations & DND.DROP_COPY) != 0) {
+	          event.detail = DND.DROP_COPY;
+	          event.currentDataType = dataType;
+	        } else if (URLTransfer.getInstance().isSupportedType(dataType)) {
+            event.currentDataType = dataType;
+	          if ((event.operations & DND.DROP_COPY) != 0) {
+	            event.detail = DND.DROP_COPY;
+	          } else if ((event.operations & DND.DROP_LINK) != 0) {
+	            event.detail = DND.DROP_LINK;
+	          }
+	        }
+	      }
+	    }
+
+	    @Override
+	    public void dragOver(DropTargetEvent event) {
+	      event.feedback = DND.FEEDBACK_SELECT | DND.FEEDBACK_SCROLL | DND.FEEDBACK_EXPAND;
+	    }
+
+	    @Override
+	    public void drop(DropTargetEvent event) {
+	      DropTarget target = (DropTarget) event.widget;
+	      Table table = (Table) target.getControl();
+	      TableItem targetItem = (TableItem) event.item;
+	      int targetIndex = targetItem == null ? -1 : table.indexOf(targetItem);
+	      if (targetIndex < 0) {
+	        targetIndex = table.getItemCount() + 1;
+	      }
+	      if (QueueItemTransfer.getInstance().isSupportedType(event.currentDataType)){
+	        LOG.debug("Processing Queue item move. ");
+	        int[] data = (int[]) event.data;
+	        try {
+	          for (int entry : data) {
+	            QueueDisplay.this.zone.getMediaRendererDevice().getAvTransportService().reorderTracksInQueue(entry, 1, targetIndex);
+	          }
+	        } catch (IOException e) {
+	          // TODO Auto-generated catch block
+	          e.printStackTrace();
+	        } catch (UPNPResponseException e) {
+	          // TODO Auto-generated catch block
+	          e.printStackTrace();
+	        }
+	        
+	      } else if (EntryTransfer.getInstance().isSupportedType(event.currentDataType)) {
+	        LOG.debug("Processing Queue Entry add. ");
+	        // Get the dropped data
+	        Entry[] data = (Entry[]) event.data;
+
+	        try {
+	          for (Entry entry : data) {
+	            QueueDisplay.this.zone.getMediaRendererDevice().getAvTransportService().addToQueue(entry, targetIndex);
+	          }
+	        } catch (IOException e) {
+	          // TODO Auto-generated catch block
+	          e.printStackTrace();
+	        } catch (UPNPResponseException e) {
+	          // TODO Auto-generated catch block
+	          e.printStackTrace();
+	        }
+	      } else if (URLTransfer.getInstance().isSupportedType(event.currentDataType)) {
+	        String data = (String) event.data;
+	        try {
+            QueueDisplay.this.zone.getMediaRendererDevice().getAvTransportService().addToQueue(EntryHelper.createEntryForUrl(data), targetIndex);
+          } catch (IOException e) {
+            // TODO Auto-generated catch block
+            e.printStackTrace();
+          } catch (UPNPResponseException e) {
+            // TODO Auto-generated catch block
+            e.printStackTrace();
+          }
+	      }
+	    }
+	  }
+
+	  private class QueueDragListener extends DragSourceAdapter {
+	    @Override
+	    public void dragFinished(DragSourceEvent event) {
+	      if (event.detail == DND.DROP_NONE || event.doit == false) {
+	        LogFactory.getLog(getClass()).debug("No DnD performed");
+	      }
+	    }
+
+	    @Override
+	    public void dragSetData(DragSourceEvent event) {
+	      // Get the selected items in the drag source
+	      DragSource ds = (DragSource) event.widget;
+	      Table table = (Table) ds.getControl();
+	      int[] selection = table.getSelectionIndices();
+	      if (EntryTransfer.getInstance().isSupportedType(event.dataType)) {
+	        Entry[] entries = new Entry[selection.length];
+	        for (int i=0;i<selection.length;i++) {
+	          entries[i] = queueModel.getEntryAt(selection[i]);
+	        }
+
+	        event.data = entries;
+	      } else if (QueueItemTransfer.getInstance().isSupportedType(event.dataType)) {
+	        event.data = selection;
+	      }
+	    }
+	  }
+
+	  private static class TableResizer implements ControlListener {
+	    public void controlMoved(ControlEvent arg0) {
+	    }
+
+	    public void controlResized(ControlEvent arg0) {
+	      Table t = (Table)arg0.widget;
+	      TableColumn c = t.getColumn(0);
+	      c.setWidth(t.getClientArea().width);
+	    }
+	  };
+
 }
