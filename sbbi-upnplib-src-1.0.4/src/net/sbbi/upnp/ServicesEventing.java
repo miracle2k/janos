@@ -47,6 +47,7 @@
  */
 package net.sbbi.upnp;
 
+import java.text.MessageFormat;
 import java.util.*;
 import java.io.*;
 import java.net.*;
@@ -151,16 +152,20 @@ public class ServicesEventing implements Runnable {
       StringBuffer packet = new StringBuffer( 64 );
       packet.append( "SUBSCRIBE " ).append( eventingLoc.getFile() ).append( " HTTP/1.1\r\n" );
       packet.append( "HOST: " ).append( eventingLoc.getHost() ).append( ":" ).append( eventingLoc.getPort() ).append( "\r\n" );
-      packet.append( "CALLBACK: <http://" ).append( InetAddress.getLocalHost().getHostAddress() ).append( ":" ).append( daemonPort ).append( "" ).append( eventingLoc.getFile() ).append( ">\r\n" );
+      packet.append( "CALLBACK: <http://" ).append( "{0}:" ).append( daemonPort ).append( "" ).append( eventingLoc.getFile() ).append( ">\r\n" );
       packet.append( "NT: upnp:event\r\n" );
       packet.append( "Connection: close\r\n" ); 
       packet.append( "TIMEOUT: Second-" ).append( duration ).append( "\r\n\r\n" );
 
       Socket skt = new Socket( eventingLoc.getHost(), eventingLoc.getPort() );
       skt.setSoTimeout( 30000 ); // 30 secs timeout according to the specs
-      if ( log.isDebugEnabled() ) log.debug( packet );
+      
+      MessageFormat packetFormat = new MessageFormat(packet.toString());
+      String message = packetFormat.format( new Object[]{skt.getLocalAddress().getHostAddress()} );
+      
+      if ( log.isDebugEnabled() ) log.debug( message );
       OutputStream out = skt.getOutputStream();
-      out.write( packet.toString().getBytes() );
+      out.write( message.getBytes() );
       out.flush();
 
       InputStream in = skt.getInputStream();      
