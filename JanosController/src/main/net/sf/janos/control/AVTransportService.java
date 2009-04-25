@@ -425,7 +425,7 @@ public class AVTransportService extends AbstractService implements ServiceEventH
    *           <li>701 Transition not available: The immediate transition from
    *           current transport state to desired transport state is not
    *           supported by this device. </li>
-   *           <li>705 Transport is locked: The transport is “hold locked”.
+   *           <li>705 Transport is locked: The transport is "hold locked".
    *           <li>710 Seek mode not supported: The specified seek mode is not
    *           supported by the device. </li>
    *           <li>711 Illegal seek target: The specified seek target is not

@@ -58,8 +58,10 @@ public class Janos implements Runnable {
   }
 
   public void run() {
+    Display.setAppName("Janos");
     SonosController controller = SonosController.getInstance();
     SonosControllerShell shell = new SonosControllerShell(new Display(), controller);
+    controller.searchForDevices();
     ApplicationContext.create(controller, shell);
     shell.start();
   }

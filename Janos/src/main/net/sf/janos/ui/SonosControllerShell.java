@@ -20,8 +20,6 @@ import net.sf.janos.ui.tooltip.EntryToolTipHandler;
 import net.sf.janos.ui.tooltip.ToolTipHandler;
 
 import org.eclipse.swt.SWT;
-import org.eclipse.swt.custom.SashForm;
-import org.eclipse.swt.layout.FillLayout;
 import org.eclipse.swt.layout.GridData;
 import org.eclipse.swt.layout.GridLayout;
 import org.eclipse.swt.widgets.Composite;
@@ -39,7 +37,6 @@ public class SonosControllerShell {
 	private SearchBar searchBar;
 	private UrlAdder urlAdder;
 	private ZoneControlList zoneControls;
-	private SashForm sashForm;
   private ToolTipHandler toolTipHandler;
 	
 	public SonosControllerShell(Display display, SonosController controller) {
@@ -65,26 +62,27 @@ public class SonosControllerShell {
 	private void buildComponents() {
 
 		shell.setText("SonosJ");
-		shell.setLayout(new FillLayout());
-
-		sashForm= new SashForm(shell,SWT.HORIZONTAL);
-//		sashForm.setLayout(new FillLayout());
+		shell.setLayout(new GridLayout(2, false));
 		
-		ExpandBar bar = new ExpandBar(sashForm, SWT.NONE);
+		ExpandBar bar = new ExpandBar(shell, SWT.V_SCROLL);
+		GridData barData = new GridData();
+		barData.grabExcessVerticalSpace = true;
+		barData.horizontalAlignment = SWT.FILL;
+		barData.verticalAlignment = SWT.FILL;
+		bar.setLayoutData(barData);
+		
 		zoneControls = new ZoneControlList(bar, controller);
 		
-		Composite rightSide = new Composite(sashForm, SWT.NONE);
+		Composite rightSide = new Composite(shell, SWT.NONE);
 		GridLayout layout = new GridLayout(4, false);
 		rightSide.setLayout(layout);
+		GridData rightSideData = new GridData();
+		rightSideData.grabExcessHorizontalSpace=true;
+		rightSideData.grabExcessVerticalSpace=true;
+		rightSideData.horizontalAlignment=SWT.FILL;
+		rightSideData.verticalAlignment=SWT.FILL;
+		rightSide.setLayoutData(rightSideData);
 		
-//		Composite topPanel = new Composite(rightSide, SWT.NONE);
-//		topPanel.setLayout(new GridLayout(4, false));
-//		GridData data1 = new GridData();
-//		data1.grabExcessHorizontalSpace = true;
-//		data1.horizontalAlignment = SWT.FILL;
-//		topPanel.setLayoutData(data1);
-
-
 		Label urlAdderLabel = new Label(rightSide, SWT.NONE);
 		urlAdderLabel.setText("URL Adder: ");
 		
@@ -112,7 +110,7 @@ public class SonosControllerShell {
 		data2.horizontalSpan = 4;
 		music.setLayoutData(data2);
 		
-		sashForm.setWeights(new int[] {40, 60} );
+//		shell.getDisplay().addListener(SWT.KeyDown, new KeyControlAdapter());
 	}
 
 	private void dispose() {

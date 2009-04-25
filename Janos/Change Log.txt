@@ -1,7 +1,10 @@
 Change Log
 
-11-Oct-2008
-- adjust MusicControlPanel to pin each column width to the ClientArea's width, eliminating "phantom" columns
+0.3
+- Removed the sashbar between zone controls and library
+- Set application name to Janos
+- improved tool-tip display (esp for linux users)
+- Fixed bug 2674384: "Service Event registration uses unreliable return address"
 
 0.2
 - Removed tooltip on zone list
@@ -14,6 +17,7 @@ Change Log
 - Added URL adder bar
 - Added Tooltips to library & queue entries
 - Added Drag & Drop support
+- adjust MusicControlPanel to pin each column width to the ClientArea's width, eliminating "phantom" columns
 
 0.1
 Initial Release. 

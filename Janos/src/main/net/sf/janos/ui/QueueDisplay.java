@@ -16,8 +16,8 @@
 package net.sf.janos.ui;
 
 import java.io.IOException;
-import java.io.InputStream;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collection;
 import java.util.List;
 import java.util.Set;
@@ -37,6 +37,7 @@ import net.sf.janos.model.xml.AVTransportEventHandler.AVTransportEventType;
 import net.sf.janos.ui.dnd.EntryTransfer;
 import net.sf.janos.ui.dnd.QueueItemTransfer;
 import net.sf.janos.util.EntryHelper;
+import net.sf.janos.util.ui.ImageUtilities;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -57,6 +58,8 @@ import org.eclipse.swt.events.KeyAdapter;
 import org.eclipse.swt.events.KeyEvent;
 import org.eclipse.swt.events.MouseEvent;
 import org.eclipse.swt.events.MouseListener;
+import org.eclipse.swt.events.SelectionAdapter;
+import org.eclipse.swt.events.SelectionEvent;
 import org.eclipse.swt.graphics.Image;
 import org.eclipse.swt.layout.GridData;
 import org.eclipse.swt.layout.GridLayout;
@@ -74,7 +77,6 @@ import org.eclipse.swt.widgets.TableItem;
  *
  */
 public class QueueDisplay extends Composite implements AVTransportListener {
-
   private static final Log LOG = LogFactory.getLog(QueueDisplay.class);
 
 	/**
@@ -127,21 +129,10 @@ public class QueueDisplay extends Composite implements AVTransportListener {
 		super(parent, style);
 		this.zone = zone;
 
-		setLayout(new GridLayout(1, true));
+		setLayout(new GridLayout(2, false));
 
-		InputStream is = getClass().getResourceAsStream("/nowPlaying.png");
-		nowPlayingImage = new Image(getDisplay(), is);
-		try {
-			is.close();
-		} catch (IOException e) {
-		}
-
-		is = getClass().getResourceAsStream("/empty.png");
-		emptyImage = new Image(getDisplay(), is);
-		try {
-			is.close();
-		} catch (IOException e) {
-		}
+		nowPlayingImage = new Image(getDisplay(), ImageUtilities.loadImageDataFromSystemClasspath("nowPlaying.png"));
+		emptyImage = new Image(getDisplay(), ImageUtilities.loadImageDataFromSystemClasspath("empty.png"));
 
 
 		queueModelListener = new TableUpdater();
@@ -155,12 +146,44 @@ public class QueueDisplay extends Composite implements AVTransportListener {
 		queueColumn.setText("Queue Entries");
 		queue.addControlListener(tableResizer);
 		queue.addListener(SWT.SetData, queueDataFiller);
-		GridData queueData = new GridData(GridData.CENTER, GridData.BEGINNING, false, false);
-		queueData.horizontalAlignment = GridData.FILL;
-		queueData.grabExcessHorizontalSpace = true;
+		GridData queueData = new GridData(SWT.FILL, SWT.FILL, true, true);
 		queue.setLayoutData(queueData);
+		queue.setHeaderVisible(true);
 		
-    // Set up Drag & Drop
+		Composite buttonPanel = new Composite(this, SWT.None);
+		GridLayout buttonLayout = new GridLayout(1, false);
+		buttonLayout.marginBottom = 0;
+		buttonLayout.marginLeft = 0;
+    buttonLayout.marginTop = 0;
+    buttonLayout.marginRight = 0;
+    buttonLayout.verticalSpacing = 0;
+    buttonLayout.horizontalSpacing = 0;
+    buttonLayout.marginWidth = 0;
+    buttonPanel.setLayout(buttonLayout);
+		buttonPanel.setLayoutData(new GridData(SWT.FILL, SWT.BOTTOM, false, false));
+		
+		Button deleteButton = new Button(buttonPanel, SWT.FLAT);
+		deleteButton.setLayoutData(new GridData(SWT.LEFT, SWT.BOTTOM, false, false));
+		deleteButton.setImage(new Image(deleteButton.getDisplay(), ImageUtilities.loadImageDataFromSystemClasspath("remove.png")));
+		deleteButton.setToolTipText("Remove selection from queue");
+		deleteButton.addSelectionListener(new SelectionAdapter() {
+		  @Override
+		  public void widgetSelected(SelectionEvent e) {
+		    deleteSelection();
+		  }
+		});
+		Button clearButton = new Button(buttonPanel, SWT.FLAT);
+		clearButton.setLayoutData(new GridData(SWT.LEFT, SWT.BOTTOM, false, false));
+		clearButton.setImage(new Image(clearButton.getDisplay(), ImageUtilities.loadImageDataFromSystemClasspath("remove-all.png")));
+		clearButton.setToolTipText("Clear Queue");
+		clearButton.addSelectionListener(new SelectionAdapter() {
+		  @Override
+		  public void widgetSelected(SelectionEvent e) {
+		    deleteAll();
+		  }
+		});
+		
+		// Set up Drag & Drop
     DragSource dragSource = new DragSource(queue, DND.DROP_MOVE);
     dragSource.setTransfer(new Transfer[] {QueueItemTransfer.getInstance(), EntryTransfer.getInstance()});
     dragSource.addDragListener(new QueueDragListener());
@@ -173,12 +196,6 @@ public class QueueDisplay extends Composite implements AVTransportListener {
     ApplicationContext.getInstance().getShell().getToolTipHandler().activateHoverHelp(queue);
     
 		zone.getMediaRendererDevice().getAvTransportService().addAvTransportListener(this);
-		
-		Composite buttonPanel = new Composite(this, SWT.None);
-		Button clearButton = new Button(buttonPanel, SWT.FLAT);
-		clearButton.setText("Clear");
-		Button deleteButton = new Button(buttonPanel, SWT.FLAT);
-		deleteButton.setText("Remove");
 		
 		queue.addKeyListener(new DeleteListener());
 	}
@@ -261,16 +278,26 @@ public class QueueDisplay extends Composite implements AVTransportListener {
 	 */
 	private void deleteSelection() {
 	  int[] selection = queue.getSelectionIndices();
+	  Arrays.sort(selection);
 	  try {
-	    for (Integer index : selection) {
+	    for (int selectionIndex = selection.length-1; selectionIndex >= 0; selectionIndex--) {
+	      int index = selection[selectionIndex];
 	      zone.getMediaRendererDevice().getAvTransportService().removeTrackFromQueue(queueModel.getEntryAt(index));
 	    }
 	  } catch (Exception e) {
 	    LOG.debug("Couldn't delete queue entry : ", e);
 	  }
 	}
+	
+	private void deleteAll() {
+    try {
+      zone.getMediaRendererDevice().getAvTransportService().clearQueue();
+    } catch (Exception e) {
+      LOG.debug("Couldn't delete queue entry : ", e);
+    }
+	}
 
-	/**
+  /**
 	 * {@inheritDoc}
 	 */
 	public void valuesChanged(Set<AVTransportEventType> events, AVTransportService source) {
@@ -365,18 +392,22 @@ public class QueueDisplay extends Composite implements AVTransportListener {
 	 private class QueueDropListener extends DropTargetAdapter {
 	    @Override
 	    public void dragEnter(DropTargetEvent event) {
+	      LOG.debug("Drag enter");
 	      for (TransferData dataType : event.dataTypes) {
 	        if (QueueItemTransfer.getInstance().isSupportedType(dataType) && 
 	            (event.operations & DND.DROP_MOVE) != 0) {
+	          LOG.debug("Drag enter QueueItem");
 	          event.detail = DND.DROP_MOVE;
 	          event.currentDataType = dataType;
 	          // this is preferred choice, don't check the others.
 	          break;
 	        } else if (EntryTransfer.getInstance().isSupportedType(dataType) &&
 	            (event.operations & DND.DROP_COPY) != 0) {
+	          LOG.debug("Drag enter Entry");
 	          event.detail = DND.DROP_COPY;
 	          event.currentDataType = dataType;
 	        } else if (URLTransfer.getInstance().isSupportedType(dataType)) {
+	          LOG.debug("Drag enter Url");
             event.currentDataType = dataType;
 	          if ((event.operations & DND.DROP_COPY) != 0) {
 	            event.detail = DND.DROP_COPY;
@@ -401,48 +432,32 @@ public class QueueDisplay extends Composite implements AVTransportListener {
 	      if (targetIndex < 0) {
 	        targetIndex = table.getItemCount() + 1;
 	      }
-	      if (QueueItemTransfer.getInstance().isSupportedType(event.currentDataType)){
-	        LOG.debug("Processing Queue item move. ");
-	        int[] data = (int[]) event.data;
-	        try {
+	      try {
+	        if (QueueItemTransfer.getInstance().isSupportedType(event.currentDataType)){
+	          LOG.debug("Processing Queue item move. ");
+	          int[] data = (int[]) event.data;
 	          for (int entry : data) {
 	            QueueDisplay.this.zone.getMediaRendererDevice().getAvTransportService().reorderTracksInQueue(entry, 1, targetIndex);
 	          }
-	        } catch (IOException e) {
-	          // TODO Auto-generated catch block
-	          e.printStackTrace();
-	        } catch (UPNPResponseException e) {
-	          // TODO Auto-generated catch block
-	          e.printStackTrace();
-	        }
-	        
-	      } else if (EntryTransfer.getInstance().isSupportedType(event.currentDataType)) {
-	        LOG.debug("Processing Queue Entry add. ");
-	        // Get the dropped data
-	        Entry[] data = (Entry[]) event.data;
+	        } else if (EntryTransfer.getInstance().isSupportedType(event.currentDataType)) {
+	          LOG.debug("Processing Queue Entry add. ");
+	          // Get the dropped data
+	          Entry[] data = (Entry[]) event.data;
 
-	        try {
 	          for (Entry entry : data) {
 	            QueueDisplay.this.zone.getMediaRendererDevice().getAvTransportService().addToQueue(entry, targetIndex);
 	          }
-	        } catch (IOException e) {
-	          // TODO Auto-generated catch block
-	          e.printStackTrace();
-	        } catch (UPNPResponseException e) {
-	          // TODO Auto-generated catch block
-	          e.printStackTrace();
+	        } else if (URLTransfer.getInstance().isSupportedType(event.currentDataType)) {
+	          LOG.debug("Processing Url add. ");
+	          String data = (String) event.data;
+	          QueueDisplay.this.zone.getMediaRendererDevice().getAvTransportService().addToQueue(EntryHelper.createEntryForUrl(data), targetIndex);
 	        }
-	      } else if (URLTransfer.getInstance().isSupportedType(event.currentDataType)) {
-	        String data = (String) event.data;
-	        try {
-            QueueDisplay.this.zone.getMediaRendererDevice().getAvTransportService().addToQueue(EntryHelper.createEntryForUrl(data), targetIndex);
-          } catch (IOException e) {
-            // TODO Auto-generated catch block
-            e.printStackTrace();
-          } catch (UPNPResponseException e) {
-            // TODO Auto-generated catch block
-            e.printStackTrace();
-          }
+	      } catch (IOException e) {
+	        // TODO Auto-generated catch block
+	        e.printStackTrace();
+	      } catch (UPNPResponseException e) {
+	        // TODO Auto-generated catch block
+	        e.printStackTrace();
 	      }
 	    }
 	  }

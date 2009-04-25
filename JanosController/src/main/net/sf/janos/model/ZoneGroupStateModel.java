@@ -3,7 +3,11 @@ package net.sf.janos.model;
 import java.util.ArrayList;
 import java.util.List;
 
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
+
 public class ZoneGroupStateModel {
+  private static final Log LOG = LogFactory.getLog(ZoneGroupStateModel.class);
 	private ZoneGroupState oldGroupState = new ZoneGroupState(new ArrayList<ZoneGroup>());
 	private final List<ZoneGroupStateModelListener> listeners = new ArrayList<ZoneGroupStateModelListener>();
 
@@ -48,21 +52,21 @@ public class ZoneGroupStateModel {
 	}
 
 	protected void fireGroupRemoved(ZoneGroup group) {
-		System.out.println("REMOVING GROUP: " + group.getId());
+		LOG.info("REMOVING GROUP: " + group.getId());
 		for (ZoneGroupStateModelListener l : listeners) {
 			l.zoneGroupRemoved(group, this);
 		}
 	}
 
 	protected void fireGroupAdded(ZoneGroup group) {
-		System.out.println("ADDING GROUP: " + group.getId());
+	  LOG.info("ADDING GROUP: " + group.getId());
 		for (ZoneGroupStateModelListener l : listeners) {
 			l.zoneGroupAdded(group, this);
 		}
 	}
 
 	protected void fireGroupMembershipChanged(ZoneGroup group) {
-		System.out.println("CHANGING GROUP: " + group.getId());
+	  LOG.info("CHANGING GROUP: " + group.getId());
 		for (ZoneGroupStateModelListener l : listeners) {
 			l.zoneGroupMembersChanged(group, this);
 		}

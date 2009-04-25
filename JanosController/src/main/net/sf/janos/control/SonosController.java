@@ -114,6 +114,10 @@ public class SonosController implements ZoneGroupTopologyListener {
   }
   
   private SonosController() {
+    // private constructor
+  }
+  
+  public void searchForDevices() {
     ServicesEventing.getInstance().setDaemonPort(Integer.parseInt(System.getProperty("net.sf.EventingPort", "2001")));
     try {
       // These first two listen for broadcast advertisements, while the 3rd
@@ -179,9 +183,11 @@ public class SonosController implements ZoneGroupTopologyListener {
    */
   private void removeZonePlayer(final String udn) {
     ZonePlayer zp = zonePlayers.getById(udn);
-    zonePlayers.remove(zp);
-    zp.getZoneGroupTopologyService().removeZoneGroupTopologyListener(this);
-    zp.dispose();
+    if (zp != null) {
+      zonePlayers.remove(zp);
+      zp.getZoneGroupTopologyService().removeZoneGroupTopologyListener(this);
+      zp.dispose();
+    }
   }
   
   /**

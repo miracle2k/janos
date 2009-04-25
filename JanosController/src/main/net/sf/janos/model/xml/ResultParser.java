@@ -47,13 +47,6 @@ public class ResultParser {
    * @throws SAXException
    */
   public static List<Entry> getEntriesFromStringResult(String xml) throws SAXException {
-    // TODO this is very slow - is there a faster way?
-    /* IDEAS: 1) adding a caching entity resolover (or even putting local copies
-     * of remote entities in the code base).
-     * 2) replace default SAX parser with something else (woodstox?)
-     * 3) use JAXB instead. 
-     */
-    
     XMLReader reader = XMLReaderFactory.createXMLReader();
     EntryHandler handler = new EntryHandler();
     reader.setContentHandler(handler);

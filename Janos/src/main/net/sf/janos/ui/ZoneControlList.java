@@ -24,6 +24,7 @@ import org.eclipse.swt.events.ExpandListener;
 import org.eclipse.swt.graphics.Image;
 import org.eclipse.swt.graphics.ImageData;
 import org.eclipse.swt.graphics.ImageLoader;
+import org.eclipse.swt.layout.GridData;
 import org.eclipse.swt.widgets.Control;
 import org.eclipse.swt.widgets.ExpandBar;
 import org.eclipse.swt.widgets.ExpandItem;
@@ -231,6 +232,18 @@ public class ZoneControlList implements ExpandListener, ZoneGroupStateModelListe
 		if (expand) {
 			refreshItem(item);
 		}
+		
+		// set a good size for the expand-bar's width.
+    int maxWidth = 0;
+    for (ExpandItem expandItem : bar.getItems()) {
+      Control control = expandItem.getControl();
+      if (control != null) {
+        maxWidth=Math.max(maxWidth, control.computeSize(SWT.DEFAULT, SWT.DEFAULT).x);
+      }
+    }
+    ((GridData)bar.getLayoutData()).widthHint = Math.max(maxWidth, bar.computeSize(SWT.DEFAULT, SWT.DEFAULT).x);
+    bar.getParent().layout(true);
+
 
 		return item;
 	}

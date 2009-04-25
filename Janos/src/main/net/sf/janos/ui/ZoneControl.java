@@ -77,8 +77,7 @@ public class ZoneControl extends Composite implements ControlListener {
     queueData.grabExcessVerticalSpace=true;
     queueData.horizontalAlignment=SWT.FILL;
     queueData.verticalAlignment=SWT.FILL;
-    queueData.minimumHeight=100;
-    queueData.heightHint = 50;
+    queueData.heightHint = 200;
     queue.setLayoutData(queueData);
  	}
 

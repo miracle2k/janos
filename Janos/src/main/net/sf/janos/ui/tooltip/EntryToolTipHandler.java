@@ -32,7 +32,6 @@ import org.eclipse.swt.events.MouseMoveListener;
 import org.eclipse.swt.events.MouseTrackAdapter;
 import org.eclipse.swt.graphics.Image;
 import org.eclipse.swt.graphics.ImageData;
-import org.eclipse.swt.graphics.PaletteData;
 import org.eclipse.swt.graphics.Point;
 import org.eclipse.swt.graphics.Rectangle;
 import org.eclipse.swt.layout.GridData;
@@ -55,10 +54,7 @@ import org.eclipse.swt.widgets.Widget;
  */
 public class EntryToolTipHandler implements ToolTipHandler {
 
-  protected static final ImageData EMPTY_IMAGE = new ImageData(64, 64, 24, new PaletteData(0xFF0000,0x00FF00,0x0000FF));
-  static {
-    EMPTY_IMAGE.alpha = 1;
-  }
+  protected static final ImageData EMPTY_IMAGE = ImageUtilities.loadImageDataFromSystemClasspath("empty.png").scaledTo(64, 64);
 
   private Shell tipShell;
 
@@ -216,7 +212,6 @@ public class EntryToolTipHandler implements ToolTipHandler {
         }
         imageLoadCallback = new ImageLoadCallback(tipLabelImage, tipShell);
         ImageUtilities.loadImageAsync(getToolTipImageUrlFrom(entry), imageLoadCallback);
-//        ImageUtilities.attemptSetImageAsync(tipLabelImage, getToolTipImageUrlFrom(entry), new Point(64, 64));
         tipLabelText.setText(text != null ? text : "");
         tipShell.pack();
         setHoverLocation(tipShell, tipPosition);
