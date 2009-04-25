@@ -4,6 +4,7 @@ Change Log
 - Removed the sashbar between zone controls and library
 - Set application name to Janos
 - improved tool-tip display (esp for linux users)
+- Modified linux launcher to use absolute paths
 - Fixed bug 2674384: "Service Event registration uses unreliable return address"
 
 0.2

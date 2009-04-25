@@ -19,21 +19,30 @@
 
 echo Starting Janos...
 
-CLASSPATH=Janos.jar
-CLASSPATH=$CLASSPATH:lib/resources
-CLASSPATH=$CLASSPATH:lib/commons-jxpath-1.1.jar
-CLASSPATH=$CLASSPATH:lib/commons-lang-2.3.jar
-CLASSPATH=$CLASSPATH:lib/commons-logging-api.jar
-CLASSPATH=$CLASSPATH:lib/commons-logging.jar
-CLASSPATH=$CLASSPATH:lib/joda-time-1.5.2.jar
-CLASSPATH=$CLASSPATH:lib/sbbi-upnplib-1.0.4.jar
-CLASSPATH=$CLASSPATH:lib/swt.jar
-CLASSPATH=$CLASSPATH:lib/lib/mx4j-impl.jar
-CLASSPATH=$CLASSPATH:lib/mx4j-jmx.jar
-CLASSPATH=$CLASSPATH:lib/mx4j-remote.jar
-CLASSPATH=$CLASSPATH:lib/lib/mx4j-tools.jar
-CLASSPATH=$CLASSPATH:lib/sbbi-jmx-1.0.jar
-PATH=$PATH:./lib
+ROOTDIR=`dirname "$0"`
+echo ROOTDIR=$ROOTDIR
+
+CLASSPATH=$ROOTDIR/SonosJ.jar
+CLASSPATH=$CLASSPATH:$ROOTDIR/lib/JanosController.jar
+CLASSPATH=$CLASSPATH:$ROOTDIR/lib/resources
+CLASSPATH=$CLASSPATH:$ROOTDIR/lib/commons-jxpath-1.1.jar
+CLASSPATH=$CLASSPATH:$ROOTDIR/lib/commons-lang-2.3.jar
+CLASSPATH=$CLASSPATH:$ROOTDIR/lib/commons-logging-api.jar
+CLASSPATH=$CLASSPATH:$ROOTDIR/lib/commons-logging.jar
+CLASSPATH=$CLASSPATH:$ROOTDIR/lib/joda-time-1.5.2.jar
+CLASSPATH=$CLASSPATH:$ROOTDIR/lib/sbbi-upnplib-1.0.4.jar
+CLASSPATH=$CLASSPATH:$ROOTDIR/lib/swt.jar
+CLASSPATH=$CLASSPATH:$ROOTDIR/lib/lib/mx4j-impl.jar
+CLASSPATH=$CLASSPATH:$ROOTDIR/lib/mx4j-jmx.jar
+CLASSPATH=$CLASSPATH:$ROOTDIR/lib/mx4j-remote.jar
+CLASSPATH=$CLASSPATH:$ROOTDIR/lib/mx4j-tools.jar
+CLASSPATH=$CLASSPATH:$ROOTDIR/lib/mx4j-impl.jar
+CLASSPATH=$CLASSPATH:$ROOTDIR/lib/lib/mx4j-tools.jar
+CLASSPATH=$CLASSPATH:$ROOTDIR/lib/sbbi-jmx-1.0.jar
+CLASSPATH=$CLASSPATH:$ROOTDIR/lib/log4j-1.2.15.jar
+PATH=$PATH:$ROOTDIR/lib
 echo PATH=$PATH
 
-java -cp $CLASSPATH net.sf.janos.Janos -Djava.library.path=$PATH
+ARGS=2000
+JVMARGS=
+java -cp $CLASSPATH -Djava.library.path=$PATH $JVMARGS net.sf.janos.Janos $ARGS
