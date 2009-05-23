@@ -80,7 +80,7 @@ public class ZoneControlList implements ExpandListener, ZoneGroupStateModelListe
 		}
 
 		final DeviceIcon deviceIcon = (DeviceIcon) icons.get(0);
-		SonosController.getInstance().getExecutor().execute(new Runnable() {
+		SonosController.getInstance().getWorkerExecutor().execute(new Runnable() {
 			public void run() {
 				InputStream is = null;
 				URL url = deviceIcon.getUrl();

@@ -202,7 +202,7 @@ public class ContentDirectoryService extends AbstractService {
    */
   public BrowseHandle getAllEntriesAsync(final EntryCallback callback, final String type) {
     AsyncBrowser handle = new AsyncBrowser(type, callback);
-    SonosController.getInstance().getExecutor().execute(handle);
+    SonosController.getInstance().getWorkerExecutor().execute(handle);
     return handle;
   }
   

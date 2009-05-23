@@ -162,7 +162,7 @@ public class MusicControlPanel extends Composite implements ZoneListSelectionLis
   
   protected void play() {
     final String action = (String) play.getData();
-    SonosController.getInstance().getExecutor().execute(new Runnable() {
+    SonosController.getInstance().getWorkerExecutor().execute(new Runnable() {
       public void run() {
         try {
           if (action.equals("Pause")) {

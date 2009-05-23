@@ -104,9 +104,10 @@ public abstract class AbstractService {
    *         until unregisterServiceEventing() is called.
    */
   protected boolean registerServiceEventing(final ServiceEventHandler handler) {
+    ThreadChangingEventHandlerWrapper handlerWrapper = new ThreadChangingEventHandlerWrapper(handler);
     try {
-      refreshServiceEventing(DEFAULT_EVENT_PERIOD, handler);
-      EventingRefreshTask task = new EventingRefreshTask(handler);
+      refreshServiceEventing(DEFAULT_EVENT_PERIOD, handlerWrapper);
+      EventingRefreshTask task = new EventingRefreshTask(handlerWrapper);
       tasks.add(task);
       // schedule to refresh 1 minute less than the event period (in milis, not seconds)
       timer.schedule(task, (DEFAULT_EVENT_PERIOD-60) * 1000, (DEFAULT_EVENT_PERIOD-60) * 1000);
@@ -125,27 +126,27 @@ public abstract class AbstractService {
    * @throws IOException
    */
   protected void unregisterServiceEventing(ServiceEventHandler handler) {
+    ServicesEventing eventing = ServicesEventing.getInstance();
     for (ListIterator<EventingRefreshTask> i= tasks.listIterator(); i.hasNext(); ) {
       EventingRefreshTask task = i.next();
-      if (task.handler == handler) {
+      if (task.handler.getWrappedHandler() == handler) {
         task.cancel();
         i.remove();
+        try {
+          eventing.unRegister(service, task.handler);
+        } catch (IOException e) {
+          LOG.error("Could not unregister eventing from " + service, e);
+        }
       }
-    }
-    ServicesEventing eventing = ServicesEventing.getInstance();
-    try {
-      eventing.unRegister(service, handler);
-    } catch (IOException e) {
-      LOG.error("Could not unregister eventing from " + service, e);
     }
   }
   
   
   
   private class EventingRefreshTask extends TimerTask {
-    private final ServiceEventHandler handler;
+    private final ThreadChangingEventHandlerWrapper handler;
     
-    protected EventingRefreshTask(ServiceEventHandler handler) {
+    protected EventingRefreshTask(ThreadChangingEventHandlerWrapper handler) {
       this.handler=handler;
     }
     
@@ -156,6 +157,29 @@ public abstract class AbstractService {
       } catch (IOException e) {
         LOG.warn("Could not refresh eventing: ", e);
       }
+    }
+  }
+  
+  /**
+   * A ServiceEventHandler that adapts the event to occur in the SonosController thread.
+   * @author David Wheeler
+   *
+   */
+  private static final class ThreadChangingEventHandlerWrapper implements ServiceEventHandler {
+    
+    private ServiceEventHandler handler;
+    public ThreadChangingEventHandlerWrapper(ServiceEventHandler handler) {
+      this.handler = handler;
+    }
+    public void handleStateVariableEvent(final String varName, final String newValue) {
+      SonosController.getInstance().getControllerExecutor().execute(new Runnable() {
+        public void run() {
+          handler.handleStateVariableEvent(varName, newValue);
+        }
+      });
+    }
+    public ServiceEventHandler getWrappedHandler() {
+      return handler;
     }
   }
 }

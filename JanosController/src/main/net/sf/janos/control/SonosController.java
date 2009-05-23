@@ -56,15 +56,24 @@ public class SonosController implements ZoneGroupTopologyListener {
 
   private static SonosController INSTANCE;
   
-  private final Executor EXECUTOR = Executors.newFixedThreadPool(3, new ThreadFactory() {
+  private final Executor workerExecutor = Executors.newFixedThreadPool(3, new ThreadFactory() {
     // yes, this i isn't threadsafe, but who cares?
     private int i=0;
     public Thread newThread(Runnable r) {
-      Thread t = new Thread(r, "SonosControllerThread" + i++);
+      Thread t = new Thread(r, "SonosControllerWorkerThread" + i++);
       t.setDaemon(true);
       return t;
     }
   });
+  
+  private final Executor controllerExecutor = Executors.newSingleThreadExecutor(new ThreadFactory() {
+    public Thread newThread(Runnable r) {
+      Thread t = new Thread(r, "SonosControllerThread");
+      t.setDaemon(true);
+      return t;
+    }
+  });
+
   
   /**
    * A class to  handle both types of discovery events.
@@ -72,29 +81,41 @@ public class SonosController implements ZoneGroupTopologyListener {
    *
    */
   private class DiscoveryHandler implements DiscoveryEventHandler, DiscoveryResultsHandler {
-    public void eventSSDPAlive(String usn, String udn, String nt, String maxAge, URL location) {
-      try {
-        addZonePlayer(new UPNPRootDevice(location, maxAge));
-        LOG.info("Discovered device " + usn);
-      } catch (MalformedURLException e) {
-        LOG.warn("Discovered device " + usn + " with invalid URL: " + location);
-      } catch (IllegalStateException e) {
-        LOG.warn("Discovered device of a too-recent version.");
-      }
+    public void eventSSDPAlive(final String usn, String udn, String nt, final String maxAge, final URL location) {
+      controllerExecutor.execute(new Runnable() {
+        public void run() {
+          try {
+            addZonePlayer(new UPNPRootDevice(location, maxAge));
+            LOG.info("Discovered device " + usn);
+          } catch (MalformedURLException e) {
+            LOG.warn("Discovered device " + usn + " with invalid URL: " + location);
+          } catch (IllegalStateException e) {
+            LOG.warn("Discovered device of a too-recent version.");
+          }
+        }
+      });
     }
-    public void eventSSDPByeBye(String usn, String udn, String nt) {
-      removeZonePlayer(udn);
-      LOG.info("Bye bye from " + usn);
+    public void eventSSDPByeBye(final String usn, final String udn, String nt) {
+      controllerExecutor.execute(new Runnable() {
+        public void run() {
+          removeZonePlayer(udn);
+          LOG.info("Bye bye from " + usn);
+        }
+      });
     }
-    public void discoveredDevice(String usn, String udn, String nt, String maxAge, URL location, String firmware) {
-      try {
-        addZonePlayer(new UPNPRootDevice(location, maxAge, firmware));
-        LOG.info("Discovered device " + usn);
-      } catch (MalformedURLException e) {
-        LOG.warn("Discovered device " + usn + " with invalid URL: " + location);
-      } catch (IllegalStateException e) {
-        LOG.warn("Discovered device of a too-recent version.");
-      }
+    public void discoveredDevice(final String usn, String udn, String nt, final String maxAge, final URL location, final String firmware) {
+      controllerExecutor.execute(new Runnable() {
+        public void run() {
+          try {
+            addZonePlayer(new UPNPRootDevice(location, maxAge, firmware));
+            LOG.info("Discovered device " + usn);
+          } catch (MalformedURLException e) {
+            LOG.warn("Discovered device " + usn + " with invalid URL: " + location);
+          } catch (IllegalStateException e) {
+            LOG.warn("Discovered device of a too-recent version.");
+          }
+        }
+      });
     }
   };
   
@@ -171,10 +192,10 @@ public class SonosController implements ZoneGroupTopologyListener {
     	return;
       }
     }
-    ZonePlayer sd = new ZonePlayer(dev);
-    zonePlayers.addZonePlayer(sd);
-    sd.getZoneGroupTopologyService().addZoneGroupTopologyListener(this);
-    zoneGroupTopologyChanged(sd.getZoneGroupTopologyService().getGroupState());
+    ZonePlayer zone = new ZonePlayer(dev);
+    zonePlayers.addZonePlayer(zone);
+    zone.getZoneGroupTopologyService().addZoneGroupTopologyListener(this);
+    zoneGroupTopologyChanged(zone.getZoneGroupTopologyService().getGroupState());
   }
   
   /**
@@ -225,8 +246,12 @@ public class SonosController implements ZoneGroupTopologyListener {
   /**
    * @return an Executor for performing asynchronous activities.
    */
-  public Executor getExecutor() {
-    return EXECUTOR;
+  public Executor getWorkerExecutor() {
+    return workerExecutor;
+  }
+  
+  public Executor getControllerExecutor() {
+    return controllerExecutor;
   }
 
   public void dispose() {

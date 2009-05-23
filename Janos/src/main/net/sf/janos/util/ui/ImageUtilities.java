@@ -145,7 +145,7 @@ public class ImageUtilities {
     }
     
     // No shortcuts. just load the image
-    ApplicationContext.getInstance().getController().getExecutor().execute(new Runnable() {
+    ApplicationContext.getInstance().getController().getWorkerExecutor().execute(new Runnable() {
       public void run() {
         final ImageData imageData = loadImageData(resource);
         callback.imageLoaded(imageData);
