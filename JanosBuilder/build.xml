@@ -13,7 +13,9 @@
   	<copy todir="${dir.distribution}">
   		<fileset dir="${dir.project.sonosJ}/lib"/>
   		<fileset dir="${dir.project.janosController}/lib"/>
-  		<fileset dir="${dir.project.upnp}/libs"/>
+  		<fileset dir="${dir.project.upnp}/libs"> 
+  			<include name="sbbi-upnp*"/>
+  	  </fileset>
   	</copy>
 		<copy todir="${dir.distribution}/resources">
 		  <fileset dir="${dir.project.sonosJ}/resources"></fileset>
@@ -24,7 +26,7 @@
 	<!-- ================================= 
           target: jar              
          ================================= -->
-  <target name="jar" depends="buildSonosJ" description="Builds and deploys janos">
+  <target name="jar" depends="clean,buildSonosJ" description="Builds and deploys janos">
   	<mkdir dir="${dir.distribution}"/>
 		<jar destfile="${dir.distribution}/JanosController.jar" basedir="build/JanosController">
 		</jar>  	
@@ -93,6 +95,14 @@
   </target>
 	
 	<!-- ================================= 
+          target: clean              
+         ================================= -->
+	<target name="clean" description="cleans up resources from previous builds">
+		<delete dir="${dir.distribution}"/>
+		<delete dir="build"/>
+	</target>
+		
+	<!-- ================================= 
           target: run              
          ================================= -->
     <target name="run" depends="deployJars" description="deploys Janos and attempts to run it">
@@ -109,6 +119,9 @@
       </java>
     </target>
 	
+	<!-- ================================= 
+          target: app              
+         ================================= -->
 	  <target name="app" depends="deployJars" description="creates a MAC OS .app file">
 	  	<taskdef name="jarbundler" classname="net.sourceforge.jarbundler.JarBundler" />
 	  	<mkdir dir="dist.osx"/>
@@ -120,7 +133,8 @@
 	  		          icon="resources/Stereo.icns"
 	  		          version="${build.id}"
 	  		          startOnMainThread="true"
-	  		          extraclasspath="$JAVAROOT/resources">
+	  		          extraclasspath="$JAVAROOT/resources"
+	  		          arguments="2000">
 	  		<jarfileset dir="dist">
 	  				<include name="*.jar"/>
 	  	  </jarfileset>
