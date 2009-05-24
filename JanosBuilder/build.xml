@@ -1,0 +1,136 @@
+<project name="Janos" default="deployJars">
+
+	<property file="build.properties"/>
+	<property name="dir.project.janosController" value="${basedir}/../JanosController"/>
+	<property name="dir.project.sonosJ" value="${basedir}/../SonosJ"/>
+	<property name="dir.project.upnp" value="${basedir}/../sbbi-upnplib-src-1.0.4"/>
+	<property name="dir.distribution" value="dist"/>
+	
+	<!-- ================================= 
+          target: deployJars              
+         ================================= -->
+	<target name="deployJars" depends="jar" description="deploys the jar files required by Janos">
+  	<copy todir="${dir.distribution}">
+  		<fileset dir="${dir.project.sonosJ}/lib"/>
+  		<fileset dir="${dir.project.janosController}/lib"/>
+  		<fileset dir="${dir.project.upnp}/libs"/>
+  	</copy>
+		<copy todir="${dir.distribution}/resources">
+		  <fileset dir="${dir.project.sonosJ}/resources"></fileset>
+		</copy>
+		<!-- <delete dir="build"/>-->
+	</target>
+	
+	<!-- ================================= 
+          target: jar              
+         ================================= -->
+  <target name="jar" depends="buildSonosJ" description="Builds and deploys janos">
+  	<mkdir dir="${dir.distribution}"/>
+		<jar destfile="${dir.distribution}/JanosController.jar" basedir="build/JanosController">
+		</jar>  	
+		<jar destfile="${dir.distribution}/sbbi-upnplib-1.0.4.jar" basedir="build/upnplib">
+		</jar>  	
+		<jar destfile="${dir.distribution}/SonosJ.jar" basedir="build/SonosJ/">
+			<manifest>
+				<attribute name="Built-By" value="${user.name}"/>
+				<attribute name="Implementation-Title" value="Janos"/>
+				<attribute name="Main-Class" value="net.sf.janos.Janos"/>
+			</manifest>
+		</jar>
+  </target>
+	
+	<!-- ================================= 
+          target: buildController              
+         ================================= -->
+  <target name="buildController" depends="buildUpnp" description="Builds and deploys janos controller project">
+  	<mkdir dir="build/JanosController"/>
+
+  	<javac srcdir="${dir.project.janosController}" destdir="build/JanosController" debug="true">
+  		<classpath>
+  			<fileset dir="${dir.project.janosController}/lib/">
+  				<include name="*.jar"/>
+  			</fileset>
+  			<pathelement location="build/upnplib"/>
+  		</classpath>
+  		<include name="src/main/**/*.java"/>
+  	</javac>
+  </target>
+
+	<!-- ================================= 
+          target: build upnplib              
+         ================================= -->
+  <target name="buildUpnp" description="Builds and deploys upnplib project">
+  	<mkdir dir="build/upnplib"/>
+
+  	<javac srcdir="${dir.project.upnp}" destdir="build/upnplib" debug="true">
+  		<classpath>
+  			<fileset dir="${dir.project.upnp}/libs/">
+  				<include name="*.jar"/>
+  			</fileset>
+  		</classpath>
+  		<include name="src/**/*.java"/>
+  	</javac>
+  </target>
+
+	<!-- ================================= 
+          target: buildSonosJ              
+         ================================= -->
+  <target name="buildSonosJ" depends="buildController" description="Builds and deploys SonosJ project">
+  	<mkdir dir="build/SonosJ"/>
+  	<javac srcdir="${dir.project.sonosJ}" destdir="build/sonosJ" debug="true">
+  		<classpath>
+  			<fileset dir="${dir.project.sonosJ}/lib/">
+  				<include name="*.jar"/>
+  			</fileset>
+  			<pathelement location="build/upnplib"/>
+  			<pathelement location="build/janosController"/>
+  		</classpath>
+  		<include name="src/main/**/*.java"/>
+  	</javac>
+  	<copy todir="build/SonosJ">
+  		<fileset dir="${dir.project.sonosJ}/resources" includes="/**/*"></fileset>
+  	</copy>
+  </target>
+	
+	<!-- ================================= 
+          target: run              
+         ================================= -->
+    <target name="run" depends="deployJars" description="deploys Janos and attempts to run it">
+  		<path id="classpath">
+  			<fileset dir="${dir.distribution}" includes="**/*.jar"></fileset>
+  			<pathelement location="${dir.distribution}/resources"/>
+  		</path>
+    	<echo>Starting java...</echo>
+      <java classname="net.sf.janos.Janos" fork="true">
+      	<classpath refid="classpath">
+       	</classpath>
+      	<arg value="2000"/>
+      	<jvmarg value="-XstartOnFirstThread"/>
+      </java>
+    </target>
+	
+	  <target name="app" depends="deployJars" description="creates a MAC OS .app file">
+	  	<taskdef name="jarbundler" classname="net.sourceforge.jarbundler.JarBundler" />
+	  	<mkdir dir="dist.osx"/>
+	  	<jarbundler dir="dist.osx" 
+	  	            name="Janos-${build.id}"
+	  		          shortname="Janos"
+	  		          bundleid="net.sourceforge.janos.Janos"
+	  	            mainclass="net.sf.janos.Janos"
+	  		          icon="resources/Stereo.icns"
+	  		          version="${build.id}"
+	  		          startOnMainThread="true"
+	  		          extraclasspath="$JAVAROOT/resources">
+	  		<jarfileset dir="dist">
+	  				<include name="*.jar"/>
+	  	  </jarfileset>
+	  		<resourcefileset dir="dist">
+	  				<include name="*.jnilib"/>
+	  		</resourcefileset>
+	  		<javafileset dir="dist">
+	  				<include name="resources/*"/>
+	  		</javafileset>
+	  	</jarbundler>
+	  </target>
+	
+</project>
