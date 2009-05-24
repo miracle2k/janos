@@ -23,6 +23,7 @@ import net.sf.janos.control.SonosController;
 import net.sf.janos.control.ZonePlayer;
 import net.sf.janos.model.Entry;
 import net.sf.janos.util.ui.ImageUtilities;
+import net.sf.janos.util.ui.LabelHelper;
 import net.sf.janos.util.ui.ImageUtilities.Callback;
 
 import org.eclipse.swt.SWT;
@@ -212,7 +213,7 @@ public class EntryToolTipHandler implements ToolTipHandler {
         }
         imageLoadCallback = new ImageLoadCallback(tipLabelImage, tipShell);
         ImageUtilities.loadImageAsync(getToolTipImageUrlFrom(entry), imageLoadCallback);
-        tipLabelText.setText(text != null ? text : "");
+        tipLabelText.setText(text != null ? LabelHelper.escapeText(text) : "");
         tipShell.pack();
         setHoverLocation(tipShell, tipPosition);
         tipShell.setVisible(true);

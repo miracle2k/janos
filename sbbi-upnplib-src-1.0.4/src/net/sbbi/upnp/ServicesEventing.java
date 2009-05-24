@@ -382,7 +382,7 @@ public class ServicesEventing implements Runnable {
         byte[] buffer = new byte[256];
         boolean EOF = false;
         while ( !EOF && ( readen = in.read( buffer ) ) != -1 ) {
-          data.append( new String( buffer, 0, readen ) );
+          data.append( new String( buffer, 0, readen , "UTF-8") );
        
           final String endToken = "</e:propertyset>";
           String lastBytes = data.substring(data.length()-endToken.length(), data.length());

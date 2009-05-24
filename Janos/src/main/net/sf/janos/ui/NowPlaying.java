@@ -29,6 +29,7 @@ import net.sf.janos.model.PositionInfo;
 import net.sf.janos.model.TrackMetaData;
 import net.sf.janos.model.xml.AVTransportEventHandler.AVTransportEventType;
 import net.sf.janos.util.ui.ImageUtilities;
+import net.sf.janos.util.ui.LabelHelper;
 import net.sf.janos.util.ui.SingleWorkQueue;
 
 import org.apache.commons.logging.Log;
@@ -318,10 +319,10 @@ public class NowPlaying extends Composite implements AVTransportListener {
 
 		@Override
 		public void run() {
-			trackArtist.setText(artist);
-			trackAlbum.setText(album);
-			trackName.setText(name);
-			nowPlaying.setText(groupTitle);
+			trackArtist.setText(LabelHelper.escapeText(artist));
+			trackAlbum.setText(LabelHelper.escapeText(album));
+			trackName.setText(LabelHelper.escapeText(name));
+			nowPlaying.setText(LabelHelper.escapeText(groupTitle));
 
 			URL oldURL = (URL)artwork.getData();
 			if (oldURL != null && url != null && url.sameFile(oldURL) == false) {
