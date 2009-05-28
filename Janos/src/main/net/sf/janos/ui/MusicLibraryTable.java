@@ -23,7 +23,6 @@ import java.util.ListIterator;
 import net.sbbi.upnp.messages.UPNPResponseException;
 import net.sf.janos.ApplicationContext;
 import net.sf.janos.control.AVTransportService;
-import net.sf.janos.control.SonosController;
 import net.sf.janos.control.ZonePlayer;
 import net.sf.janos.model.Entry;
 import net.sf.janos.model.MusicLibrary;
@@ -34,6 +33,7 @@ import net.sf.janos.model.ZonePlayerModelListener;
 import net.sf.janos.ui.dnd.EntryTransfer;
 import net.sf.janos.util.ui.ImageUtilities;
 
+import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.eclipse.swt.SWT;
 import org.eclipse.swt.dnd.DND;
@@ -65,6 +65,8 @@ import org.eclipse.swt.widgets.TableItem;
  */
 public class MusicLibraryTable extends Composite implements ZonePlayerModelListener {
   
+  private static final Log LOG = LogFactory.getLog(MusicLibraryTable.class);
+
   /**
    * The string displayed when no zone players are known of
    */
@@ -416,8 +418,8 @@ public class MusicLibraryTable extends Composite implements ZonePlayerModelListe
                 tableSelection = selection;
                 /*
                  * TODO: there's a bizarre bug where dragging over an SWT table
-                 * deselects any selected entry in that table. we may need to
-                 * preserve the selection of ALL tables here (yuk!)
+                 * on OS X deselects any selected entry in that table. we may
+                 * need to preserve the selection of ALL tables here (yuk!)
                  */
               }
             }
@@ -475,7 +477,7 @@ public class MusicLibraryTable extends Composite implements ZonePlayerModelListe
             int sel = table.getTable().getSelectionIndex();
             if (sel >= 0) {
               Entry entry = table.getModel().getEntryAt(sel);
-              ZonePlayer zone = SonosController.getCoordinatorForZonePlayer(controller.getZoneList().getSelectedZone());
+              ZonePlayer zone = controller.getController().getCoordinatorForZonePlayer(controller.getZoneList().getSelectedZone());
               try {
                 if (entry.getUpnpClass().equals("object.item.audioItem.audioBroadcast")
                     || entry.getRes().startsWith("x-rincon-stream:")) {

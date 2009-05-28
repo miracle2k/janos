@@ -19,7 +19,6 @@ import java.net.MalformedURLException;
 import java.net.URL;
 
 import net.sf.janos.ApplicationContext;
-import net.sf.janos.control.SonosController;
 import net.sf.janos.control.ZonePlayer;
 import net.sf.janos.model.Entry;
 import net.sf.janos.util.ui.ImageUtilities;
@@ -255,7 +254,8 @@ public class EntryToolTipHandler implements ToolTipHandler {
         return null;
       }
       try {
-        ZonePlayer zone = SonosController.getCoordinatorForZonePlayer(ApplicationContext.getInstance().getShell().getZoneList().getSelectedZone());
+        ApplicationContext appContext = ApplicationContext.getInstance();
+        ZonePlayer zone = appContext.getController().getCoordinatorForZonePlayer(appContext.getShell().getZoneList().getSelectedZone());
         return zone.appendUrl(entry.getAlbumArtUri());
       } catch (MalformedURLException e) {
         // TODO Auto-generated catch block

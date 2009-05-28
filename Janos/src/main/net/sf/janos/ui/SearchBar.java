@@ -54,7 +54,7 @@ public class SearchBar extends Composite {
     ZonePlayer currentZone = controller.getZoneList().getSelectedZone();
     if (currentZone != null) {
       // TODO this should use cached results, it'll take some time this way...
-      currentZone = SonosController.getCoordinatorForZonePlayer(currentZone);
+      currentZone = controller.getController().getCoordinatorForZonePlayer(currentZone);
       SearchResultCallback callback = new SearchResultCallback();
       browseHandles.add(currentZone.getMediaServerDevice().getContentDirectoryService().getAllEntriesAsync(callback, "A:TRACKS:" + text));
       browseHandles.add(currentZone.getMediaServerDevice().getContentDirectoryService().getAllEntriesAsync(callback, "A:ARTIST:" + text));

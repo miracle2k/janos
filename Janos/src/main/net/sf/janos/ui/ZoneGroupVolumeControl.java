@@ -20,6 +20,7 @@ import java.io.InputStream;
 import java.util.Set;
 
 import net.sbbi.upnp.messages.UPNPResponseException;
+import net.sf.janos.ApplicationContext;
 import net.sf.janos.control.RenderingControlListener;
 import net.sf.janos.control.RenderingControlService;
 import net.sf.janos.control.ZonePlayer;
@@ -77,9 +78,10 @@ public class ZoneGroupVolumeControl extends Composite implements RenderingContro
 		layout.spacing = 10 ;
 		setLayout(layout);
 
+		ZonePlayer coordinator = ApplicationContext.getInstance().getController().getZonePlayerModel().getById(group.getCoordinator());
 		master = new VolumeControl(this, SWT.NONE, getGroupMode() ? 
 				"Group Volume" : 
-					group.getCoordinator().getDevicePropertiesService().getZoneAttributes().getName() ) {
+					coordinator.getDevicePropertiesService().getZoneAttributes().getName() ) {
 
 		  @Override
 			protected void setVolume(final int vol) {
@@ -220,7 +222,8 @@ public class ZoneGroupVolumeControl extends Composite implements RenderingContro
 	protected void showSubControls() {
 		Control previousControl = master;
 
-		for (ZonePlayer zone: group.getMembers()) {
+		for (String zoneId: group.getMembers()) {
+		  ZonePlayer zone = ApplicationContext.getInstance().getController().getZonePlayerModel().getById(zoneId);
 
 			Label sep = new Label(this, SWT.SEPARATOR | SWT.HORIZONTAL);
 
@@ -289,7 +292,8 @@ public class ZoneGroupVolumeControl extends Composite implements RenderingContro
 	 */
 	abstract class subZoneOperator {
 		public void iterate() {
-			for (ZonePlayer zone : group.getMembers()) {
+			for (String zoneId : group.getMembers()) {
+			  ZonePlayer zone = ApplicationContext.getInstance().getController().getZonePlayerModel().getById(zoneId);
 				try {
 					operate(zone);
 				} catch (Exception e) {

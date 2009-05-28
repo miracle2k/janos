@@ -7,6 +7,8 @@ Change Log
 - Modified linux launcher to use absolute paths
 - Fixed bug 2674384: "Service Event registration uses unreliable return address"
 - Tooltip and Now Playing section now correctly display ampersands and non-ASCII chars
+- removed 0.5 second delay on all event notifications
+- added artwork window
 
 0.2
 - Removed tooltip on zone list

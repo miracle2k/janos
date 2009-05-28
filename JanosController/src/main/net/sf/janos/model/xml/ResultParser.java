@@ -20,7 +20,6 @@ import java.io.StringReader;
 import java.util.List;
 import java.util.Map;
 
-import net.sf.janos.control.SonosController;
 import net.sf.janos.model.Entry;
 import net.sf.janos.model.TrackMetaData;
 import net.sf.janos.model.ZoneGroupState;
@@ -66,9 +65,9 @@ public class ResultParser {
    * @throws IOException
    * @throws SAXException
    */
-  public static ZoneGroupState getGroupStateFromResult(SonosController controller, String xml) throws SAXException {
+  public static ZoneGroupState getGroupStateFromResult(String xml) throws SAXException {
     XMLReader reader = XMLReaderFactory.createXMLReader();
-    ZoneGroupStateHandler handler = new ZoneGroupStateHandler(controller);
+    ZoneGroupStateHandler handler = new ZoneGroupStateHandler();
     reader.setContentHandler(handler);
     try {
       reader.parse(new InputSource(new StringReader(xml)));

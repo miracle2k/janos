@@ -19,8 +19,6 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
 
-import net.sf.janos.control.ZonePlayer;
-
 /**
  * An immutable data transfer object containing the members and controller of a
  * zone group.
@@ -30,12 +28,12 @@ import net.sf.janos.control.ZonePlayer;
  */
 public class ZoneGroup {
 
-	private final List<ZonePlayer> members;
-	private final ZonePlayer coordinator;
+	private final List<String> members;
+	private final String coordinator;
 	private final String id;
 
-	public ZoneGroup(String id, ZonePlayer coordinator, Collection<ZonePlayer> members) {
-		this.members= new ArrayList<ZonePlayer>(members);
+	public ZoneGroup(String id, String coordinator, Collection<String> members) {
+		this.members= new ArrayList<String>(members);
 		if (!this.members.contains(coordinator)) {
 			this.members.add(coordinator);
 		}
@@ -43,11 +41,11 @@ public class ZoneGroup {
 		this.id = id;
 	}
 
-	public List<ZonePlayer> getMembers() {
+	public List<String> getMembers() {
 		return members;
 	}
 
-	public ZonePlayer getCoordinator() {
+	public String getCoordinator() {
 		return coordinator;
 	}
 
@@ -65,5 +63,10 @@ public class ZoneGroup {
 			return group.getId().equals(getId());
 		}
 		return false;
+	}
+	
+	@Override
+	public int hashCode() {
+	  return id.hashCode();
 	}
 }

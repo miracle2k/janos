@@ -15,6 +15,11 @@
  */
 package net.sf.janos.util.ui;
 
+/**
+ * This class contains static utility methods for help with labels.
+ * @author David Wheeler
+ *
+ */
 public final class LabelHelper {
 
   private LabelHelper() {

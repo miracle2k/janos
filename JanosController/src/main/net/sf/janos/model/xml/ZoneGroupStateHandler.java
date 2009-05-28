@@ -18,8 +18,6 @@ package net.sf.janos.model.xml;
 import java.util.ArrayList;
 import java.util.List;
 
-import net.sf.janos.control.SonosController;
-import net.sf.janos.control.ZonePlayer;
 import net.sf.janos.model.ZoneGroup;
 
 import org.xml.sax.Attributes;
@@ -29,14 +27,9 @@ import org.xml.sax.helpers.DefaultHandler;
 public class ZoneGroupStateHandler extends DefaultHandler {
 
   private final List<ZoneGroup> groups = new ArrayList<ZoneGroup>();
-  private final List<ZonePlayer> currentGroupPlayers = new ArrayList<ZonePlayer>();
+  private final List<String> currentGroupPlayers = new ArrayList<String>();
   private String coordinator;
   private String groupId;
-  private SonosController controller;
-  
-  ZoneGroupStateHandler(SonosController controller) {
-    this.controller = controller;
-  }
   
   @Override
   public void startElement(String uri, String localName, String qName, Attributes attributes) throws SAXException {
@@ -44,14 +37,14 @@ public class ZoneGroupStateHandler extends DefaultHandler {
       groupId = attributes.getValue("ID");
       coordinator = attributes.getValue("Coordinator");
     } else if (qName.equals("ZoneGroupMember")) {
-      currentGroupPlayers.add(controller.getZonePlayerModel().getById(attributes.getValue("UUID")));
+      currentGroupPlayers.add(attributes.getValue("UUID"));
     }
   }
   
   @Override
   public void endElement(String uri, String localName, String qName) throws SAXException {
     if (qName.equals("ZoneGroup")) {
-      groups.add(new ZoneGroup(groupId, controller.getZonePlayerModel().getById(coordinator), currentGroupPlayers));
+      groups.add(new ZoneGroup(groupId, coordinator, currentGroupPlayers));
       currentGroupPlayers.clear();
     }
   }

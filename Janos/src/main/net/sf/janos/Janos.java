@@ -62,6 +62,13 @@ public class Janos implements Runnable {
     SonosController controller = SonosController.getInstance();
     SonosControllerShell shell = new SonosControllerShell(new Display(), controller);
     controller.searchForDevices();
+    try {
+      Thread.sleep(Integer.parseInt(System.getProperty("net.sf.janos.searchTime", "1000")));
+    } catch (NumberFormatException e) {
+      LogFactory.getLog(Janos.class).warn("Sleep interrupted:", e);
+    } catch (InterruptedException e) {
+      LogFactory.getLog(Janos.class).warn("Sleep interrupted:", e);
+    }
     ApplicationContext.create(controller, shell);
     shell.start();
   }

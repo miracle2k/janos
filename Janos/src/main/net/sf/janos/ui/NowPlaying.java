@@ -132,6 +132,7 @@ public class NowPlaying extends Composite implements AVTransportListener {
 		gd.widthHint = 128;
 		gd.heightHint = 128;
 		artwork.setLayoutData(gd);
+		ArtworkDisplayer artworkDisplayer = new ArtworkDisplayer(artwork);
 
 		GridData labelGridData = new GridData (GridData.HORIZONTAL_ALIGN_END );
 

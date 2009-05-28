@@ -367,10 +367,6 @@ public class ServicesEventing implements Runnable {
       this.client = client;
     }
     
-    // A temporary hack to work around the race-condition-on-startup
-    // issue.
-    final private int wait = 500;
-      
     public void run() {
       try {
         client.setSoTimeout( 30000 );
@@ -394,9 +390,6 @@ public class ServicesEventing implements Runnable {
           // all data has been delivered and the other side went bye-bye.
           if ( data.charAt( data.length()-1 ) == (char)0 || endToken.equals(lastBytes)) {
             EOF = true;
-            // work around a race condition at startup.  Not sure why, but if we go as fast
-            // as we can, the group code gets confused.
-            Thread.sleep(wait);
           }
         }
        

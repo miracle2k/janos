@@ -1,5 +1,6 @@
 package net.sf.janos.ui;
 
+import net.sf.janos.ApplicationContext;
 import net.sf.janos.control.ZonePlayer;
 import net.sf.janos.model.ZoneGroup;
 
@@ -20,7 +21,7 @@ public class ZoneControl extends Composite implements ControlListener {
 	public ZoneControl(Composite parent, ZoneGroup group) {
 		super(parent, 0);
 		this.group = group;
-		ZonePlayer zone = group.getCoordinator();
+		ZonePlayer zone = ApplicationContext.getInstance().getController().getZonePlayerModel().getById(group.getCoordinator());
 		
 //		// Row 1
 //		nowPlaying = new NowPlaying(this, 0, zone);
@@ -86,7 +87,7 @@ public class ZoneControl extends Composite implements ControlListener {
 	}
 
 	public ZonePlayer getZonePlayer() {
-		return group.getCoordinator();
+		return ApplicationContext.getInstance().getController().getZonePlayerModel().getById(group.getCoordinator());
 	}
 	
 	public QueueDisplay getQueue() {

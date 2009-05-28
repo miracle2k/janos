@@ -231,13 +231,13 @@ public class SonosController implements ZoneGroupTopologyListener {
    * @return the coordinator of the zone player's group, or zp if it could not
    *         be discovered.
    */
-  public static ZonePlayer getCoordinatorForZonePlayer(ZonePlayer zp) {
+  public ZonePlayer getCoordinatorForZonePlayer(ZonePlayer zp) {
     if (zp == null || zp.getZoneGroupTopologyService().getGroupState() == null) {
       return zp;
     }
     for (ZoneGroup zg : zp.getZoneGroupTopologyService().getGroupState().getGroups()) {
-      if (zg.getMembers().contains(zp)) {
-        return zg.getCoordinator();
+      if (zg.getMembers().contains(zp.getId())) {
+        return getZonePlayerModel().getById(zg.getCoordinator());
       }
     }
     return zp;

@@ -9,6 +9,7 @@ import java.util.LinkedList;
 import java.util.List;
 
 import net.sbbi.upnp.devices.DeviceIcon;
+import net.sf.janos.ApplicationContext;
 import net.sf.janos.control.SonosController;
 import net.sf.janos.control.ZoneListSelectionListener;
 import net.sf.janos.control.ZonePlayer;
@@ -169,7 +170,7 @@ public class ZoneControlList implements ExpandListener, ZoneGroupStateModelListe
 		removeSearchingItem();
 
 		// extract the coordinator since he's the one we'll key off of
-		ZonePlayer coordinator = group.getCoordinator();
+		ZonePlayer coordinator = ApplicationContext.getInstance().getController().getZonePlayerModel().getById(group.getCoordinator());
 		String coordinatorName = coordinator.getDevicePropertiesService().getZoneAttributes().getName();
 
 		// Create a new Now Playing display object
@@ -210,7 +211,8 @@ public class ZoneControlList implements ExpandListener, ZoneGroupStateModelListe
 		
 		// generate the title by alphabetizing and concatenating the zone names
 		LinkedList<String> names = new LinkedList<String>();
-		for (ZonePlayer zp : group.getMembers()) {
+		for (String zoneId : group.getMembers()) {
+		  ZonePlayer zp = ApplicationContext.getInstance().getController().getZonePlayerModel().getById(zoneId);
 			names.add(zp.getDevicePropertiesService().getZoneAttributes().getName());
 		}
 		Collections.sort(names);

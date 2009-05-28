@@ -53,7 +53,7 @@ public class ZoneGroupTopologyService extends AbstractService {
       try {
         if (varName.equals("AvailableSoftwareUpdate")) {
         } else if (varName == "ZoneGroupState") {
-          zoneGroup = ResultParser.getGroupStateFromResult(SonosController.getInstance(), newValue);
+          zoneGroup = ResultParser.getGroupStateFromResult(newValue);
           fireStateChanged();
         } else if (varName == "ThirdPartyMediaServers") {
 
