@@ -9,6 +9,7 @@ Change Log
 - Tooltip and Now Playing section now correctly display ampersands and non-ASCII chars
 - removed 0.5 second delay on all event notifications
 - added artwork window
+- added basic key control support
 
 0.2
 - Removed tooltip on zone list

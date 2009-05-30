@@ -22,6 +22,8 @@ import net.sf.janos.util.ui.ImageUtilities;
 import net.sf.janos.util.ui.ImageUtilities.Callback;
 
 import org.eclipse.swt.SWT;
+import org.eclipse.swt.events.KeyAdapter;
+import org.eclipse.swt.events.KeyEvent;
 import org.eclipse.swt.events.MouseAdapter;
 import org.eclipse.swt.events.MouseEvent;
 import org.eclipse.swt.events.MouseListener;
@@ -39,7 +41,12 @@ public class ArtworkDisplayer extends MouseAdapter implements MouseTrackListener
   private Label label;
 
   public ArtworkDisplayer(Label target) {
-    shell = new Shell(ApplicationContext.getInstance().getShell().getShell(), SWT.TITLE);
+    createShell(target);
+    addTargetLabel(target);
+  }
+
+  private void createShell(Label target) {
+    shell = new Shell(ApplicationContext.getInstance().getShell().getShell(), SWT.DIALOG_TRIM);
     this.target = target;
     this.label = new Label(shell, SWT.NONE);
     MouseListener clickListener = new MouseAdapter() {
@@ -51,7 +58,14 @@ public class ArtworkDisplayer extends MouseAdapter implements MouseTrackListener
     shell.addMouseListener(clickListener);
     label.addMouseListener(clickListener);
     shell.setLayout(new FillLayout());
-    addTargetLabel(target);
+    shell.addKeyListener(new KeyAdapter() {
+      @Override
+      public void keyReleased(KeyEvent e) {
+        if (SWT.ESC == e.character) {
+          shell.setVisible(false);
+        }
+      }
+    });
   }
 
   private void addTargetLabel(Label target) {
@@ -61,7 +75,7 @@ public class ArtworkDisplayer extends MouseAdapter implements MouseTrackListener
 
   @Override
   public void mouseUp(MouseEvent e) {
-    if (shell.isVisible()) {
+    if (!shell.isDisposed() && shell.isVisible()) {
       shell.setVisible(false);
     } else {
       mouseHover(e);
@@ -75,6 +89,10 @@ public class ArtworkDisplayer extends MouseAdapter implements MouseTrackListener
   }
 
   public void mouseHover(MouseEvent e) {
+    // if the user presses the cross on the frame the shell is disposed, and a new one needs to be created
+    if (shell.isDisposed()) {
+      createShell(target);
+    }
     Object data = target.getData();
     if (data != null && data != label.getData() && data instanceof URL) {
       URL url = (URL) data;

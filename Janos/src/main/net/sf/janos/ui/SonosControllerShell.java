@@ -110,10 +110,12 @@ public class SonosControllerShell {
 		data2.horizontalSpan = 4;
 		music.setLayoutData(data2);
 		
+		SonosMenuBar menuBar = new SonosMenuBar(shell);
+    menuBar.activate();
 //		shell.getDisplay().addListener(SWT.KeyDown, new KeyControlAdapter());
 	}
 
-	private void dispose() {
+  private void dispose() {
 		searchBar.dispose();
 		urlAdder.dispose();
 		music.dispose();
