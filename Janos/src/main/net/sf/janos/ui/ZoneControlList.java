@@ -10,6 +10,7 @@ import java.util.List;
 
 import net.sbbi.upnp.devices.DeviceIcon;
 import net.sf.janos.ApplicationContext;
+import net.sf.janos.ZoneNotAvailableException;
 import net.sf.janos.control.SonosController;
 import net.sf.janos.control.ZoneListSelectionListener;
 import net.sf.janos.control.ZonePlayer;
@@ -17,6 +18,7 @@ import net.sf.janos.model.ZoneGroup;
 import net.sf.janos.model.ZoneGroupStateModel;
 import net.sf.janos.model.ZoneGroupStateModelListener;
 
+import org.apache.commons.logging.LogFactory;
 import org.eclipse.swt.SWT;
 import org.eclipse.swt.events.ControlEvent;
 import org.eclipse.swt.events.ControlListener;
@@ -143,7 +145,11 @@ public class ZoneControlList implements ExpandListener, ZoneGroupStateModelListe
 	public void zoneGroupAdded(final ZoneGroup group, final ZoneGroupStateModel source) {
 		bar.getDisplay().asyncExec(new Runnable() {
 			public void run() {
-				addZone(group, source);
+				try {
+          addZone(group, source);
+        } catch (ZoneNotAvailableException e) {
+          LogFactory.getLog(getClass()).error("Could not add zone group", e);
+        }
 			}
 		});
 	}
@@ -164,13 +170,16 @@ public class ZoneControlList implements ExpandListener, ZoneGroupStateModelListe
 		});
 	}
 
-	protected ExpandItem addZone(ZoneGroup group, ZoneGroupStateModel source) {
+	protected ExpandItem addZone(ZoneGroup group, ZoneGroupStateModel source) throws ZoneNotAvailableException {
 
 		// clear search mode if necessary
 		removeSearchingItem();
 
 		// extract the coordinator since he's the one we'll key off of
 		ZonePlayer coordinator = ApplicationContext.getInstance().getController().getZonePlayerModel().getById(group.getCoordinator());
+		if (coordinator == null) {
+		  throw new ZoneNotAvailableException("Can't locate zone with id " + group.getCoordinator());
+		}
 		String coordinatorName = coordinator.getDevicePropertiesService().getZoneAttributes().getName();
 
 		// Create a new Now Playing display object
@@ -268,12 +277,15 @@ public class ZoneControlList implements ExpandListener, ZoneGroupStateModelListe
 
 		// remove the old group and add a new one
 		removeZone(group, source);
-		i = addZone(group, source);
-		refreshItem(i);
-
-		// reinstate the item expanded state
-		i.setExpanded(expanded);
-
+		try {
+      i = addZone(group, source);
+      refreshItem(i);
+      
+      // reinstate the item expanded state
+      i.setExpanded(expanded);
+    } catch (ZoneNotAvailableException e) {
+      LogFactory.getLog(getClass()).error("Could not replace group" + group.getId(), e);
+    }
 	}
 
 	protected ExpandItem findItemByZoneGroup(ZoneGroup group) {

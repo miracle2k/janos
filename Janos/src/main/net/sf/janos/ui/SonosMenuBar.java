@@ -39,17 +39,17 @@ public class SonosMenuBar {
     playbackItem.setMenu(playbackMenu);
 
     MenuItem pauseItem = new MenuItem(playbackMenu, SWT.NONE);
-    pauseItem.setText("&Play/Pause");
+    pauseItem.setText("&Play/Pause\tCtrl+p");
     pauseItem.setAccelerator(SWT.MOD1 + 'p');
     pauseItem.addSelectionListener(new PauseResumeAction());
 
     MenuItem skipItem = new MenuItem(playbackMenu, SWT.NONE);
-    skipItem.setText("&Next");
+    skipItem.setText("&Next\tCtrl+RIGHT");
     skipItem.setAccelerator(SWT.MOD1 + SWT.ARROW_RIGHT);
     skipItem.addSelectionListener(new SkipAction());
 
     MenuItem skipBackItem = new MenuItem(playbackMenu, SWT.NONE);
-    skipBackItem.setText("&Back");
+    skipBackItem.setText("&Back\tCtrl+LEFT");
     skipBackItem.setAccelerator(SWT.MOD1 + SWT.ARROW_LEFT);
     skipBackItem.addSelectionListener(new SkipBackAction());
 }

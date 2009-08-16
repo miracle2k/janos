@@ -1,4 +1,7 @@
 Change Log
+0.4
+- Updated to support sonos 3.0 radio stations
+- Updated to ignore Zone Bridges (this allows janos to start)
 
 0.3
 - Removed the sashbar between zone controls and library

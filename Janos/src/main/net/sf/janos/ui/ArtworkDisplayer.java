@@ -47,6 +47,7 @@ public class ArtworkDisplayer extends MouseAdapter implements MouseTrackListener
 
   private void createShell(Label target) {
     shell = new Shell(ApplicationContext.getInstance().getShell().getShell(), SWT.DIALOG_TRIM);
+    shell.setText("Click to Exit");
     this.target = target;
     this.label = new Label(shell, SWT.NONE);
     MouseListener clickListener = new MouseAdapter() {

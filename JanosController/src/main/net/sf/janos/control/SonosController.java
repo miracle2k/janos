@@ -192,10 +192,29 @@ public class SonosController implements ZoneGroupTopologyListener {
     	return;
       }
     }
-    ZonePlayer zone = new ZonePlayer(dev);
-    zonePlayers.addZonePlayer(zone);
-    zone.getZoneGroupTopologyService().addZoneGroupTopologyListener(this);
-    zoneGroupTopologyChanged(zone.getZoneGroupTopologyService().getGroupState());
+    
+    // Ignore zone bridges 
+    // TODO may need to implement cut down zone player for the zone bridge
+    // I believe the bridge only supports the following interfaces:
+    // DeviceProperties
+    // GroupManagement
+    // SystemProperties
+    // ZoneGroup
+    if (dev.getModelNumber().contains("ZB100")) {
+      LOG.warn("Ignoring Zone " + dev.getDeviceType() + " " + dev.getModelDescription() + " " + dev.getModelName() + " " + dev.getModelNumber());
+      return;
+    }
+    if (LOG.isInfoEnabled()) {
+      LOG.info("Adding zone: " + dev.getDeviceType() + " " + dev.getModelDescription() + " " + dev.getModelName() + " " + dev.getModelNumber());
+    }
+    try {
+      ZonePlayer zone = new ZonePlayer(dev);
+      zonePlayers.addZonePlayer(zone);
+      zone.getZoneGroupTopologyService().addZoneGroupTopologyListener(this);
+      zoneGroupTopologyChanged(zone.getZoneGroupTopologyService().getGroupState());
+    } catch (Exception e) {
+      LOG.error("Couldn't add zone" + dev.getDeviceType() + " " + dev.getModelDescription() + " " + dev.getModelName() + " " + dev.getModelNumber(), e);
+    }
   }
   
   /**
