@@ -134,7 +134,8 @@
 	  		          version="${build.id}"
 	  		          startOnMainThread="true"
 	  		          extraclasspath="$JAVAROOT/resources"
-	  		          arguments="2000">
+	  		          arguments="2000"
+	  		          stubfile="JavaApplicationStub32"><!--32 bit mode until swt-cocoa comes out-->
 	  		<jarfileset dir="dist">
 	  				<include name="*.jar"/>
 	  	  </jarfileset>
