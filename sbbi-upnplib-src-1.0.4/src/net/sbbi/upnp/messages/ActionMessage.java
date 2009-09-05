@@ -69,6 +69,15 @@ import javax.xml.parsers.*;
 public class ActionMessage {
   
   private final static Log log = LogFactory.getLog( ActionMessage.class );
+
+  private static final Map XML_ENTITIES = new HashMap();
+  static {
+    XML_ENTITIES.put(Character.valueOf('"'), "quot");
+    XML_ENTITIES.put(Character.valueOf('&'), "amp");
+    XML_ENTITIES.put(Character.valueOf('<'), "lt");
+    XML_ENTITIES.put(Character.valueOf('>'), "gt");
+    XML_ENTITIES.put(Character.valueOf('\''), "apos");
+  }
   
   private UPNPService service;
   private ServiceAction serviceAction;
@@ -295,21 +304,56 @@ public class ActionMessage {
     if ( serviceAction.getInputActionArguments() == null ) throw new IllegalArgumentException( "No input parameters required for this message" );
     ServiceActionArgument arg = serviceAction.getInputActionArgument( parameterName );
     if ( arg == null ) throw new IllegalArgumentException( "Wrong input argument name for this action:" + parameterName + " available parameters are : " + getInputParameterNames() );
+    String escapedVal = escape(parameterValue);
     for ( Iterator i = inputParameters.iterator(); i.hasNext(); ) {
       InputParamContainer container = (InputParamContainer)i.next();
       if ( container.name.equals( parameterName ) ) {
-        container.value = parameterValue;
+        container.value = escapedVal;
         return this;
       }
     }
     // nothing found add the new value
     InputParamContainer container = new InputParamContainer();
     container.name = parameterName;
-    container.value = parameterValue;
+    container.value = escapedVal;
     inputParameters.add( container );
     return this;
   }
 
+  /**
+   * <p>Escapes the characters in a <code>String</code>.</p>
+   *
+   * <p>For example, if you have called addEntity(&quot;foo&quot;, 0xA1),
+   * escape(&quot;\u00A1&quot;) will return &quot;&amp;foo;&quot;</p>
+   *
+   * @param str The <code>String</code> to escape.
+   * @return A new escaped <code>String</code>.
+   */
+  public String escape(String str) {
+    //todo: rewrite to use a Writer
+    StringBuffer buf = new StringBuffer(str.length() * 2);
+    int i;
+    for (i = 0; i < str.length(); ++i) {
+      char ch = str.charAt(i);
+      String entityName = (String) XML_ENTITIES.get(Character.valueOf(ch));
+      if (entityName == null) {
+        if (ch > 0x7F) {
+          int intValue = ch;
+          buf.append("&#");
+          buf.append(intValue);
+          buf.append(';');
+        } else {
+          buf.append(ch);
+        }
+      } else {
+        buf.append('&');
+        buf.append(entityName);
+        buf.append(';');
+      }
+    }
+    return buf.toString();
+  }
+  
   /**
    * Set the value of an input parameter before a message service call
    * @param parameterName the parameter name
