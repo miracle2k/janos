@@ -45,7 +45,6 @@ import net.sf.janos.model.xml.ResultParser;
 import net.sf.janos.model.xml.AVTransportEventHandler.AVTransportEventType;
 import net.sf.janos.util.TimeUtilities;
 
-import org.apache.commons.lang.StringEscapeUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.xml.sax.SAXException;
@@ -151,7 +150,7 @@ public class AVTransportService extends AbstractService implements ServiceEventH
     if (LOG.isDebugEnabled()) {
       LOG.debug("Created metadata: " + metadata);
     }
-    return StringEscapeUtils.escapeXml(metadata);
+    return metadata;
   }
 
   /**
