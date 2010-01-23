@@ -1,4 +1,8 @@
 Change Log
+0.5
+- Updated to svn 3.5
+- Now polls zone players to detect disconnections, and recover for reconnections.
+
 0.4
 - Updated to support sonos 3.0 radio stations
 - Updated to ignore Zone Bridges (this allows janos to start)
