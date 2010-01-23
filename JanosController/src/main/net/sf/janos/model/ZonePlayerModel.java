@@ -60,7 +60,7 @@ public class ZonePlayerModel {
 
   /**
    * @param id
-   *          the ID of a zone player (including "UUID:").
+   *          the ID of a zone player (excluding "UUID:").
    * @return a zone player matching that id, or null if one could not be found.
    */
   public ZonePlayer getById(String id) {

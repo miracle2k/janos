@@ -92,12 +92,10 @@ public class SonosControllerShell {
 		adderData.horizontalAlignment = SWT.FILL;
 		urlAdder.setLayoutData(adderData);
 
-    Label searchLabel = new Label(rightSide, SWT.NONE);
-    searchLabel.setText("Search: ");
-    
     searchBar = new SearchBar(rightSide, SWT.NONE, this);
     GridData data3 = new GridData();
     data3.horizontalAlignment = SWT.END;
+    data3.widthHint = 120;
     searchBar.setLayoutData(data3);
 
 

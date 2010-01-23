@@ -22,7 +22,6 @@ import java.util.List;
 
 import net.sf.janos.control.BrowseHandle;
 import net.sf.janos.control.EntryCallback;
-import net.sf.janos.control.SonosController;
 import net.sf.janos.control.ZonePlayer;
 import net.sf.janos.model.Entry;
 
@@ -44,7 +43,8 @@ public class SearchBar extends Composite {
     this.controller = controller;
     this.browseHandles = Collections.synchronizedList(new ArrayList<BrowseHandle>());
     
-    Text searchField = new Text(this, SWT.SEARCH | SWT.CANCEL );
+    Text searchField = new Text(this, SWT.SEARCH | SWT.ICON_CANCEL | SWT.ICON_SEARCH);
+    searchField.setMessage("search");
     @SuppressWarnings("unused")
 	SearchAction searchAction = new SearchAction(searchField);
   }

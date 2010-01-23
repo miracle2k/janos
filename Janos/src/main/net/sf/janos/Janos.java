@@ -15,6 +15,9 @@
  */
 package net.sf.janos;
 
+import java.util.Timer;
+import java.util.TimerTask;
+
 import net.sf.janos.control.SonosController;
 import net.sf.janos.ui.SonosControllerShell;
 
@@ -37,7 +40,7 @@ public class Janos implements Runnable {
     if (args.length == 1) {
       System.setProperty("net.sbbi.upnp.Discovery.bindPort", args[0]);
     }
-    
+     
     /*
      * [DW] For some reason unknown to me, given: 
      * 1) arch is intel
@@ -47,22 +50,38 @@ public class Janos implements Runnable {
      * no exceptions are displayed in the eclipse console in the main thread. 
      * To work around this, we just do everything in a new thread :-)
      */
-    try {
-      Thread mainThread = new Thread(new Janos(), "Janos-SWT");
-      mainThread.start();
-      mainThread.join();
-    } catch (Throwable t) {
-      LogFactory.getLog(Janos.class).fatal("Could not start thread: ", t);
-      System.exit(1);
+    if (Boolean.getBoolean("net.sf.janos.forkNewThread"))
+    {
+      try {
+        Thread mainThread = new Thread(new Janos(), "Janos-SWT");
+        mainThread.start();
+        mainThread.join();
+      } catch (Throwable t) {
+        LogFactory.getLog(Janos.class).fatal("Could not start thread: ", t);
+        System.exit(1);
+      }
+    } else {
+      new Janos().run();
     }
   }
 
   public void run() {
     Display.setAppName("Janos");
-    SonosController controller = SonosController.getInstance();
+    final SonosController controller = SonosController.getInstance();
     SonosControllerShell shell = new SonosControllerShell(new Display(), controller);
-    controller.searchForDevices();
     try {
+      Timer zonePollerTimer = new Timer("ZonePoller", true);
+      TimerTask zonePollerTask = new TimerTask() {
+        
+        @Override
+        public void run() {
+          controller.searchForDevices();
+          long pollPeriod = Long.parseLong(System.getProperty("net.sf.janos.pollPeriod", "5000"));
+          controller.purgeStaleDevices(pollPeriod*2);
+        }
+      };
+      long pollPeriod = Long.parseLong(System.getProperty("net.sf.janos.pollPeriod", "5000"));
+      zonePollerTimer.scheduleAtFixedRate(zonePollerTask, 0, pollPeriod);
       Thread.sleep(Integer.parseInt(System.getProperty("net.sf.janos.searchTime", "1000")));
     } catch (NumberFormatException e) {
       LogFactory.getLog(Janos.class).warn("Sleep interrupted:", e);
@@ -71,6 +90,7 @@ public class Janos implements Runnable {
     }
     ApplicationContext.create(controller, shell);
     shell.start();
+    
   }
 
 }

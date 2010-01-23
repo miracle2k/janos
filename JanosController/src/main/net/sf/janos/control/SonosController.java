@@ -21,7 +21,11 @@ import java.net.InetAddress;
 import java.net.MalformedURLException;
 import java.net.NetworkInterface;
 import java.net.URL;
+import java.util.Collections;
 import java.util.Enumeration;
+import java.util.HashMap;
+import java.util.Map;
+import java.util.Map.Entry;
 import java.util.concurrent.Executor;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ThreadFactory;
@@ -86,7 +90,6 @@ public class SonosController implements ZoneGroupTopologyListener {
         public void run() {
           try {
             addZonePlayer(new UPNPRootDevice(location, maxAge));
-            LOG.info("Discovered device " + usn);
           } catch (MalformedURLException e) {
             LOG.warn("Discovered device " + usn + " with invalid URL: " + location);
           } catch (IllegalStateException e) {
@@ -108,7 +111,6 @@ public class SonosController implements ZoneGroupTopologyListener {
         public void run() {
           try {
             addZonePlayer(new UPNPRootDevice(location, maxAge, firmware));
-            LOG.info("Discovered device " + usn);
           } catch (MalformedURLException e) {
             LOG.warn("Discovered device " + usn + " with invalid URL: " + location);
           } catch (IllegalStateException e) {
@@ -122,6 +124,9 @@ public class SonosController implements ZoneGroupTopologyListener {
   private final DiscoveryHandler discoveryHandler = new DiscoveryHandler();
   private final ZoneGroupStateModel groups = new ZoneGroupStateModel();
   private final ZonePlayerModel zonePlayers = new ZonePlayerModel();
+  // a map from zone UDN to when the zone was last seen
+  private final Map<String, Long> zonePlayerDiscoveries = new HashMap<String, Long>();
+  private boolean registeredForSearching = false;
 
   /**
    * @return the singleton instance of SonosController
@@ -139,21 +144,23 @@ public class SonosController implements ZoneGroupTopologyListener {
   }
   
   public void searchForDevices() {
-    ServicesEventing.getInstance().setDaemonPort(Integer.parseInt(System.getProperty("net.sf.EventingPort", "2001")));
     try {
-      // These first two listen for broadcast advertisements, while the 3rd
-      // listens for responses to a search request.
-      DiscoveryAdvertisement.getInstance().registerEvent(
-          DiscoveryAdvertisement.EVENT_SSDP_ALIVE, 
-          ZonePlayerConstants.SONOS_DEVICE_TYPE, 
-          discoveryHandler);
-      DiscoveryAdvertisement.getInstance().registerEvent(
-          DiscoveryAdvertisement.EVENT_SSDP_BYE_BYE, 
-          ZonePlayerConstants.SONOS_DEVICE_TYPE, 
-          discoveryHandler);
-      DiscoveryListener.getInstance().registerResultsHandler(
-          discoveryHandler, 
-          ZonePlayerConstants.SONOS_DEVICE_TYPE);
+      if (!registeredForSearching) {
+        ServicesEventing.getInstance().setDaemonPort(Integer.parseInt(System.getProperty("net.sf.EventingPort", "2001")));
+        // These first two listen for broadcast advertisements, while the 3rd
+        // listens for responses to a search request.
+        DiscoveryAdvertisement.getInstance().registerEvent(
+            DiscoveryAdvertisement.EVENT_SSDP_ALIVE, 
+            ZonePlayerConstants.SONOS_DEVICE_TYPE, 
+            discoveryHandler);
+        DiscoveryAdvertisement.getInstance().registerEvent(
+            DiscoveryAdvertisement.EVENT_SSDP_BYE_BYE, 
+            ZonePlayerConstants.SONOS_DEVICE_TYPE, 
+            discoveryHandler);
+        DiscoveryListener.getInstance().registerResultsHandler(
+            discoveryHandler, 
+            ZonePlayerConstants.SONOS_DEVICE_TYPE);
+      }
       sendSearchPacket(ZonePlayerConstants.SONOS_DEVICE_TYPE);
     } catch (IOException e) {
       LOG.error("Could not search for devices.", e);
@@ -167,7 +174,7 @@ public class SonosController implements ZoneGroupTopologyListener {
    * @param searchTarget
    * @throws IOException 
    */
-  private void sendSearchPacket(String searchTarget) throws IOException {
+  public void sendSearchPacket(String searchTarget) throws IOException {
     for ( Enumeration<NetworkInterface> e = NetworkInterface.getNetworkInterfaces(); e.hasMoreElements(); ) {
       NetworkInterface intf = (NetworkInterface)e.nextElement();
       for ( Enumeration<InetAddress> adrs = intf.getInetAddresses(); adrs.hasMoreElements(); ) {
@@ -180,19 +187,31 @@ public class SonosController implements ZoneGroupTopologyListener {
 
   }
   
+  public void purgeStaleDevices(long staleThreshold) {
+    long now = System.currentTimeMillis();
+    for (Entry<String, Long> zone : zonePlayerDiscoveries.entrySet()) {
+      if (now - zone.getValue() > staleThreshold) {
+        removeZonePlayer(zone.getKey());
+      }
+    }
+  }
+  
   /**
    * Creates a new ZonePlayer from the given device and adds it to our list.
    * @param dev
    * @throws IllegalArgumentException if <code>dev</code> is not a sonos device
    */
   private void addZonePlayer(final UPNPRootDevice dev) {
+    zonePlayerDiscoveries.put(dev.getUDN().substring(5), System.currentTimeMillis());
+    
     // Check if we've already got this zone player
     for (ZonePlayer zone : zonePlayers.getAllZones()) {
       if (zone.getRootDevice().getUDN().equals(dev.getUDN())) {
     	return;
       }
     }
-    
+    LOG.info("Discovered device " + dev.getDiscoveryUDN());
+
     // Ignore zone bridges 
     // TODO may need to implement cut down zone player for the zone bridge
     // I believe the bridge only supports the following interfaces:
@@ -224,8 +243,13 @@ public class SonosController implements ZoneGroupTopologyListener {
   private void removeZonePlayer(final String udn) {
     ZonePlayer zp = zonePlayers.getById(udn);
     if (zp != null) {
+      LOG.info("Removing ZonePlayer " + udn + " " + zp.getRootDevice().getModelDescription());
       zonePlayers.remove(zp);
       zp.getZoneGroupTopologyService().removeZoneGroupTopologyListener(this);
+      if (zonePlayers.getSize() == 0)
+      {
+        zoneGroupTopologyChanged(new ZoneGroupState(Collections.EMPTY_LIST));
+      }
       zp.dispose();
     }
   }

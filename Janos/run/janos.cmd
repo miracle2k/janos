@@ -18,8 +18,9 @@ REM Usage: Janos.cmd
 echo Starting Janos
 
 
-set CLASSPATH=Janos.jar
+set CLASSPATH=lib/SonosJ.jar
 set CLASSPATH=%CLASSPATH%;lib/resources
+set CLASSPATH=%CLASSPATH%;lib/JanosController.jar
 set CLASSPATH=%CLASSPATH%;lib/commons-jxpath-1.1.jar
 set CLASSPATH=%CLASSPATH%;lib/commons-lang-2.3.jar
 set CLASSPATH=%CLASSPATH%;lib/commons-logging-api.jar
@@ -34,5 +35,7 @@ set CLASSPATH=%CLASSPATH%;lib/mx4j-tools.jar
 set CLASSPATH=%CLASSPATH%;lib/sbbi-jmx-1.0.jar
 
 set PATH=%PATH%;./lib
+set ARGS=2000
+set JVMARGS=
 
-java -cp %CLASSPATH% net.sf.janos.Janos
+java -cp %CLASSPATH% %JVMARGS% net.sf.janos.Janos %ARGS%

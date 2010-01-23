@@ -62,7 +62,7 @@ public class VolumeControl extends Composite {
 		title = new Label(this, SWT.WRAP | SWT.RIGHT);
 		title.setText(titleText);
 
-		mute = new Button(this, SWT.TOGGLE);
+		mute = new Button(this, SWT.TOGGLE | SWT.FLAT);
 		mute.setImage(notMuted);
 		mute.addSelectionListener(new SelectionAdapter() {
 			@Override

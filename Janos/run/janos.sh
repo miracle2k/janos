@@ -22,7 +22,7 @@ echo Starting Janos...
 ROOTDIR=`dirname "$0"`
 echo ROOTDIR=$ROOTDIR
 
-CLASSPATH=$ROOTDIR/SonosJ.jar
+CLASSPATH=$ROOTDIR/lib/SonosJ.jar
 CLASSPATH=$CLASSPATH:$ROOTDIR/lib/JanosController.jar
 CLASSPATH=$CLASSPATH:$ROOTDIR/lib/resources
 CLASSPATH=$CLASSPATH:$ROOTDIR/lib/commons-jxpath-1.1.jar
