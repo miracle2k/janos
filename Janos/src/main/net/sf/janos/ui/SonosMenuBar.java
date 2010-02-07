@@ -16,6 +16,7 @@
 package net.sf.janos.ui;
 
 import net.sf.janos.ui.action.PauseResumeAction;
+import net.sf.janos.ui.action.SaveQueueAction;
 import net.sf.janos.ui.action.SkipAction;
 import net.sf.janos.ui.action.SkipBackAction;
 
@@ -52,6 +53,16 @@ public class SonosMenuBar {
     skipBackItem.setText("&Back\tCtrl+LEFT");
     skipBackItem.setAccelerator(SWT.MOD1 + SWT.ARROW_LEFT);
     skipBackItem.addSelectionListener(new SkipBackAction());
+    
+    MenuItem libraryItem = new MenuItem(menuBar, SWT.CASCADE);
+    libraryItem.setText("Library");
+    Menu libraryMenu = new Menu(shell, SWT.DROP_DOWN);
+    libraryItem.setMenu(libraryMenu);
+    
+    MenuItem saveQueueItem = new MenuItem(libraryMenu, SWT.NONE);
+    saveQueueItem.setText("&Save Queue As...");
+    saveQueueItem.addSelectionListener(new SaveQueueAction());
+
 }
 
   public void activate() {

@@ -21,11 +21,14 @@ import java.util.TimerTask;
 import net.sf.janos.control.SonosController;
 import net.sf.janos.ui.SonosControllerShell;
 
+import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.eclipse.swt.widgets.Display;
 
 
 public class Janos implements Runnable {
+  
+  private static final Log LOG = LogFactory.getLog(Janos.class);
 
   /**
    * @param args
@@ -68,28 +71,35 @@ public class Janos implements Runnable {
   public void run() {
     Display.setAppName("Janos");
     final SonosController controller = SonosController.getInstance();
-    SonosControllerShell shell = new SonosControllerShell(new Display(), controller);
     try {
-      Timer zonePollerTimer = new Timer("ZonePoller", true);
-      TimerTask zonePollerTask = new TimerTask() {
-        
-        @Override
-        public void run() {
-          controller.searchForDevices();
-          long pollPeriod = Long.parseLong(System.getProperty("net.sf.janos.pollPeriod", "5000"));
-          controller.purgeStaleDevices(pollPeriod*2);
-        }
-      };
-      long pollPeriod = Long.parseLong(System.getProperty("net.sf.janos.pollPeriod", "5000"));
-      zonePollerTimer.scheduleAtFixedRate(zonePollerTask, 0, pollPeriod);
-      Thread.sleep(Integer.parseInt(System.getProperty("net.sf.janos.searchTime", "1000")));
-    } catch (NumberFormatException e) {
-      LogFactory.getLog(Janos.class).warn("Sleep interrupted:", e);
-    } catch (InterruptedException e) {
-      LogFactory.getLog(Janos.class).warn("Sleep interrupted:", e);
+      SonosControllerShell shell = new SonosControllerShell(new Display(), controller);
+      try {
+        Timer zonePollerTimer = new Timer("ZonePoller", true);
+        TimerTask zonePollerTask = new TimerTask() {
+
+          @Override
+          public void run() {
+            controller.searchForDevices();
+            long pollPeriod = Long.parseLong(System.getProperty("net.sf.janos.pollPeriod", "5000"));
+            controller.purgeStaleDevices(pollPeriod*2);
+          }
+        };
+        long pollPeriod = Long.parseLong(System.getProperty("net.sf.janos.pollPeriod", "5000"));
+        zonePollerTimer.scheduleAtFixedRate(zonePollerTask, 0, pollPeriod);
+        Thread.sleep(Integer.parseInt(System.getProperty("net.sf.janos.searchTime", "1000")));
+      } catch (NumberFormatException e) {
+        LogFactory.getLog(Janos.class).warn("Sleep interrupted:", e);
+      } catch (InterruptedException e) {
+        LogFactory.getLog(Janos.class).warn("Sleep interrupted:", e);
+      }
+      ApplicationContext.create(controller, shell);
+      shell.start();
+    } catch (Throwable t) {
+      LOG.fatal("Error running Janos", t);
+    } finally {
+      // attempt to unregister from zone players
+      controller.dispose();
     }
-    ApplicationContext.create(controller, shell);
-    shell.start();
     
   }
 

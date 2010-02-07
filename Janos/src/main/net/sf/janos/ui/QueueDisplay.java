@@ -420,7 +420,7 @@ public class QueueDisplay extends Composite implements AVTransportListener {
 
 	    @Override
 	    public void dragOver(DropTargetEvent event) {
-	      event.feedback = DND.FEEDBACK_SELECT | DND.FEEDBACK_SCROLL | DND.FEEDBACK_EXPAND;
+	      event.feedback = DND.FEEDBACK_SELECT | DND.FEEDBACK_SCROLL;
 	    }
 
 	    @Override

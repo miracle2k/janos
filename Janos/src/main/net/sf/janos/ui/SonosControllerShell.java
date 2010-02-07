@@ -136,7 +136,7 @@ public class SonosControllerShell {
 	  return this.toolTipHandler;
 	}
 	
-	protected Shell getShell() {
+	public Shell getShell() {
 	  return shell;
 	}
 }

@@ -38,14 +38,15 @@ import org.xml.sax.SAXException;
  */
 public class ContentDirectoryService extends AbstractService {
   
-
-  private static final int DEFAULT_REQUEST_COUNT = 200;
-
-  private static final String DEFAULT_SORT_CRITERIA = "";
-
-  private static final String DEFAULT_FILTER_STRING = "dc:title,res,dc:creator,upnp:artist,upnp:album";
-
-  private static final String DEFAULT_BROWSE_TYPE = "BrowseDirectChildren";
+  public static final int DEFAULT_REQUEST_COUNT = 200;
+  public static final String DEFAULT_SORT_CRITERIA = "";
+  public static final String DEFAULT_FILTER_STRING = "dc:title,res,dc:creator,upnp:artist,upnp:album";
+  public static final BrowseType DEFAULT_BROWSE_TYPE = BrowseType.BrowseDirectChildren;
+  
+  public static enum BrowseType {
+    BrowseDirectChildren,
+    BrowseMetadata;
+  }
 
   private static final Log LOG = LogFactory.getLog(ContentDirectoryService.class);
 
@@ -132,8 +133,34 @@ public class ContentDirectoryService extends AbstractService {
    * @return a List of Entries of maximum size <code>length</code>, or null if the request fails.
    */
   public List<Entry> getEntries(int startAt, int length, String type) {
+    return getEntries(startAt, length, type, DEFAULT_BROWSE_TYPE);
+  }
+  
+  /**
+   * Retrieves a list of entries from the device.
+   * @param startAt the index of the first entry to be returned.
+   * @param length the maximum number of entries to returned.
+   * @param type the type of entries to be retrieved eg "A:ARTIST" or "Q:".
+   * @param browseType the desired browse type 
+   * @return a List of Entries of maximum size <code>length</code>, or null if the request fails.
+   */
+  public List<Entry> getEntries(int startAt, int length, String type, BrowseType browseType) {
+    return getEntries(startAt, length, type, browseType, DEFAULT_FILTER_STRING, DEFAULT_SORT_CRITERIA);
+  }
+  
+  /**
+   * Retrieves a list of entries from the device.
+   * @param startAt the index of the first entry to be returned.
+   * @param length the maximum number of entries to returned.
+   * @param type the type of entries to be retrieved eg "A:ARTIST" or "Q:".
+   * @param browseType the desired browse type 
+   * @param filterString the comma-seperated list of fields to have returned
+   * @param sortCriteria the sort criteria, or empty string to use default sort criteria
+   * @return a List of Entries of maximum size <code>length</code>, or null if the request fails.
+   */
+  public List<Entry> getEntries(int startAt, int length, String type, BrowseType browseType, String filterString, String sortCriteria) {
     try {
-      ActionResponse response = getEntriesImpl(startAt, length, type, DEFAULT_BROWSE_TYPE, DEFAULT_FILTER_STRING, DEFAULT_SORT_CRITERIA);
+      ActionResponse response = getEntriesImpl(startAt, length, type, browseType, filterString, sortCriteria);
 
       LOG.debug("response value types: " + response.getOutActionArgumentNames());
       LOG.info("Returned " + response.getOutActionArgumentValue("NumberReturned") + " of " + response.getOutActionArgumentValue("TotalMatches") + " results.");
@@ -154,6 +181,34 @@ public class ContentDirectoryService extends AbstractService {
   }
   
   /**
+   * @param type
+   * @return the entry given by type, or null if it could not be retrieved
+   */
+  public Entry getSingleEntry(String type) {
+    try {
+      ActionResponse response = getEntriesImpl(0, 1, type, BrowseType.BrowseMetadata, DEFAULT_FILTER_STRING, DEFAULT_SORT_CRITERIA);
+      LOG.debug("response value types: " + response.getOutActionArgumentNames());
+      LOG.info("Returned " + response.getOutActionArgumentValue("NumberReturned") + " of " + response.getOutActionArgumentValue("TotalMatches") + " results.");
+      String result = response.getOutActionArgumentValue("Result");
+      LOG.debug(result);
+      List<Entry> entries = ResultParser.getEntriesFromStringResult(result);
+      if (entries.size() > 0)
+        return entries.get(0);
+    } catch (SAXException e) {
+      // TODO Auto-generated catch block
+      e.printStackTrace();
+    } catch (IOException e) {
+      // TODO Auto-generated catch block
+      e.printStackTrace();
+    } catch (UPNPResponseException e) {
+      // TODO Auto-generated catch block
+      e.printStackTrace();
+    }
+    return null;
+
+  }
+
+  /**
    * Performs a getEntries request, returning the response
    * @param startAt the index of the first entry to be returned.
    * @param length the maximum number of entries to returned.
@@ -165,10 +220,10 @@ public class ContentDirectoryService extends AbstractService {
    * @throws IOException if a network error prevents communications
    * @throws UPNPResponseException if a UPnP error response is returned
    */
-  public ActionResponse getEntriesImpl(int startAt, int length, String type, String browseType, String filter, String sortCriteria) throws IOException, UPNPResponseException {
+  protected ActionResponse getEntriesImpl(int startAt, int length, String type, BrowseType browseType, String filter, String sortCriteria) throws IOException, UPNPResponseException {
     ActionMessage browseAction = messageFactory.getMessage("Browse");
     browseAction.setInputParameter("ObjectID", type);
-    browseAction.setInputParameter("BrowseFlag", browseType);
+    browseAction.setInputParameter("BrowseFlag", String.valueOf(browseType));
     browseAction.setInputParameter("Filter", filter);
     browseAction.setInputParameter("StartingIndex", String.valueOf(startAt));
     browseAction.setInputParameter("RequestedCount", String.valueOf(length));

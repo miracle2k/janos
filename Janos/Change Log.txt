@@ -1,4 +1,11 @@
 Change Log
+
+0.5.2
+- add ability to save the queue, and browse previously saved queues.
+
+0.5.1
+- fixed build script to compile to java 1.5
+
 0.5
 - Updated to svn 3.5
 - Now polls zone players to detect disconnections, and recover for reconnections.

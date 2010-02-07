@@ -232,16 +232,16 @@ public class AVTransportService extends AbstractService implements ServiceEventH
   /**
    * Saves the given queue to the given title
    * @param title
-   * @param queue
+   * @param queue the object id of the playlist, or "" for the current queue
    * @return the new ObjectID to refer to the saved queue
    * @throws IOException
    * @throws UPNPResponseException
    */
-  public String saveQueue(String title, Entry queue) throws IOException, UPNPResponseException {
+  public String saveQueue(String title, String queue) throws IOException, UPNPResponseException {
     ActionMessage message = messageFactory.getMessage("SaveQueue");
     message.setInputParameter("InstanceID", 0);
     message.setInputParameter("Title", title);
-    message.setInputParameter("ObjectID", queue.getId());
+    message.setInputParameter("ObjectID", queue);
     ActionResponse resp = message.service();
     return resp.getOutActionArgumentValue("AssignedObjectID");
   }

@@ -20,6 +20,6 @@
 <stringAttribute key="org.eclipse.jdt.launching.MAIN_TYPE" value="net.sf.janos.Janos"/>
 <stringAttribute key="org.eclipse.jdt.launching.PROGRAM_ARGUMENTS" value="2000"/>
 <stringAttribute key="org.eclipse.jdt.launching.PROJECT_ATTR" value="sonosJ"/>
-<stringAttribute key="org.eclipse.jdt.launching.VM_ARGUMENTS" value="-Djava.library.path=${env_var:PATH}:${project_loc:sonosJ}/lib -XstartOnFirstThread -Dnet.sf.janos.searchTime=2000 -d32"/>
+<stringAttribute key="org.eclipse.jdt.launching.VM_ARGUMENTS" value="-XstartOnFirstThread -Dnet.sf.janos.searchTime=2000"/>
 <stringAttribute key="yk-options" value="&#10;additional-options=&#10;snapshots-dir=&#10;"/>
 </launchConfiguration>

@@ -340,6 +340,9 @@ public class MusicLibraryTable extends Composite implements ZonePlayerModelListe
     if (entry.getUpnpClass().equals("object.container.searchResultContainer")) {
       return new Image(display, SEARCH_IMAGE);
     }
+    if (entry.getId().startsWith("SQ:")) {
+      return new Image(display, PLAYLIST_IMAGE);
+    }
     return null;
   }
 

@@ -223,8 +223,8 @@ public class TransportControl extends Composite implements AVTransportListener {
 
 		updateEnabledness();
 
-		zone.getMediaRendererDevice().getAvTransportService().addAvTransportListener(this);
 		transportTimer = new Timer("Timer Task:" + zone.getDevicePropertiesService().getZoneAttributes().getName(), true);
+		zone.getMediaRendererDevice().getAvTransportService().addAvTransportListener(this);
 		updateTimers();
 	}
 

@@ -44,10 +44,12 @@ public class RootEntryLibrary extends MusicLibrary{
   protected BrowseHandle loadEntries(ZonePlayer zone, String type) {
     Entry radio = new Entry("R:0", "Radio", null, null, null, null, "object.container.radioContainer", null);
     Entry lineIn = new Entry("AI:", "Line In", null, null, null, null, "object.container.lineInContainer", null);
+    Entry savedQueues = new Entry("SQ:", "Saved Queues", null, null, null, null, "object.container.savedQueueContainer", null);
     searchResults = new Entry("SEARCH_RESULT", "Search Results", null, null, null, null, "object.container.searchResultContainer", null);
     additionalEntries = new ArrayList<Entry>();
     additionalEntries.add(radio);
     additionalEntries.add(lineIn);
+    additionalEntries.add(savedQueues);
     additionalEntries.add(searchResults);
     // TODO these should be added AFTER the other entries...
     addEntries(additionalEntries);

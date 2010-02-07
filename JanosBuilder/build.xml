@@ -57,7 +57,7 @@
   <target name="buildController" depends="buildUpnp" description="Builds and deploys janos controller project">
   	<mkdir dir="build/JanosController"/>
 
-  	<javac srcdir="${dir.project.janosController}" destdir="build/JanosController" debug="true">
+  	<javac srcdir="${dir.project.janosController}" destdir="build/JanosController" debug="true" target="1.5">
   		<classpath>
   			<fileset dir="${dir.project.janosController}/lib/">
   				<include name="*.jar"/>
@@ -74,7 +74,7 @@
   <target name="buildUpnp" description="Builds and deploys upnplib project">
   	<mkdir dir="build/upnplib"/>
 
-  	<javac srcdir="${dir.project.upnp}" destdir="build/upnplib" debug="true">
+  	<javac srcdir="${dir.project.upnp}" destdir="build/upnplib" debug="true" target="1.5">
   		<classpath>
   			<fileset dir="${dir.project.upnp}/libs/">
   				<include name="*.jar"/>
@@ -89,7 +89,7 @@
          ================================= -->
   <target name="buildSonosJ" depends="buildController" description="Builds and deploys SonosJ project">
   	<mkdir dir="build/SonosJ"/>
-  	<javac srcdir="${dir.project.sonosJ}" destdir="build/sonosJ" debug="true">
+  	<javac srcdir="${dir.project.sonosJ}" destdir="build/sonosJ" debug="true" target="1.5">
   		<classpath>
   			<fileset dir="${dir.project.sonosJ}/lib/">
   				<include name="*.jar"/>
@@ -132,7 +132,7 @@
 	<!-- ================================= 
           target: dist.osx              
          ================================= -->
-	  <target name="dist.osx" depends="deployJars" description="creates a MAC OS .app file">
+	  <target name="dist.osx" depends="clean.osx, deployJars" description="creates a MAC OS .app file">
 	  	<taskdef name="jarbundler" classname="net.sourceforge.jarbundler.JarBundler" />
 	  	<mkdir dir="dist.osx"/>
 	  	<jarbundler dir="dist.osx" 
@@ -164,17 +164,15 @@
           Create a DMG - This only works on MacOSX (requires hdiutil) 
          - - - - - - - - - - - - - - - - - -->
     <target name="create-dmg">
-    	    <property name="app.name"
-    	              value="Janos-${build.id}"/>
+    	    <property name="app.name" value="Janos-${build.id}"/>
 
     	    <!-- Set this property value to a directory where you can 
     	         mount temporarily your images, for example /tmp -->
-    	    <property name="mountdir"
-    	              value="/tmp"/>
+    	    <property name="mountdir" value="/tmp"/>
 
     	    <!-- Delete previously created DMG -->
-    	    <delete file="dist.osx/${app.name}.dmg}"
-    	            quiet="yes" failonerror="false"/>
+    	    <delete file="dist.osx/${app.name}.dmg}"/>
+    	    <delete file="dist.osx/${app.name}-tmp.dmg}"/>
 
     	    <!-- Create a temporary Disk Image -->
     	    <exec executable="/usr/bin/hdiutil" os="Mac OS X" failonerror="true">
@@ -250,7 +248,7 @@
 	<!-- ================================= 
           target: dist.win32              
          ================================= -->
-    <target name="dist.win32" depends="deployJars" description="Creates a windows distribution">
+    <target name="dist.win32" depends="clean.win32, deployJars" description="Creates a windows distribution">
       <mkdir dir="dist.win32/Janos-${build.id}-win32/lib"/>
     	<copy todir="dist.win32/Janos-${build.id}-win32/lib">
     		<fileset dir="${dir.distribution}">
@@ -269,8 +267,8 @@
     	</copy>
     	
     	<zip destfile="dist.win32/Janos-${build.id}-win32-x86.zip">
-    		<zipfileset dir="dist.win32/Janos-${build.id}-win32">
-    			<include name="**/*"/>
+    		<zipfileset dir="dist.win32">
+    			<include name="Janos-${build.id}-win32/**/*"/>
     		</zipfileset>
     	</zip>
     	<delete dir="dist.win32/Janos-${build.id}-win32">
@@ -280,7 +278,7 @@
 	<!-- ================================= 
           target: dist.linux              
          ================================= -->
-    <target name="dist.linux" depends="deployJars" description="Creates a windows distribution">
+    <target name="dist.linux" depends="clean.linux, deployJars" description="Creates a windows distribution">
       <mkdir dir="dist.linux/Janos-${build.id}-linux/lib"/>
     	<copy todir="dist.linux/Janos-${build.id}-linux/lib">
     		<fileset dir="${dir.distribution}">
@@ -299,8 +297,8 @@
     	</copy>
     	
     	<tar destfile="dist.linux/Janos-${build.id}-linux-x86.tar.bz2" compression="bzip2">
-    		<tarfileset dir="dist.linux/Janos-${build.id}-linux">
-    			<include name="**/*"/>
+    		<tarfileset dir="dist.linux">
+    			<include name="Janos-${build.id}-linux/**/*"/>
     			<exclude name="janos.sh"/>
     		</tarfileset>
     		<tarfileset file="dist.linux/Janos-${build.id}-linux/janos.sh" filemode="755"></tarfileset>
@@ -309,4 +307,26 @@
     	</delete>
     </target>
 
+	<!-- - - - - - - - - - - - - - - - - - 
+          target: clean.osx                      
+         - - - - - - - - - - - - - - - - - -->
+    <target name="clean.osx">
+      <delete dir="dist.osx"></delete>
+    </target>
+
+	<!-- - - - - - - - - - - - - - - - - - 
+          target: clean.win32                      
+         - - - - - - - - - - - - - - - - - -->
+    <target name="clean.win32">
+      <delete dir="dist.win32"></delete>
+    </target>
+
+	<!-- - - - - - - - - - - - - - - - - - 
+          target: clean.linux                      
+         - - - - - - - - - - - - - - - - - -->
+    <target name="clean.linux">
+      <delete dir="dist.linux"></delete>
+    </target>
+
+	
 </project>
