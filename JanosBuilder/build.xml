@@ -2,7 +2,7 @@
 
 	<property file="build.properties"/>
 	<property name="dir.project.janosController" value="${basedir}/../JanosController"/>
-	<property name="dir.project.sonosJ" value="${basedir}/../SonosJ"/>
+	<property name="dir.project.sonosJ" value="${basedir}/../sonosJ"/>
 	<property name="dir.project.upnp" value="${basedir}/../sbbi-upnplib-src-1.0.4"/>
 	<property name="dir.distribution" value="dist"/>
 	
@@ -89,13 +89,13 @@
          ================================= -->
   <target name="buildSonosJ" depends="buildController" description="Builds and deploys SonosJ project">
   	<mkdir dir="build/SonosJ"/>
-  	<javac srcdir="${dir.project.sonosJ}" destdir="build/sonosJ" debug="true" target="1.5">
+  	<javac srcdir="${dir.project.sonosJ}" destdir="build/SonosJ" debug="true" target="1.5">
   		<classpath>
   			<fileset dir="${dir.project.sonosJ}/lib/">
   				<include name="*.jar"/>
   			</fileset>
   			<pathelement location="build/upnplib"/>
-  			<pathelement location="build/janosController"/>
+  			<pathelement location="build/JanosController"/>
   		</classpath>
   		<include name="src/main/**/*.java"/>
   	</javac>
