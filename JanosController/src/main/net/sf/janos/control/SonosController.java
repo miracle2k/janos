@@ -219,7 +219,7 @@ public class SonosController implements ZoneGroupTopologyListener {
     // GroupManagement
     // SystemProperties
     // ZoneGroup
-    if (dev.getModelNumber().contains("ZB100")) {
+    if (dev.getModelNumber().contains("ZB100") || dev.getModelNumber().contains("BR100")) {
       LOG.warn("Ignoring Zone " + dev.getDeviceType() + " " + dev.getModelDescription() + " " + dev.getModelName() + " " + dev.getModelNumber());
       return;
     }
