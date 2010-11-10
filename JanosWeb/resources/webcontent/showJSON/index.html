@@ -1,0 +1,250 @@
+<html>
+<head>
+<title>test</title>
+<script type="text/javascript" src="../javascript/JanosWebBasic.js"></script>
+<script type="text/javascript" src="json2.js"></script>
+<script type="text/javascript">
+
+function displayJSON(object) {
+	if (object.response.succes) {
+		document.getElementById("showResult").innerHTML="<pre style=\"color:darkgreen\">"+JSON.stringify(object, null, 2)+"</pre>";
+	}
+	else { 
+		alert("Error handling here is outputting with red text!!");
+		document.getElementById("showResult").innerHTML="<pre style=\"color:red\">"+JSON.stringify(object, null, 2)+"</pre>";
+	}
+}
+
+function displayZonesAsBox(object) {
+	var zoneshtml = "";
+	for (i=0; i<object.response.groups.group.length; i++) {
+		for (j=0; j<object.response.groups.group[i].groupMembers.zone.length; j++) {
+				zoneshtml += "<option value=\""+object.response.groups.group[i].groupMembers.zone[j].zoneID+"\">"+object.response.groups.group[i].groupMembers.zone[j].zoneID+"</option>\n";
+			}
+	}
+	document.getElementById("zoneID").innerHTML=zoneshtml;
+}
+
+function displayGroupsAsBox(object) {
+	var groupshtml = "";
+	for (i=0; i<object.response.groups.group.length; i++) {
+		groupshtml += "<option value=\""+object.response.groups.group[i].groupID+"\">"+object.response.groups.group[i].groupID+"</option>\n";
+	}
+	document.getElementById("groupID").innerHTML=groupshtml;
+}
+
+function displayCommandsAsBox(object) {
+	var comhtml = "";
+	for (i=0; i<object.response.playCommands.command.length;i++) {
+		comhtml += "<option value=\""+object.response.playCommands.command[i]+"\">"+object.response.playCommands.command[i]+"</option>\n";
+	}
+	document.getElementById("playCommand").innerHTML=comhtml;
+}
+
+
+function displayModesAsBox(object) {
+	var modeshtml = "";
+	for (i=0; i<object.response.playModes.mode.length;i++) {
+		modeshtml += "<option value=\""+object.response.playModes.mode[i]+"\">"+object.response.playModes.mode[i]+"</option>\n";
+	}
+	document.getElementById("playMode").innerHTML=modeshtml;
+}
+
+function hideAll() {
+	document.getElementById("input_gid").style.display = 'none';
+	document.getElementById("input_zid").style.display = 'none';
+	document.getElementById("input_startindex").style.display = 'none';
+	document.getElementById("input_nument").style.display = 'none';
+	document.getElementById("input_search").style.display = 'none';
+	document.getElementById("input_iid").style.display = 'none';
+	document.getElementById("input_trackpos").style.display = 'none';
+	document.getElementById("input_playmode").style.display = 'none';
+	document.getElementById("input_command").style.display = 'none';
+	document.getElementById("input_mute").style.display = 'none';
+	document.getElementById("input_volume").style.display = 'none';
+}
+
+function showInputGID() {
+	document.getElementById("input_gid").style.display = 'block';
+	getGroups(displayGroupsAsBox);
+}
+
+function showInputZID() {
+	document.getElementById("input_zid").style.display = 'block';
+	getGroups(displayZonesAsBox);
+}
+
+
+function showIdxNum() {
+	document.getElementById("input_startindex").style.display = 'block';
+	document.getElementById("input_nument").style.display = 'block';
+}
+
+function fixOperationFields() {
+	var selbox = document.getElementById("opselect");
+	var index = selbox.options.selectedIndex;
+	var actionbutton = document.getElementById("actionbutton");
+	//actionbutton.value = selbox.options[index].text;
+	hideAll();
+	if (selbox.options[index].value == "getGroups") {
+		actionbutton.onclick = function(){getGroups(displayJSON)};
+	}
+	else if (selbox.options[index].value == "getPlayModes") {
+		actionbutton.onclick = function(){getPlayModes(displayJSON)};
+	}
+	else if (selbox.options[index].value == "getPlayCommands") {
+		actionbutton.onclick = function(){getPlayCommands(displayJSON)};
+	}
+	else if (selbox.options[index].value == "setGroupVolume") {
+		showInputGID();
+		document.getElementById("input_volume").style.display = 'block';
+		actionbutton.onclick = function(){setGroupVolume(groupID.options[groupID.options.selectedIndex].value,volume.value,displayJSON)};
+	}
+	else if (selbox.options[index].value == "setZoneVolume") {
+		showInputZID();
+		document.getElementById("input_volume").style.display = 'block';
+		actionbutton.onclick = function(){setZoneVolume(zoneID.options[zoneID.options.selectedIndex].value,volume.value,displayJSON)};
+	}
+	else if (selbox.options[index].value == "setGroupMute") {
+		showInputGID();
+		document.getElementById("input_mute").style.display = 'block';
+		actionbutton.onclick = function(){setGroupMute(groupID.options[groupID.options.selectedIndex].value,mute.options[mute.options.selectedIndex].value,displayJSON)};
+	}
+	else if (selbox.options[index].value == "setZoneMute") {
+		showInputZID();
+		document.getElementById("input_mute").style.display = 'block';
+		actionbutton.onclick = function(){setZoneMute(zoneID.options[zoneID.options.selectedIndex].value,mute.options[mute.options.selectedIndex].value,displayJSON)};
+	}
+	else if (selbox.options[index].value == "getGroupVolume") {
+		showInputGID();
+		actionbutton.onclick = function(){getGroupVolume(groupID.options[groupID.options.selectedIndex].value,displayJSON)};
+	}
+	else if (selbox.options[index].value == "setGroupCommand") {
+		showInputGID();
+		document.getElementById("input_command").style.display = 'block';
+		getPlayCommands(displayCommandsAsBox);
+		actionbutton.onclick = function(){setGroupCommand(groupID.options[groupID.options.selectedIndex].value,playCommand.options[playCommand.options.selectedIndex].value,displayJSON)};
+	}
+	else if (selbox.options[index].value == "setGroupPlayMode") {
+		showInputGID();
+		document.getElementById("input_playmode").style.display = 'block';
+		getPlayModes(displayModesAsBox);
+		actionbutton.onclick = function(){setGroupPlayMode(groupID.options[groupID.options.selectedIndex].value,playMode.options[playMode.options.selectedIndex].value,displayJSON)};
+	}
+	else if (selbox.options[index].value == "getGroupPlayInfo") {
+		showInputGID();
+		actionbutton.onclick = function(){getGroupPlayInfo(groupID.options[groupID.options.selectedIndex].value,displayJSON)};
+	}
+	else if (selbox.options[index].value == "getGroupTrack") {
+		showInputGID();
+		actionbutton.onclick = function(){getGroupTrack(groupID.options[groupID.options.selectedIndex].value,displayJSON)};
+	}
+	else if (selbox.options[index].value == "getGroupTrackPos") {
+		showInputGID();
+		actionbutton.onclick = function(){getGroupTrackPos(groupID.options[groupID.options.selectedIndex].value,displayJSON)};
+	}
+	else if (selbox.options[index].value == "setGroupTrackPos") {
+		showInputGID();
+		document.getElementById("input_trackpos").style.display = 'block';
+		actionbutton.onclick = function(){setGroupTrackPos(groupID.options[groupID.options.selectedIndex].value,trackpos.value,displayJSON)};
+	}
+	else if (selbox.options[index].value == "getGroupQueue") {
+		showInputGID();
+		showIdxNum();
+		actionbutton.onclick = function(){getGroupQueue(groupID.options[groupID.options.selectedIndex].value,startindex.value,nument.value,displayJSON)};
+	}
+	else if (selbox.options[index].value == "getGroupSearch") {
+		showInputGID();
+		showIdxNum();
+		document.getElementById("input_search").style.display = 'block';
+		actionbutton.onclick = function(){getGroupSearch(groupID.options[groupID.options.selectedIndex].value,startindex.value,nument.value,searchstring.value,displayJSON)};
+	}
+	else if (selbox.options[index].value == "getGroupArtists") {
+		showInputGID();
+		showIdxNum();
+		actionbutton.onclick = function(){getGroupArtists(groupID.options[groupID.options.selectedIndex].value,startindex.value,nument.value,displayJSON)};
+	}
+	else if (selbox.options[index].value == "getGroupAlbums") {
+		showInputGID();
+		showIdxNum();
+		actionbutton.onclick = function(){getGroupAlbums(groupID.options[groupID.options.selectedIndex].value,startindex.value,nument.value,displayJSON)};
+	}
+	else if (selbox.options[index].value == "getGroupTracks") {
+		showInputGID();
+		showIdxNum();
+		actionbutton.onclick = function(){getGroupTracks(groupID.options[groupID.options.selectedIndex].value,startindex.value,nument.value,displayJSON)};
+	}
+	else if (selbox.options[index].value == "setGroupEnqueue") {
+		showInputGID();
+		document.getElementById("input_iid").style.display = 'block';
+		actionbutton.onclick = function(){setGroupEnqueue(groupID.options[groupID.options.selectedIndex].value,itemID.value,displayJSON)};
+	}	
+	else if (selbox.options[index].value == "setGroupEnqueueNow") {
+		showInputGID();
+		document.getElementById("input_iid").style.display = 'block';
+		actionbutton.onclick = function(){setGroupEnqueueNow(groupID.options[groupID.options.selectedIndex].value,itemID.value,displayJSON)};
+	}	
+	else if (selbox.options[index].value == "setGroupEnqueueNext") {
+		showInputGID();
+		document.getElementById("input_iid").style.display = 'block';
+		actionbutton.onclick = function(){setGroupEnqueueNext(groupID.options[groupID.options.selectedIndex].value,itemID.value,displayJSON)};
+	}	
+	else if (selbox.options[index].value == "setGroupClearQueue") {
+		showInputGID();
+		actionbutton.onclick = function(){setGroupClearQueue(groupID.options[groupID.options.selectedIndex].value,displayJSON)};
+	}	
+}
+</script>
+</head>
+<body>
+<div id="controls">
+	<div id="operation" style="float:left">
+		Functionality<br/>
+		<select id="opselect" name="opselect" onChange="fixOperationFields()">
+			<option value="getGroups">Get Groups</option>
+			<option value="getPlayCommands">Get Play Commands</option>
+			<option value="getPlayModes">Get Play Modes</option>
+			<option value="getGroupVolume">Show volume (Group)</option>
+			<option value="setZoneVolume">Set volume (Single Zone)</option>
+			<option value="setGroupVolume">Set volume (Group)</option>
+			<option value="setZoneMute">Mute (Single Zone)</option>
+			<option value="setGroupMute">Mute (Group)</option>
+			<option value="getGroupPlayInfo">Show Play Info (Group)</option>
+			<option value="setGroupCommand">Set Command (Group)</option>
+			<option value="setGroupPlayMode">Set Play Mode (Group)</option>
+			<option value="getGroupTrackPos">Show Current TrackPos (Group)</option>
+			<option value="setGroupTrackPos">Set Current TrackPos (Group)</option>
+			<option value="getGroupTrack">Show Current Track (Group)</option>
+			<option value="getGroupQueue">Show Queue (Group)</option>
+			<option value="getGroupSearch">Search (Group)</option>
+			<option value="getGroupArtists">List Artists (Group)</option>
+			<option value="getGroupAlbums">List Albums (Group)</option>
+			<option value="getGroupTracks">List Tracks (Group)</option>
+			<option value="setGroupEnqueue">Enqueue (Group)</option>
+			<option value="setGroupEnqueueNow">Enqueue Now (Group)</option>
+			<option value="setGroupEnqueueNext">Enqueue Next (Group)</option>
+			<option value="setGroupClearQueue">Clear Queue (Group)</option>
+		</select>
+	</div>
+	<div id="input_gid" style="display:none;float:left;">GroupID<br/><select id="groupID" onChange=""><option value="RINCON???">RINCON???</option></select></div>
+	<div id="input_zid" style="display:none;float:left;">ZoneID<br/><select id="zoneID" onChange=""><option value="RINCON???">RINCON???</option></select></div>
+	<div id="input_search" style="display:none;float:left;">Search<br/><input type="text" id="searchstring" /></div>
+	<div id="input_startindex" style="display:none;float:left;">StartIndex<br/><input type="text" id="startindex" value="0"/></div>
+	<div id="input_nument" style="display:none;float:left;"># results<br/><input type="text" id="nument" value="1000"/></div>
+	<div id="input_iid" style="display:none;float:left;">ItemID<br/><input type="text" id="itemID" /></div>
+	<div id="input_trackpos" style="display:none;float:left;">Position (ms)<br/><input type="text" id="trackpos" /></div>
+	<div id="input_playmode" style="display:none;float:left;">PlayMode<br/><select id="playMode" onChange=""><option value="NORMAL">NORMAL</option></select></div>
+	<div id="input_command" style="display:none;float:left;">Command<br/><select id="playCommand" onChange=""><option value="Play">Play</option></select></div>
+	<div id="input_mute" style="display:none;float:left;">Mute<br/><select id="mute" onChange=""><option value="true">Mute</option><option value="false">Unmute</option></select></div>
+	<div id="input_volume" style="display:none;float:left;">Volume<br/><input type="text" id="volume" /></div>
+	<br/>
+	<input id="actionbutton" type="button" onclick="getGroups(displayJSON)" value="Hit it!" style="float:right"></input>
+</div>
+<br/>
+<br/>
+
+<div id="result" style="background:lightgray;text-align:center;"><h4>Result:</h4>
+<div id="showResult" style="font-size:90%;text-align:left;"></div>
+</div>
+</body>
+</html>
