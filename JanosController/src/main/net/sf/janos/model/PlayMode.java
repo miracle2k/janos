@@ -24,7 +24,8 @@ package net.sf.janos.model;
  */
 public enum PlayMode {
   NORMAL, 
-  SHUFFLE, 
+  SHUFFLE,
+  SHUFFLE_NOREPEAT,
   REPEAT_ONE, 
   REPEAT_ALL, 
   RANDOM, 

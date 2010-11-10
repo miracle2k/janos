@@ -1,4 +1,8 @@
 Change Log
+0.6.0
+- add JanosWeb, a web-servlet and web front-end as an alternative to the Swing-
+  version of Janos.
+- fixed Zonebridge-ignoring for Zone Bridges with model number BR100
 
 0.5.2
 - add ability to save the queue, and browse previously saved queues.

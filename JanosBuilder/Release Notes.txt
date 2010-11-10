@@ -1,5 +1,6 @@
 1. LICENSE INFO:
 Copyright David Wheeler 2008
+JanosWeb Copyright Chris Christiansen 2010
 
    Licensed under the Apache License, Version 2.0 (the "License");
    you may not use this file except in compliance with the License.
@@ -19,6 +20,9 @@ This product includes software developed by
 Joda.org (http://www.joda.org/).
 
 This product includes software developed by the Eclipse Foundation (http://eclipse.org/).
+
+This product includes Tiny Java Web Server (TJWS) which is licenced under
+various licenses. See http://tjws.sourceforge.net/#copyright
 
 2. REQUIREMENTS:
 This application requires a JRE version 1.5 or later. 

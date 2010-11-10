@@ -210,7 +210,7 @@ public class SonosController implements ZoneGroupTopologyListener {
     	return;
       }
     }
-    LOG.info("Discovered device " + dev.getDiscoveryUDN());
+    //LOG.info("Discovered device " + dev.getDiscoveryUDN());
 
     // Ignore zone bridges 
     // TODO may need to implement cut down zone player for the zone bridge
@@ -220,7 +220,7 @@ public class SonosController implements ZoneGroupTopologyListener {
     // SystemProperties
     // ZoneGroup
     if (dev.getModelNumber().contains("ZB100") || dev.getModelNumber().contains("BR100")) {
-      LOG.warn("Ignoring Zone " + dev.getDeviceType() + " " + dev.getModelDescription() + " " + dev.getModelName() + " " + dev.getModelNumber());
+      //LOG.warn("Ignoring Zone " + dev.getDeviceType() + " " + dev.getModelDescription() + " " + dev.getModelName() + " " + dev.getModelNumber());
       return;
     }
     if (LOG.isInfoEnabled()) {

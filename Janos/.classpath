@@ -8,6 +8,6 @@
 	<classpathentry combineaccessrules="false" kind="src" path="/JanosController"/>
 	<classpathentry kind="lib" path="lib/log4j-1.2.15.jar"/>
 	<classpathentry combineaccessrules="false" kind="src" path="/sbbi-upnplib-src-1.0.4"/>
-	<classpathentry kind="lib" path="lib/osx-x86_64/swt.jar" sourcepath="/Users/david/Downloads/swt-3.5-osx/src.zip"/>
+	<classpathentry kind="lib" path="lib/win64/swt.jar"/>
 	<classpathentry kind="output" path="build"/>
 </classpath>

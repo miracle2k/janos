@@ -61,6 +61,8 @@ public class AVTransportEventHandler extends DefaultHandler {
 </Event>
 */
   
+  //TODO: Add CurrentCrossfadeMode here and in AVTransport1.xml 
+  
   public static enum AVTransportEventType {
     TransportState, 
     CurrentPlayMode, 
