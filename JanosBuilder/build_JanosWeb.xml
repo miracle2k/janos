@@ -1,0 +1,375 @@
+<project name="Janos" default="deployJarsWeb">
+
+	<property file="build.properties"/>
+	<property name="dir.project.janosController" value="${basedir}/../JanosController"/>
+	<property name="dir.project.JanosWeb" value="${basedir}/../JanosWeb"/>
+	<property name="dir.project.upnp" value="${basedir}/../sbbi-upnplib-src-1.0.4"/>
+	<property name="dir.distribution.web" value="dist_web"/>
+	
+	<!-- ================================= 
+          target: dist.all.web              
+         ================================= -->
+    <target name="dist.all.web" depends="dist.linux.web, dist.win32.web, dist.osx.web, dist.win64.web" description="creates a distribution for all of the supported OSes.">
+        
+    </target>
+
+	<!-- ================================= 
+          target: deployJarsWeb              
+         ================================= -->
+	<target name="deployJarsWeb" depends="jarweb" description="deploys the jar files required by JanosWeb">
+  	<copy todir="${dir.distribution.web}">
+  		<fileset dir="${dir.project.JanosWeb}/lib">
+  			<include name="*.jar"/>
+  	  </fileset>
+  		<fileset dir="${dir.project.janosController}/lib"/>
+  		<fileset dir="${dir.project.upnp}/libs"> 
+  			<include name="sbbi-upnp*"/>
+  	  </fileset>
+  	</copy>
+		<copy todir="${dir.distribution.web}/resources">
+		  <fileset dir="${dir.project.JanosWeb}/resources"></fileset>
+		</copy>
+		<!-- <delete dir="build"/>-->
+	</target>
+	
+	<!-- ================================= 
+          target: jarweb              
+         ================================= -->
+  <target name="jarweb" depends="cleanweb,buildJanosWeb" description="Builds and deploys JanosWeb">
+  	<mkdir dir="${dir.distribution.web}"/>
+		<jar destfile="${dir.distribution.web}/JanosController.jar" basedir="build/JanosController">
+		</jar>  	
+		<jar destfile="${dir.distribution.web}/sbbi-upnplib-1.0.4.jar" basedir="build/upnplib">
+		</jar>  	
+		<jar destfile="${dir.distribution.web}/JanosWeb.jar" basedir="build/JanosWeb/">
+			<manifest>
+				<attribute name="Built-By" value="${user.name}"/>
+				<attribute name="Implementation-Title" value="JanosWeb"/>
+				<attribute name="Main-Class" value="net.sf.janos.web.JanosWeb"/>
+			</manifest>
+		</jar>
+  </target>
+	
+	<!-- ================================= 
+          target: buildController              
+         ================================= -->
+  <target name="buildController" depends="buildUpnp" description="Builds and deploys janos controller project">
+  	<mkdir dir="build/JanosController"/>
+
+  	<javac srcdir="${dir.project.janosController}" destdir="build/JanosController" debug="true" target="1.5">
+  		<classpath>
+  			<fileset dir="${dir.project.janosController}/lib/">
+  				<include name="*.jar"/>
+  			</fileset>
+  			<pathelement location="build/upnplib"/>
+  		</classpath>
+  		<include name="src/main/**/*.java"/>
+  	</javac>
+  </target>
+
+	<!-- ================================= 
+          target: build upnplib              
+         ================================= -->
+  <target name="buildUpnp" description="Builds and deploys upnplib project">
+  	<mkdir dir="build/upnplib"/>
+
+  	<javac srcdir="${dir.project.upnp}" destdir="build/upnplib" debug="true" target="1.5">
+  		<classpath>
+  			<fileset dir="${dir.project.upnp}/libs/">
+  				<include name="*.jar"/>
+  			</fileset>
+  		</classpath>
+  		<include name="src/**/*.java"/>
+  	</javac>
+  </target>
+
+	<!-- ================================= 
+          target: buildJanosWeb          
+         ================================= -->
+  <target name="buildJanosWeb" depends="buildController" description="Builds and deploys JanosWeb project">
+  	<mkdir dir="build/JanosWeb"/>
+  	<javac srcdir="${dir.project.JanosWeb}" destdir="build/JanosWeb" debug="true" target="1.5">
+  		<classpath>
+  			<fileset dir="${dir.project.JanosWeb}/lib/">
+  				<include name="*.jar"/>
+  			</fileset>
+  			<pathelement location="build/upnplib"/>
+  			<pathelement location="build/JanosController"/>
+  		</classpath>
+  		<include name="src/main/**/*.java"/>
+  	</javac>
+  	<copy todir="build/JanosWeb">
+  		<fileset dir="${dir.project.JanosWeb}/resources" includes="/**/*"></fileset>
+  	</copy>
+  </target>
+	
+	<!-- ================================= 
+          target: cleanweb              
+         ================================= -->
+	<target name="cleanweb" description="cleans up resources from previous builds">
+		<delete dir="${dir.distribution.web}"/>
+		<delete dir="build"/>
+	</target>
+		
+	<!-- ================================= 
+          target: runweb              
+         ================================= -->
+    <target name="runweb" depends="deployJarsWeb" description="deploys JanosWeb and attempts to run it">
+  		<path id="classpath">
+  			<fileset dir="${dir.distribution.web}" includes="**/*.jar"></fileset>
+  			<pathelement location="${dir.distribution.web}/resources"/>
+  		</path>
+    	<echo>Starting java...</echo>
+      <java classname="net.sf.janos.web.JanosWeb" fork="true">
+      	<classpath refid="classpath">
+       	</classpath>
+      </java>
+    </target>
+	
+	<!-- ================================= 
+          target: dist.osx.web              
+         ================================= -->
+	  <target name="dist.osx.web" depends="clean.osx.web, deployJarsWeb" description="creates a MAC OS .app file">
+	  	<taskdef name="jarbundler" classname="net.sourceforge.jarbundler.JarBundler" />
+	  	<mkdir dir="dist.osx.web"/>
+	  	<jarbundler dir="dist.osx.web" 
+	  	            name="JanosWeb-${build.id}"
+	  		          shortname="JanosWeb"
+	  		          bundleid="net.sourceforge.janos.JanosWeb"
+	  	            mainclass="net.sf.janos.web.JanosWeb"
+	  		          icon="resources/Stereo.icns"
+	  		          version="${build.id}"
+	  		          startOnMainThread="true"
+	  		          extraclasspath="$JAVAROOT/resources"
+	  		          arguments="2000">
+	  		<jarfileset dir="dist">
+	  				<include name="*.jar"/>
+	  	  </jarfileset>
+	  		<javafileset dir="dist">
+	  				<include name="resources/*"/>
+	  		</javafileset>
+	  	</jarbundler>
+	  	
+	  	<antcall target="create-dmg-web"></antcall>
+	  </target>
+	
+	<!-- - - - - - - - - - - - - - - - - - 
+          target: create-dmg-web                     
+          Create a DMG - This only works on MacOSX (requires hdiutil) 
+         - - - - - - - - - - - - - - - - - -->
+    <target name="create-dmg-web">
+    	    <property name="app.name" value="JanosWeb-${build.id}"/>
+
+    	    <!-- Set this property value to a directory where you can 
+    	         mount temporarily your images, for example /tmp -->
+    	    <property name="mountdir" value="/tmp"/>
+
+    	    <!-- Delete previously created DMG -->
+    	    <delete file="dist.osx.web/${app.name}.dmg}"/>
+    	    <delete file="dist.osx.web/${app.name}-tmp.dmg}"/>
+
+    	    <!-- Create a temporary Disk Image -->
+    	    <exec executable="/usr/bin/hdiutil" os="Mac OS X" failonerror="true">
+    	      <arg value="create"/>
+    	      <arg value="-srcfolder"/>
+    	      <arg value="dist.osx.web/${app.name}.app"/>
+    	      <arg value="-volname"/>
+    	      <arg value="${app.name}"/>
+    	      <arg value="-ov"/>
+    	      <arg value="dist.osx.web/${app.name}-tmp.dmg"/>
+    	      <arg value="-format"/>
+    	      <arg value="UDRW"/>
+    	    </exec>
+
+    	    <!-- Attach the temporary image -->
+    	    <exec executable="/usr/bin/hdiutil" os="Mac OS X" failonerror="true">
+    	      <arg value="attach"/>
+    	      <arg value="dist.osx.web/${app.name}-tmp.dmg"/>
+    	      <arg value="-mountroot"/>
+    	      <arg value="${mountdir}/"/>
+    	    </exec>
+
+    	    <!-- Copy the background, the volume icon and DS_Store files -->
+    	    <mkdir dir="${mountdir}/${app.name}/.background"/>
+    	    <!--<copy file="background.png"
+    	          tofile="${mountdir}/${app.name}/.background/background.png"
+    	          overwrite="true"/>-->
+    	    <copy file="resources/Stereo.icns"
+    	          tofile="${mountdir}/${app.name}/.VolumeIcon.icns"
+    	          overwrite="true"/>
+    	    <!--<copy file="DS_Store"
+    	          tofile="${mountdir}/${app.name}/.DS_Store"
+    	          overwrite="true"/>-->
+    	    <copy todir="${mountdir}/">
+        		<fileset file="${basedir}/LICENSE.txt"></fileset>
+        		<fileset file="${basedir}/Release Notes.txt"></fileset>
+        		<fileset file="${basedir}/NOTICE.txt"></fileset>
+        		<fileset file="${basedir}/Change Log.txt"></fileset>
+    	    </copy>
+
+    	    <!-- Indicate that we want a custom icon -->
+    	    <exec executable="/Developer/Tools/SetFile" os="Mac OS X">
+    	      <arg value="-a"/>
+    	      <arg value="C"/>
+    	      <arg value="${mountdir}/${app.name}"/>
+    	    </exec>
+
+    	    <!-- Add a symbolic link to the Applications directory -->
+    	    <symlink link="${mountdir}/${app.name}" resource="/Applications"/>
+
+    	    <!-- Detach the temporary image -->
+    	    <exec executable="/usr/bin/hdiutil" os="Mac OS X" failonerror="true">
+    	      <arg value="detach"/>
+    	      <arg value="${mountdir}/${app.name}"/>
+    	    </exec>
+
+    	    <!-- Compress it to a new image -->
+    	    <exec executable="/usr/bin/hdiutil" os="Mac OS X" failonerror="true">
+    	      <arg value="convert"/>
+    	      <arg value="dist.osx.web/${app.name}-tmp.dmg"/>
+    	      <arg value="-format"/>
+    	      <arg value="UDZO"/>
+    	      <arg value="-o"/>
+    	      <arg value="dist.osx.web/${app.name}.dmg"/>
+    	    </exec>
+
+    	    <!-- Delete the temporary image -->
+    	    <delete file="dist.osx.web/${app.name}-tmp.dmg"
+    	            quiet="yes" failonerror="false"/>
+    </target>
+
+	
+	<!-- ================================= 
+          target: dist.win32.web              
+         ================================= -->
+    <target name="dist.win32.web" depends="clean.win32.web, deployJarsWeb" description="Creates a windows distribution">
+      <mkdir dir="dist.win32.web/JanosWeb-${build.id}-win32/lib"/>
+
+    	<copy todir="dist.win32.web/JanosWeb-${build.id}-win32/lib">
+    		<fileset dir="${dir.distribution.web}">
+    			<include name="**/*"/>
+    			<exclude name="**/resources/**"/>
+    		</fileset>
+    	</copy>
+
+    	<copy todir="dist.win64.web/JanosWeb-${build.id}-win32/resources">
+		  <fileset dir="${dir.distribution.web}/resources"></fileset>
+		</copy>
+
+    	<copy todir="dist.win32.web/JanosWeb-${build.id}-win32">
+    		<fileset file="${dir.project.JanosWeb}/run/janosweb.cmd"></fileset>
+    		<fileset file="${basedir}/LICENSE.txt"></fileset>
+    		<fileset file="${basedir}/Release Notes.txt"></fileset>
+    		<fileset file="${basedir}/NOTICE.txt"></fileset>
+    		<fileset file="${basedir}/Change Log.txt"></fileset>
+    	</copy>
+    	
+    	<zip destfile="dist.win32.web/JanosWeb-${build.id}-win32-x86.zip">
+    		<zipfileset dir="dist.win32.web">
+    			<include name="JanosWeb-${build.id}-win32/**/*"/>
+    		</zipfileset>
+    	</zip>
+    	<delete dir="dist.win32.web/JanoWebs-${build.id}-win32">
+    	</delete>
+    </target>
+
+	<!-- ================================= 
+          target: dist.win64.web              
+         ================================= -->
+    <target name="dist.win64.web" depends="clean.win64.web, deployJarsWeb" description="Creates a Windows 64 bit distribution (in JanosWeb there is no difference between this and the 32 bit version)">
+      <mkdir dir="dist.win64.web/JanosWeb-${build.id}-win64/lib"/>
+    	<copy todir="dist.win64.web/JanosWeb-${build.id}-win64/lib">
+    		<fileset dir="${dir.distribution.web}">
+    			<include name="**/*"/>
+    			<exclude name="**/resources/**"/>
+    		</fileset>
+    	</copy>
+    	
+		<copy todir="dist.win64.web/JanosWeb-${build.id}-win64/resources">
+		  <fileset dir="${dir.distribution.web}/resources"></fileset>
+		</copy>
+   	
+    	<copy todir="dist.win64.web/JanosWeb-${build.id}-win64">
+    		<fileset file="${dir.project.JanosWeb}/run/janosweb.cmd"></fileset>
+    		<fileset file="${basedir}/LICENSE.txt"></fileset>
+    		<fileset file="${basedir}/Release Notes.txt"></fileset>
+    		<fileset file="${basedir}/NOTICE.txt"></fileset>
+    		<fileset file="${basedir}/Change Log.txt"></fileset>
+    	</copy>
+    	
+    	<zip destfile="dist.win64.web/JanosWeb-${build.id}-win64.zip">
+    		<zipfileset dir="dist.win64.web">
+    			<include name="JanosWeb-${build.id}-win64/**/*"/>
+    		</zipfileset>
+    	</zip>
+    	<delete dir="dist.win64.web/JanosWeb-${build.id}-win64">
+    	</delete>
+    </target>
+
+	
+	<!-- ================================= 
+          target: dist.linux.web              
+         ================================= -->
+    <target name="dist.linux.web" depends="clean.linux.web, deployJarsWeb" description="Creates a linux distribution">
+      <mkdir dir="dist.linux.web/JanosWeb-${build.id}-linux/lib"/>
+    	
+    	<copy todir="dist.linux.web/JanosWeb-${build.id}-linux/lib">
+    		<fileset dir="${dir.distribution.web}">
+    			<include name="**/*"/>
+    			<exclude name="**/resources/**"/>
+    		</fileset>
+    	</copy>
+
+    	<copy todir="dist.win64.web/JanosWeb-${build.id}-linux/resources">
+		  <fileset dir="${dir.distribution.web}/resources"></fileset>
+		</copy>
+    	
+    	<copy todir="dist.linux.web/JanosWeb-${build.id}-linux">
+    		<fileset file="${dir.project.JanosWeb}/run/janosweb.sh"></fileset>
+    		<fileset file="${basedir}/LICENSE.txt"></fileset>
+    		<fileset file="${basedir}/Release Notes.txt"></fileset>
+    		<fileset file="${basedir}/NOTICE.txt"></fileset>
+    		<fileset file="${basedir}/Change Log.txt"></fileset>
+    	</copy>
+    	
+    	<tar destfile="dist.linux.web/JanosWeb-${build.id}-linux-x86.tar.bz2" compression="bzip2">
+    		<tarfileset dir="dist.linux.web">
+    			<include name="JanosWeb-${build.id}-linux/**/*"/>
+    			<exclude name="janos.sh"/>
+    		</tarfileset>
+    		<tarfileset file="dist.linux.web/JanosWeb-${build.id}-linux/janos.sh" filemode="755"></tarfileset>
+      </tar>
+    	<delete dir="dist.linux.web/JanosWeb-${build.id}-linux">
+    	</delete>
+    </target>
+
+	<!-- - - - - - - - - - - - - - - - - - 
+          target: clean.osx.web                      
+         - - - - - - - - - - - - - - - - - -->
+    <target name="clean.osx.web">
+      <delete dir="dist.osx.web"></delete>
+    </target>
+
+	<!-- - - - - - - - - - - - - - - - - - 
+          target: clean.win32.web                      
+         - - - - - - - - - - - - - - - - - -->
+    <target name="clean.win32.web">
+      <delete dir="dist.win32.web"></delete>
+    </target>
+
+	<!-- - - - - - - - - - - - - - - - - - 
+          target: clean.win64.web                      
+         - - - - - - - - - - - - - - - - - -->
+    <target name="clean.win64.web">
+      <delete dir="dist.win64.web"></delete>
+    </target>
+
+	<!-- - - - - - - - - - - - - - - - - - 
+          target: clean.linux.web                      
+         - - - - - - - - - - - - - - - - - -->
+    <target name="clean.linux.web">
+      <delete dir="dist.linux.web"></delete>
+    </target>
+
+	
+</project>
