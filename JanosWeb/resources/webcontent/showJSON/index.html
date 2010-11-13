@@ -15,7 +15,7 @@ function displayJSON(object) {
 	}
 }
 
-function displayZonesAsBox(object) {
+function displayZonesAsOptions(object) {
 	var zoneshtml = "";
 	for (i=0; i<object.response.groups.group.length; i++) {
 		for (j=0; j<object.response.groups.group[i].groupMembers.zone.length; j++) {
@@ -25,7 +25,7 @@ function displayZonesAsBox(object) {
 	document.getElementById("zoneID").innerHTML=zoneshtml;
 }
 
-function displayGroupsAsBox(object) {
+function displayGroupsAsOptions(object) {
 	var groupshtml = "";
 	for (i=0; i<object.response.groups.group.length; i++) {
 		groupshtml += "<option value=\""+object.response.groups.group[i].groupID+"\">"+object.response.groups.group[i].groupID+"</option>\n";
@@ -33,7 +33,7 @@ function displayGroupsAsBox(object) {
 	document.getElementById("groupID").innerHTML=groupshtml;
 }
 
-function displayCommandsAsBox(object) {
+function displayCommandsAsOptions(object) {
 	var comhtml = "";
 	for (i=0; i<object.response.playCommands.command.length;i++) {
 		comhtml += "<option value=\""+object.response.playCommands.command[i]+"\">"+object.response.playCommands.command[i]+"</option>\n";
@@ -42,7 +42,7 @@ function displayCommandsAsBox(object) {
 }
 
 
-function displayModesAsBox(object) {
+function displayModesAsOptions(object) {
 	var modeshtml = "";
 	for (i=0; i<object.response.playModes.mode.length;i++) {
 		modeshtml += "<option value=\""+object.response.playModes.mode[i]+"\">"+object.response.playModes.mode[i]+"</option>\n";
@@ -50,7 +50,7 @@ function displayModesAsBox(object) {
 	document.getElementById("playMode").innerHTML=modeshtml;
 }
 
-function hideAll() {
+function hideAllInput() {
 	document.getElementById("input_gid").style.display = 'none';
 	document.getElementById("input_zid").style.display = 'none';
 	document.getElementById("input_startindex").style.display = 'none';
@@ -66,12 +66,12 @@ function hideAll() {
 
 function showInputGID() {
 	document.getElementById("input_gid").style.display = 'block';
-	getGroups(displayGroupsAsBox);
+	getGroups(displayGroupsAsOptions);
 }
 
 function showInputZID() {
 	document.getElementById("input_zid").style.display = 'block';
-	getGroups(displayZonesAsBox);
+	getGroups(displayZonesAsOptions);
 }
 
 
@@ -80,12 +80,12 @@ function showIdxNum() {
 	document.getElementById("input_nument").style.display = 'block';
 }
 
-function fixOperationFields() {
+function setupInput() {
 	var selbox = document.getElementById("opselect");
 	var index = selbox.options.selectedIndex;
 	var actionbutton = document.getElementById("actionbutton");
 	//actionbutton.value = selbox.options[index].text;
-	hideAll();
+	hideAllInput();
 	if (selbox.options[index].value == "getGroups") {
 		actionbutton.onclick = function(){getGroups(displayJSON)};
 	}
@@ -122,13 +122,13 @@ function fixOperationFields() {
 	else if (selbox.options[index].value == "setGroupCommand") {
 		showInputGID();
 		document.getElementById("input_command").style.display = 'block';
-		getPlayCommands(displayCommandsAsBox);
+		getPlayCommands(displayCommandsAsOptions);
 		actionbutton.onclick = function(){setGroupCommand(groupID.options[groupID.options.selectedIndex].value,playCommand.options[playCommand.options.selectedIndex].value,displayJSON)};
 	}
 	else if (selbox.options[index].value == "setGroupPlayMode") {
 		showInputGID();
 		document.getElementById("input_playmode").style.display = 'block';
-		getPlayModes(displayModesAsBox);
+		getPlayModes(displayModesAsOptions);
 		actionbutton.onclick = function(){setGroupPlayMode(groupID.options[groupID.options.selectedIndex].value,playMode.options[playMode.options.selectedIndex].value,displayJSON)};
 	}
 	else if (selbox.options[index].value == "getGroupPlayInfo") {
@@ -200,7 +200,7 @@ function fixOperationFields() {
 <div id="controls">
 	<div id="operation" style="float:left">
 		Functionality<br/>
-		<select id="opselect" name="opselect" onChange="fixOperationFields()">
+		<select id="opselect" name="opselect" onChange="setupInput()">
 			<option value="getGroups">Get Groups</option>
 			<option value="getPlayCommands">Get Play Commands</option>
 			<option value="getPlayModes">Get Play Modes</option>

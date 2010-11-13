@@ -2,6 +2,7 @@ package net.sf.janos.web.structure;
 
 import java.io.IOException;
 import java.io.Writer;
+import java.util.LinkedList;
 import java.util.Stack;
 
 import javax.servlet.http.HttpServletResponse;
@@ -34,33 +35,33 @@ public class JSONFormatter extends Formatter {
 		}
 	}
 	
-	private void handleStack(Writer writer, Stack<Element> unwrchildren, int level) throws IOException {
-		Element popped = unwrchildren.pop();
-		if (unwrchildren.size() == 0 && !popped.isSibling()) {
+	private void handleStack(Writer writer, LinkedList<Element> unwrchildren, int level) throws IOException {
+		Element curchild = unwrchildren.remove();
+		if (unwrchildren.size() == 0 && !curchild.isSibling()) {
 			//single element
 			for (int i=0; i<level && !condense; i++) {
 				writer.write(indent);
 			}
-			writer.write("\"" + popped.getKey() + "\" : ");
-			write(writer, popped, level + 1);
-		} else if (unwrchildren.size() > 0 || popped.isSibling()) {
+			writer.write("\"" + curchild.getKey() + "\" : ");
+			write(writer, curchild, level + 1);
+		} else if (unwrchildren.size() > 0 || curchild.isSibling()) {
 			//array
 			//writer.write("{\n");
 			for (int i=0; i<level && !condense; i++) {
 				writer.write(indent);
 			}
-			writer.write("\"" + popped.getKey() + "\" : [\n");
+			writer.write("\"" + curchild.getKey() + "\" : [\n");
 			for (int i=0; i<level+1 && !condense; i++) {
 				writer.write(indent);
 			}
-			write(writer, popped, level +2);
+			write(writer, curchild, level +2);
 			while (unwrchildren.size() > 0) {
 				writer.write(",\n");
-				popped = unwrchildren.pop();
+				curchild = unwrchildren.remove();
 				for (int i=0; i<level+1 && !condense; i++) {
 					writer.write(indent);
 				}
-				write(writer, popped, level +2);
+				write(writer, curchild, level +2);
 			}
 			writer.write("\n");
 			for (int i=0; i<level && !condense; i++) {
@@ -95,7 +96,7 @@ public class JSONFormatter extends Formatter {
 				//element with sub elements
 				// BEGIN sub elements
 				writer.write("{\n");
-				Stack<Element> unwrchildren = new Stack<Element>();
+				LinkedList<Element> unwrchildren = new LinkedList<Element>();
 				
 				String lastkey = "";
 				String thiskey = "";
@@ -103,14 +104,14 @@ public class JSONFormatter extends Formatter {
 					thiskey = child.getKey();
 					if (lastkey.equals(thiskey)) {
 						//part of array that is being built
-						unwrchildren.push(child);
+						unwrchildren.add(child);
 					} else {
 						//Array or single element is on the stack (unless it's the very first child)
 						if (unwrchildren.size() > 0) {
 							handleStack(writer, unwrchildren, level);
 							writer.write(",\n");
 						}
-						unwrchildren.push(child);
+						unwrchildren.add(child);
 					}
 					lastkey = thiskey;
 				}
