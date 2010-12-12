@@ -32,6 +32,7 @@ public class AVTransportEventHandler extends DefaultHandler {
   <InstanceID val="0">
     <TransportState val="PLAYING"/>
     <CurrentPlayMode val="NORMAL"/>
+    <CurrentPlayMode val="0"/>
     <NumberOfTracks val="29"/>
     <CurrentTrack val="12"/>
     <CurrentSection val="0"/>
@@ -61,11 +62,10 @@ public class AVTransportEventHandler extends DefaultHandler {
 </Event>
 */
   
-  //TODO: Add CurrentCrossfadeMode here and in AVTransport1.xml 
-  
   public static enum AVTransportEventType {
     TransportState, 
     CurrentPlayMode, 
+    CurrentCrossfadeMode,
     NumberOfTracks,
     CurrentTrack,
     CurrentSection,

@@ -20,36 +20,71 @@ function getXmlHttp(command) {
 	return xmlhttp;
 }
 
-//Generic method calling the janosWeb-servlet with a command, querystring and display function
-function displayReply(command, querystring, displayfunction) {
-    xmlhttp = getXmlHttp(command);
-	    xmlhttp.onreadystatechange=function() {
+function AjaxClosure(command, querystring, callbackfunction, sync) {
+	var xmlhttp = init();
+	if (!sync) {
+		xmlhttp.onreadystatechange = processRequest;
+	}
+	
+	function processRequest() {
   		if (xmlhttp.readyState==4 && xmlhttp.status==200) {
 			jsondoc = xmlhttp.responseText;
 			//eval is unsafe, but I trust myself ;)
 			//feel free to rewrite this to adress any safety concerns you might have
-			displayfunction(eval('(' + jsondoc + ')'));
+			if (callbackfunction)
+				callbackfunction(eval('(' + jsondoc + ')'));
     	}
   	}
-  	if (querystring>"") {
-  		querystring = "&" + querystring;
+
+  	function init() {
+  	 	if (querystring>"") {
+  			querystring = "&" + querystring;
+	  	}
+  		return getXmlHttp(command);
   	}
-	xmlhttp.open("GET","/janosWeb?cmd="+command+querystring+"&nocache="+Math.random(),true);
-	xmlhttp.send();
+  	
+  	this.doGet = function() {
+  		if (!sync) {
+  			xmlhttp.open("GET","/janosWeb?cmd="+command+querystring+"&nocache="+Math.random(),true);
+			xmlhttp.send();
+		}
+		else {
+			//synchronous call
+			xmlhttp.open("GET","/janosWeb?cmd="+command+querystring+"&nocache="+Math.random(),false);
+			xmlhttp.send();
+			jsondoc = xmlhttp.responseText;
+			callbackfunction(eval('(' + jsondoc + ')'));
+		}
+  	}
 }
+
+//Generic method calling the janosWeb-servlet with a command, querystring and display function
+//NOTICE how it is exploited in the SET-functions below that if someone calls displayReply with 
+//only 3 parameters, the value of the fourth parameter "sync" defaults to undefined which 
+//yields the same results as "false" in an if-statement!
+function displayReply(command, querystring, callbackfunction, sync) {
+	var ac = new AjaxClosure(command, querystring, callbackfunction, sync);
+	ac.doGet();
+}
+
 
 //Shortcut function for displaying the zone groups
 //http://host:port/janosWeb?cmd=getZoneGroups
-function getGroups(displayfunction) {
-	displayReply("getZoneGroups", "", displayfunction);
+function getGroups(callbackfunction, sync) {
+	displayReply("getZoneGroups", "", callbackfunction, sync);
 }
 
-function getPlayModes(displayfunction) {
-	displayReply("getPlayModes", "", displayfunction);
+//http://host:port/janosWeb?cmd=listenForZoneGroupUpdates
+function listenForGroupUpdates(callbackfunction, sync) {
+	displayReply("listenForZoneGroupUpdates", "", callbackfunction, sync);
 }
 
-function getPlayCommands(displayfunction) {
-	displayReply("getPlayCommands", "", displayfunction);
+function getPlayModes(callbackfunction, sync) {
+	displayReply("getPlayModes", "", callbackfunction, sync);
+}
+
+function getPlayCommands(callbackfunction, sync) {
+	displayReply("getPlayCommands", "", callbackfunction, sync);
 }
 
 
@@ -60,117 +95,130 @@ function getPlayCommands(displayfunction) {
 // /___\___/|_|\_|___|  \___|_|_\\___/ \___/|_|  |___/ //
 //                                                     //
 /////////////////////////////////////////////////////////
-                                                   
+//http://host:port/janosWeb?cmd=listenForZoneGroupVolumeUpdates&groupID=RINCON_00000000000000000:00
+function listenForGroupVolumeUpdates(groupID, callbackfunction, sync) {
+	displayReply("listenForZoneGroupVolumeUpdates", "groupID="+groupID, callbackfunction, sync);
+}
+
+//http://host:port/janosWeb?cmd=listenForZoneGroupVolumeUpdates&groupID=RINCON_00000000000000000:00
+function listenForGroupMusicUpdates(groupID, callbackfunction, sync) {
+	displayReply("listenForZoneGroupMusicUpdates", "groupID="+groupID, callbackfunction, sync);
+}
+
+
 //http://host:port/janosWeb?cmd=getZoneGroupVolume&groupID=RINCON_00000000000000000:00
-function getGroupVolume(groupID, displayfunction) {
-    displayReply("getZoneGroupVolume", "groupID="+groupID, displayfunction);
+function getGroupVolume(groupID, callbackfunction, sync) {
+    displayReply("getZoneGroupVolume", "groupID="+groupID, callbackfunction, sync);
 }
 
 //http://host:port/janosWeb?cmd=setZoneGroupVolume&groupID=RINCON_00000000000000000:00&groupVolume=30
-function setGroupVolume(groupID, volume, displayfunction) {
-    displayReply("setZoneGroupVolume", "groupID="+groupID+"&groupVolume="+volume, displayfunction);
+function setGroupVolume(groupID, volume, callbackfunction) {
+    displayReply("setZoneGroupVolume", "groupID="+groupID+"&volume="+volume, callbackfunction);
 }
 
-//http://host:port/janosWeb?cmd=setZoneGroupMuted&groupID=RINCON_00000000000000000:00&groupMuted=true
-function setGroupMute(groupID, mute, displayfunction) {
-    displayReply("setZoneGroupMuted", "groupID="+groupID+"&groupMuted="+mute, displayfunction);
+//http://host:port/janosWeb?cmd=setZoneGroupMuted&groupID=RINCON_00000000000000000:00&mute=true
+function setGroupMute(groupID, mute, callbackfunction) {
+    displayReply("setZoneGroupMuted", "groupID="+groupID+"&mute="+mute, callbackfunction);
 }
 
 //http://host:port/janosWeb?cmd=getZoneGroupPlayInfo&groupID=RINCON_00000000000000000:00
-function getGroupPlayInfo(groupID, displayfunction) {
-	displayReply("getZoneGroupPlayInfo", "groupID="+groupID, displayfunction);
+function getGroupPlayInfo(groupID, callbackfunction, sync) {
+	displayReply("getZoneGroupPlayInfo", "groupID="+groupID, callbackfunction, sync);
 }
 
-//http://host:port/janosWeb?cmd=setZoneGroupCommand&groupID=RINCON_00000000000000000:00&groupCommand=Previous
+//http://host:port/janosWeb?cmd=setZoneGroupCommand&groupID=RINCON_00000000000000000:00&command=Previous
 //Valid commands (case sensitive): Play, Pause, Stop, Next, Previous 
-function setGroupCommand(groupID, command, displayfunction) {
-    displayReply("setZoneGroupCommand", "groupID="+groupID+"&groupCommand="+command, displayfunction);
+function setGroupCommand(groupID, command, callbackfunction) {
+    displayReply("setZoneGroupCommand", "groupID="+groupID+"&command="+command, callbackfunction);
 }
-function setGroupPlay(groupID, displayfunction) {
-	displayReply("setZoneGroupCommand", "groupID="+groupID+"&groupCommand=Play", displayfunction);
+function setGroupPlay(groupID, callbackfunction) {
+	displayReply("setZoneGroupCommand", "groupID="+groupID+"&command=Play", callbackfunction);
 }
-function setGroupPause(groupID, displayfunction) {
-	displayReply("setZoneGroupCommand", "groupID="+groupID+"&groupCommand=Pause", displayfunction);
+function setGroupPause(groupID, callbackfunction) {
+	displayReply("setZoneGroupCommand", "groupID="+groupID+"&command=Pause", callbackfunction);
 }
-function setGroupStop(groupID, displayfunction) {
-	displayReply("setZoneGroupCommand", "groupID="+groupID+"&groupCommand=Stop", displayfunction);
+function setGroupStop(groupID, callbackfunction) {
+	displayReply("setZoneGroupCommand", "groupID="+groupID+"&command=Stop", callbackfunction);
 }
-function setGroupNext(groupID, displayfunction) {
-	displayReply("setZoneGroupCommand", "groupID="+groupID+"&groupCommand=Next", displayfunction);
+function setGroupNext(groupID, callbackfunction) {
+	displayReply("setZoneGroupCommand", "groupID="+groupID+"&command=Next", callbackfunction);
 }
-function setGroupPrevious(groupID, displayfunction) {
-	displayReply("setZoneGroupCommand", "groupID="+groupID+"&groupCommand=Previous", displayfunction);
+function setGroupPrevious(groupID, callbackfunction) {
+	displayReply("setZoneGroupCommand", "groupID="+groupID+"&command=Previous", callbackfunction);
 }
 
-//http://host:port/janosWeb?cmd=setZoneGroupPlayMode&groupID=RINCON_00000000000000000:00&groupCommand=SHUFFLE
+//http://host:port/janosWeb?cmd=setZoneGroupPlayMode&groupID=RINCON_00000000000000000:00&playMode=SHUFFLE
 //Valid play modes (case sensitive): NORMAL, SHUFFLE, SHUFFLE_NOREPEAT, REPEAT_ONE, REPEAT_ALL, RANDOM, DIRECT_1, INTRO; 
-function setGroupPlayMode(groupID, playmode, displayfunction) {
-    displayReply("setZoneGroupPlayMode", "groupID="+groupID+"&groupPlayMode="+playmode, displayfunction);
+function setGroupPlayMode(groupID, playmode, callbackfunction) {
+    displayReply("setZoneGroupPlayMode", "groupID="+groupID+"&playMode="+playmode, callbackfunction);
 }
 
 //http://host:port/janosWeb?cmd=getZoneGroupPlayInfo&groupID=RINCON_00000000000000000:00
-function getGroupPlayInfo(groupID, displayfunction) {
-	displayReply("getZoneGroupPlayInfo", "groupID="+groupID, displayfunction);
+function getGroupPlayInfo(groupID, callbackfunction, sync) {
+	displayReply("getZoneGroupPlayInfo", "groupID="+groupID, callbackfunction, sync);
 }
 //http://host:port/janosWeb?cmd=getZoneGroupTrackPosition&groupID=RINCON_00000000000000000:00
-function getGroupTrackPos(groupID, displayfunction) {
-	displayReply("getZoneGroupTrackPosition", "groupID="+groupID, displayfunction);
+function getGroupTrackPos(groupID, callbackfunction, sync) {
+	displayReply("getZoneGroupTrackPosition", "groupID="+groupID, callbackfunction, sync);
 }
 
-//http://host:port/janosWeb?cmd=setZoneGroupTrackPosition&groupID=RINCON_00000000000000000:00&groupTrackPosition=5000
-function setGroupTrackPos(groupID, trackpos, displayfunction) {
-	displayReply("setZoneGroupTrackPosition", "groupID="+groupID+"&groupTrackPosition="+trackpos, displayfunction);
+//http://host:port/janosWeb?cmd=setZoneGroupTrackPosition&groupID=RINCON_00000000000000000:00&trackPosition=5000
+function setGroupTrackPos(groupID, trackpos, callbackfunction) {
+	displayReply("setZoneGroupTrackPosition", "groupID="+groupID+"&trackPosition="+trackpos, callbackfunction);
 }
 
 
 //http://host:port/janosWeb?cmd=getZoneGroupTrack&groupID=RINCON_00000000000000000:00
-function getGroupTrack(groupID, displayfunction) {
-	displayReply("getZoneGroupTrack", "groupID="+groupID, displayfunction);
+function getGroupTrack(groupID, callbackfunction, sync) {
+	displayReply("getZoneGroupTrack", "groupID="+groupID, callbackfunction, sync);
 }
 
 //http://host:port/janosWeb?cmd=getZoneGroupQueue&groupID=RINCON_00000000000000000:00&startIndex=3&numEntries=10
-function getGroupQueue(groupID, startidx, numentries, displayfunction) {
-	displayReply("getZoneGroupQueue", "groupID="+groupID+"&startIndex="+startidx+"&numEntries="+numentries, displayfunction);
+function getGroupQueue(groupID, startidx, numentries, callbackfunction, sync) {
+	displayReply("getZoneGroupQueue", "groupID="+groupID+"&startIndex="+startidx+"&numEntries="+numentries, callbackfunction, sync);
 }
 
 //http://host:port/janosWeb?cmd=getZoneGroupArtists&groupID=RINCON_00000000000000000:00&startIndex=3&numEntries=10
-function getGroupArtists(groupID, startidx, numentries, displayfunction) {
-	displayReply("getZoneGroupArtists", "groupID="+groupID+"&startIndex="+startidx+"&numEntries="+numentries, displayfunction);
+function getGroupArtists(groupID, startidx, numentries, callbackfunction, sync) {
+	displayReply("getZoneGroupArtists", "groupID="+groupID+"&startIndex="+startidx+"&numEntries="+numentries, callbackfunction, sync);
 }
 
 //http://host:port/janosWeb?cmd=getZoneGroupAlbums&groupID=RINCON_00000000000000000:00&startIndex=3&numEntries=10
-function getGroupAlbums(groupID, startidx, numentries, displayfunction) {
-	displayReply("getZoneGroupAlbums", "groupID="+groupID+"&startIndex="+startidx+"&numEntries="+numentries, displayfunction);
+function getGroupAlbums(groupID, startidx, numentries, callbackfunction, sync) {
+	displayReply("getZoneGroupAlbums", "groupID="+groupID+"&startIndex="+startidx+"&numEntries="+numentries, callbackfunction, sync);
 }
 
 //http://host:port/janosWeb?cmd=getZoneGroupTracks&groupID=RINCON_00000000000000000:00&startIndex=3&numEntries=10
-function getGroupTracks(groupID, startidx, numentries, displayfunction) {
-	displayReply("getZoneGroupTracks", "groupID="+groupID+"&startIndex="+startidx+"&numEntries="+numentries, displayfunction);
+function getGroupTracks(groupID, startidx, numentries, callbackfunction, sync) {
+	displayReply("getZoneGroupTracks", "groupID="+groupID+"&startIndex="+startidx+"&numEntries="+numentries, callbackfunction, sync);
 }
 
 //http://host:port/janosWeb?cmd=getZoneGroupSearch&groupID=RINCON_00000000000000000:00&startIndex=3&numEntries=10&searchData=music
-function getGroupSearch(groupID, startidx, numentries, searchdata, displayfunction) {
-	displayReply("getZoneGroupSearch", "groupID="+groupID+"&startIndex="+startidx+"&numEntries="+numentries+"&searchData="+searchdata, displayfunction);
+function getGroupSearch(groupID, startidx, numentries, searchdata, callbackfunction, sync) {
+	displayReply("getZoneGroupSearch", "groupID="+groupID+"&startIndex="+startidx+"&numEntries="+numentries+"&searchData="+searchdata, callbackfunction, sync);
 }
 
 //http://host:port/janosWeb?cmd=setZoneGroupEnqueue&groupID=RINCON_00000000000000000:00&itemID=A:ARTIST/Test
-function setGroupEnqueue(groupID, itemid, displayfunction) {
-	displayReply("setZoneGroupEnqueue", "groupID="+groupID+"&itemID="+itemid, displayfunction);
+function setGroupEnqueue(groupID, itemid, callbackfunction) {
+	itemid = itemid.replace(/%/gi, "%25");
+	displayReply("setZoneGroupEnqueue", "groupID="+groupID+"&itemID="+itemid, callbackfunction);
 }
 
 //http://host:port/janosWeb?cmd=setZoneGroupEnqueueNow&groupID=RINCON_00000000000000000:00&itemID=A:ARTIST/Test
-function setGroupEnqueueNow(groupID, itemid, displayfunction) {
-	displayReply("setZoneGroupEnqueueNow", "groupID="+groupID+"&itemID="+itemid, displayfunction);
+function setGroupEnqueueNow(groupID, itemid, callbackfunction) {
+	itemid = itemid.replace(/%/gi, "%25");
+	displayReply("setZoneGroupEnqueueNow", "groupID="+groupID+"&itemID="+itemid, callbackfunction);
 }
 
 //http://host:port/janosWeb?cmd=setZoneGroupEnqueueNext&groupID=RINCON_00000000000000000:00&itemID=A:ARTIST/Test
-function setGroupEnqueueNext(groupID, itemid, displayfunction) {
-	displayReply("setZoneGroupEnqueueNext", "groupID="+groupID+"&itemID="+itemid, displayfunction);
+function setGroupEnqueueNext(groupID, itemid, callbackfunction) {
+	itemid = itemid.replace(/%/gi, "%25");
+	displayReply("setZoneGroupEnqueueNext", "groupID="+groupID+"&itemID="+itemid, callbackfunction);
 }
 
 //http://host:port/janosWeb?cmd=setZoneGroupClearQueue&groupID=RINCON_00000000000000000:00
-function setGroupClearQueue(groupID, displayfunction) {
-	displayReply("setZoneGroupClearQueue", "groupID="+groupID, displayfunction);
+function setGroupClearQueue(groupID, callbackfunction) {
+	displayReply("setZoneGroupClearQueue", "groupID="+groupID, callbackfunction);
 }
 ////////////////////////////
 // _______  _  _ ___ ___  //
@@ -180,113 +228,124 @@ function setGroupClearQueue(groupID, displayfunction) {
 //                        //
 ////////////////////////////
 
+//http://host:port/janosWeb?cmd=listenForZoneVolumeUpdates&groupID=RINCON_00000000000000000
+function listenForZoneVolumeUpdates(zoneID, callbackfunction, sync) {
+	displayReply("listenForZoneVolumeUpdates", "zoneID="+zoneID, callbackfunction, sync);
+}
+
+//http://host:port/janosWeb?cmd=listenForZoneMusicUpdates&groupID=RINCON_00000000000000000
+function listenForZoneMusicUpdates(zoneID, callbackfunction, sync) {
+	displayReply("listenForZoneMusicUpdates", "zoneID="+zoneID, callbackfunction, sync);
+}
+
+
 //http://host:port/janosWeb?cmd=getZoneVolume&zoneID=RINCON_00000000000000000
-function getZoneVolume(zoneID, displayfunction) {
-    displayReply("getZoneVolume", "zoneID="+zoneID, displayfunction);
+function getZoneVolume(zoneID, callbackfunction, sync) {
+    displayReply("getZoneVolume", "zoneID="+zoneID, callbackfunction, sync);
 }
 
 //http://host:port/janosWeb?cmd=setZoneVolume&zoneID=RINCON_00000000000000000&volume=30
-function setZoneVolume(zoneID, volume, displayfunction) {
-    displayReply("setZoneVolume", "zoneID="+zoneID+"&volume="+volume, displayfunction);
+function setZoneVolume(zoneID, volume, callbackfunction) {
+    displayReply("setZoneVolume", "zoneID="+zoneID+"&volume="+volume, callbackfunction);
 }
 
-//http://host:port/janosWeb?cmd=setZoneMuted&zoneID=RINCON_00000000000000000&zoneMuted=true
-function setZoneMute(zoneID, mute, displayfunction) {
-    displayReply("setZoneMuted", "zoneID="+zoneID+"&zoneMuted="+mute, displayfunction);
+//http://host:port/janosWeb?cmd=setZoneMuted&zoneID=RINCON_00000000000000000&mute=true
+function setZoneMute(zoneID, mute, callbackfunction) {
+    displayReply("setZoneMuted", "zoneID="+zoneID+"&mute="+mute, callbackfunction);
 }
 
 //http://host:port/janosWeb?cmd=getZonePlayInfo&zoneID=RINCON_00000000000000000
-function getZonePlayInfo(zoneID, displayfunction) {
-	displayReply("getZonePlayInfo", "zoneID="+zoneID, displayfunction);
+function getZonePlayInfo(zoneID, callbackfunction, sync) {
+	displayReply("getZonePlayInfo", "zoneID="+zoneID, callbackfunction, sync);
 }
 
-//http://host:port/janosWeb?cmd=setZoneCommand&zoneID=RINCON_00000000000000000&zoneCommand=Previous
+//http://host:port/janosWeb?cmd=setZoneCommand&zoneID=RINCON_00000000000000000&command=Previous
 //Valid commands (case sensitive): Play, Pause, Stop, Next, Previous 
-function setZoneCommand(zoneID, command, displayfunction) {
-    displayReply("setZoneCommand", "zoneID="+zoneID+"&zoneCommand="+command, displayfunction);
+function setZoneCommand(zoneID, command, callbackfunction) {
+    displayReply("setZoneCommand", "zoneID="+zoneID+"&command="+command, callbackfunction);
 }
-function setZonePlay(zoneID, displayfunction) {
-	displayReply("setZoneCommand", "zoneID="+zoneID+"&zoneCommand=Play", displayfunction);
+function setZonePlay(zoneID, callbackfunction) {
+	displayReply("setZoneCommand", "zoneID="+zoneID+"&command=Play", callbackfunction);
 }
-function setZonePause(zoneID, displayfunction) {
-	displayReply("setZoneCommand", "zoneID="+zoneID+"&zoneCommand=Pause", displayfunction);
+function setZonePause(zoneID, callbackfunction) {
+	displayReply("setZoneCommand", "zoneID="+zoneID+"&command=Pause", callbackfunction);
 }
-function setZoneStop(zoneID, displayfunction) {
-	displayReply("setZoneCommand", "zoneID="+zoneID+"&zoneCommand=Stop", displayfunction);
+function setZoneStop(zoneID, callbackfunction) {
+	displayReply("setZoneCommand", "zoneID="+zoneID+"&command=Stop", callbackfunction);
 }
-function setZoneNext(zoneID, displayfunction) {
-	displayReply("setZoneCommand", "zoneID="+zoneID+"&zoneCommand=Next", displayfunction);
+function setZoneNext(zoneID, callbackfunction) {
+	displayReply("setZoneCommand", "zoneID="+zoneID+"&command=Next", callbackfunction);
 }
-function setZonePrevious(zoneID, displayfunction) {
-	displayReply("setZoneCommand", "zoneID="+zoneID+"&zoneCommand=Previous", displayfunction);
+function setZonePrevious(zoneID, callbackfunction) {
+	displayReply("setZoneCommand", "zoneID="+zoneID+"&command=Previous", callbackfunction);
 }
 
-//http://host:port/janosWeb?cmd=setZonePlayMode&zoneID=RINCON_00000000000000000&zonePlayMode=SHUFFLE
-//Valid play modes (case sensitive): NORMAL, SHUFFLE, SHUFFLE_NOREPEAT, REPEAT_ONE, REPEAT_ALL, RANDOM, DIRECT_1, INTRO; 
-function setZonePlayMode(zoneID, playmode, displayfunction) {
-    displayReply("setZonePlayMode", "zoneID="+zoneID+"&zonePlayMode="+playmode, displayfunction);
+//http://host:port/janosWeb?cmd=setZonePlayMode&zoneID=RINCON_00000000000000000&playMode=SHUFFLE
+//Valid play modes (case sensitive): NORMAL, SHUFFLE, SHUFFLE_NOREPEAT, REPEAT_ALL; 
+function setZonePlayMode(zoneID, playmode, callbackfunction) {
+    displayReply("setZonePlayMode", "zoneID="+zoneID+"&playMode="+playmode, callbackfunction);
 }
 
 //http://host:port/janosWeb?cmd=getZoneTrackPosition&zoneID=RINCON_00000000000000000
-function getZoneTrackPos(zoneID, displayfunction) {
-	displayReply("getZoneTrackPosition", "zoneID="+zoneID, displayfunction);
+function getZoneTrackPos(zoneID, callbackfunction, sync) {
+	displayReply("getZoneTrackPosition", "zoneID="+zoneID, callbackfunction);
 }
-//http://host:port/janosWeb?cmd=setZoneTrackPosition&zoneID=RINCON_00000000000000000&zoneTrackPosition=7000
-function setZoneTrackPos(zoneID, trackpos, displayfunction) {
-    displayReply("setZonePlayMode", "zoneID="+zoneID+"&zoneTrackPosition="+trackpos, displayfunction);
+//http://host:port/janosWeb?cmd=setZoneTrackPosition&zoneID=RINCON_00000000000000000&trackPosition=7000
+function setZoneTrackPos(zoneID, trackpos, callbackfunction) {
+    displayReply("setZonePlayMode", "zoneID="+zoneID+"&trackPosition="+trackpos, callbackfunction);
 }
 
 //http://host:port/janosWeb?cmd=getZoneTrack&zoneID=RINCON_00000000000000000
-function getZoneTrack(zoneID, displayfunction) {
-	displayReply("getZoneTrack", "zoneID="+zoneID, displayfunction);
+function getZoneTrack(zoneID, callbackfunction, sync) {
+	displayReply("getZoneTrack", "zoneID="+zoneID, callbackfunction);
 }
 
 //http://host:port/janosWeb?cmd=getZoneQueue&zoneID=RINCON_00000000000000000&startIndex=3&numEntries=10
-function getZoneTrack(zoneID, startidx, numentries, displayfunction) {
-	displayReply("getZoneQueue", "zoneID="+zoneID+"&startIndex="+startidx+"&numEntries="+numentries, displayfunction);
+function getZoneQueue(zoneID, startidx, numentries, callbackfunction, sync) {
+	displayReply("getZoneQueue", "zoneID="+zoneID+"&startIndex="+startidx+"&numEntries="+numentries, callbackfunction, sync);
 }
 
 //http://host:port/janosWeb?cmd=getZoneArtists&zoneID=RINCON_00000000000000000&startIndex=3&numEntries=10
-function getZoneArtists(zoneID, startidx, numentries, displayfunction) {
-	displayReply("getZoneArtists", "zoneID="+zoneID+"&startIndex="+startidx+"&numEntries="+numentries, displayfunction);
+function getZoneArtists(zoneID, startidx, numentries, callbackfunction, sync) {
+	displayReply("getZoneArtists", "zoneID="+zoneID+"&startIndex="+startidx+"&numEntries="+numentries, callbackfunction, sync);
 }
 
 //http://host:port/janosWeb?cmd=getZoneAlbums&zoneID=RINCON_00000000000000000&startIndex=3&numEntries=10
-function getZoneAlbums(zoneID, startidx, numentries, displayfunction) {
-	displayReply("getZoneAlbums", "zoneID="+zoneID+"&startIndex="+startidx+"&numEntries="+numentries, displayfunction);
+function getZoneAlbums(zoneID, startidx, numentries, callbackfunction, sync) {
+	displayReply("getZoneAlbums", "zoneID="+zoneID+"&startIndex="+startidx+"&numEntries="+numentries, callbackfunction, sync);
 }
 
 //http://host:port/janosWeb?cmd=getZoneTracks&zoneID=RINCON_00000000000000000&startIndex=3&numEntries=10
-function getZoneTracks(zoneID, startidx, numentries, displayfunction) {
-	displayReply("getZoneTracks", "zoneID="+zoneID+"&startIndex="+startidx+"&numEntries="+numentries, displayfunction);
+function getZoneTracks(zoneID, startidx, numentries, callbackfunction, sync) {
+	displayReply("getZoneTracks", "zoneID="+zoneID+"&startIndex="+startidx+"&numEntries="+numentries, callbackfunction, sync);
 }
 
 //http://host:port/janosWeb?cmd=getZoneSearch&zoneID=RINCON_00000000000000000&startIndex=3&numEntries=10&searchData=music
-function getZoneSearch(zoneID, startidx, numentries, searchdata, displayfunction) {
-	displayReply("getZoneSearch", "zoneID="+zoneID+"&startIndex="+startidx+"&numEntries="+numentries+"&searchData="+searchdata, displayfunction);
+function getZoneSearch(zoneID, startidx, numentries, searchdata, callbackfunction, sync) {
+	displayReply("getZoneSearch", "zoneID="+zoneID+"&startIndex="+startidx+"&numEntries="+numentries+"&searchData="+searchdata, callbackfunction, sync);
 }
 
 //http://host:port/janosWeb?cmd=getZoneSearch&zoneID=RINCON_00000000000000000&startIndex=3&numEntries=10&searchData=music
-function getZoneSearch(zoneID, startidx, numentries, searchdata, displayfunction) {
-	displayReply("getZoneSearch", "zoneID="+zoneID+"&startIndex="+startidx+"&numEntries="+numentries+"&searchData="+searchdata, displayfunction);
+function getZoneSearch(zoneID, startidx, numentries, searchdata, callbackfunction, sync) {
+	displayReply("getZoneSearch", "zoneID="+zoneID+"&startIndex="+startidx+"&numEntries="+numentries+"&searchData="+searchdata, callbackfunction, sync);
 }
 
 //http://host:port/janosWeb?cmd=setZoneEnqueue&zoneID=RINCON_00000000000000000&itemID=A:ARTIST/Test
 function setZoneEnqueue(zoneID, itemid) {
-	displayReply("setZoneEnqueue", "zoneID="+zoneID+"&itemID="+itemid, displayfunction);
+	displayReply("setZoneEnqueue", "zoneID="+zoneID+"&itemID="+itemid, callbackfunction);
 }
 
 //http://host:port/janosWeb?cmd=setZoneEnqueueNow&zoneID=RINCON_00000000000000000&itemID=A:ARTIST/Test
 function setZoneEnqueueNow(zoneID, itemid) {
-	displayReply("setZoneEnqueueNow", "zoneID="+zoneID+"&itemID="+itemid, displayfunction);
+	displayReply("setZoneEnqueueNow", "zoneID="+zoneID+"&itemID="+itemid, callbackfunction);
 }
 
 //http://host:port/janosWeb?cmd=setZoneEnqueueNext&zoneID=RINCON_00000000000000000&itemID=A:ARTIST/Test
 function setZoneEnqueueNext(zoneID, itemid) {
-	displayReply("setZoneEnqueueNext", "zoneID="+zoneID+"&itemID="+itemid, displayfunction);
+	displayReply("setZoneEnqueueNext", "zoneID="+zoneID+"&itemID="+itemid, callbackfunction);
 }
 
 //http://host:port/janosWeb?cmd=setZoneClearQueue&zoneID=RINCON_00000000000000000
 function setZoneClearQueue(zoneID) {
-	displayReply("setZoneClearQueue", "zoneID="+zoneID, displayfunction);
+	displayReply("setZoneClearQueue", "zoneID="+zoneID, callbackfunction);
 }

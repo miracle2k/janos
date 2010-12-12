@@ -8,6 +8,7 @@ import java.util.Timer;
 import java.util.TimerTask;
 
 import net.sf.janos.control.SonosController;
+import net.sf.janos.web.model.UpdateListener;
 import net.sf.janos.web.servlets.JanosWebServlet;
 import net.sf.janos.web.structure.Formatter;
 import net.sf.janos.web.structure.JSONFormatter;

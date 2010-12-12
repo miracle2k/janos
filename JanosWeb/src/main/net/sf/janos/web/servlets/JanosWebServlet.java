@@ -6,6 +6,7 @@ import java.lang.reflect.Method;
 import java.net.MalformedURLException;
 import java.net.URL;
 import java.util.Collections;
+import java.util.ConcurrentModificationException;
 import java.util.LinkedList;
 import java.util.List;
 
@@ -17,6 +18,7 @@ import javax.servlet.http.HttpServletResponse;
 import net.sbbi.upnp.devices.DeviceIcon;
 import net.sbbi.upnp.messages.UPNPResponseException;
 import net.sf.janos.control.AVTransportService;
+import net.sf.janos.control.MediaRendererDevice;
 import net.sf.janos.control.RenderingControlService;
 import net.sf.janos.control.SonosController;
 import net.sf.janos.control.ZonePlayer;
@@ -31,11 +33,10 @@ import net.sf.janos.model.TransportInfo.TransportState;
 import net.sf.janos.model.ZoneGroup;
 import net.sf.janos.web.exception.JanosWebException;
 import net.sf.janos.web.model.MusicLibrary;
+import net.sf.janos.web.model.UpdateListener;
 import net.sf.janos.web.structure.Element;
 import net.sf.janos.web.structure.ElementUtil;
 import net.sf.janos.web.structure.Formatter;
-import net.sf.janos.web.structure.JSONFormatter;
-import net.sf.janos.web.structure.XMLFormatter;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -53,8 +54,11 @@ public class JanosWebServlet extends HttpServlet {
 
 	private enum Command {
 		getZoneGroups 
+		, listenForZoneGroupUpdates
 		, getPlayCommands
 		, getPlayModes
+		, listenForZoneGroupVolumeUpdates
+		, listenForZoneGroupMusicUpdates
 		, getZoneGroupVolume 
 		, setZoneGroupVolume 
 		, setZoneGroupMuted 
@@ -74,6 +78,8 @@ public class JanosWebServlet extends HttpServlet {
 		, setZoneGroupEnqueueNow
 		, setZoneGroupClearQueue
 
+		, listenForZoneVolumeUpdates
+		, listenForZoneMusicUpdates
 		, getZoneVolume
 		, setZoneVolume 
 		, setZoneMuted
@@ -128,25 +134,30 @@ public class JanosWebServlet extends HttpServlet {
 
 	public void doPost(HttpServletRequest request, HttpServletResponse response)
 			throws ServletException, IOException {
-		thishost = request.getRequestURL().toString().replaceFirst(request.getServletPath(), "");
-		String cmd = (String) request.getParameter("cmd");
-		if (cmd == null) {
-			printServletInterface(response);
-			return;
-		}
+		try {
+			thishost = request.getRequestURL().toString().replaceFirst(request.getServletPath(), "");
+			String cmd = (String) request.getParameter("cmd");
+			if (cmd == null) {
+				printServletInterface(response);
+				return;
+			}
 		
-		// Dispatch control to the relevant methods, based on the "cmd"
-		// parameter.
-		Element resp = ElementUtil.createResponse();
+			// Dispatch control to the relevant methods, based on the "cmd"
+			// parameter.
+			Element resp = ElementUtil.createResponse();
 
-		//---------------------------------------------------------------------------------
-		//Dispatch to correct top level method, based on the cmd-parameter
-		//---------------------------------------------------------------------------------
+			//---------------------------------------------------------------------------------
+			//Dispatch to correct top level method, based on the cmd-parameter
+			//---------------------------------------------------------------------------------
 
 		try {
 			switch (Command.toCmd(cmd)) {
 			case getZoneGroups:
 				resp.addChild(getZoneGroups());
+				resp.addChildFirst(ElementUtil.getStatusSuccesElement());
+				break;
+			case listenForZoneGroupUpdates:
+				resp.addChild(listenForZoneGroupUpdates());
 				resp.addChildFirst(ElementUtil.getStatusSuccesElement());
 				break;
 			case getPlayCommands:
@@ -159,6 +170,14 @@ public class JanosWebServlet extends HttpServlet {
 				break;
 			
 				
+			case listenForZoneVolumeUpdates:
+				resp.addChild(listenForZoneVolumeUpdates(request.getParameter("zoneID")));
+				resp.addChildFirst(ElementUtil.getStatusSuccesElement());
+				break;
+			case listenForZoneMusicUpdates:
+				resp.addChild(listenForZoneMusicUpdates(request.getParameter("zoneID")));
+				resp.addChildFirst(ElementUtil.getStatusSuccesElement());
+				break;
 			case getZoneVolume:
 				resp.addChild(getZoneVolume(request.getParameter("zoneID")));
 				resp.addChildFirst(ElementUtil.getStatusSuccesElement());
@@ -170,11 +189,11 @@ public class JanosWebServlet extends HttpServlet {
 				break;
 			case setZoneMuted:
 				setZoneMuted(request.getParameter("zoneID"),
-						request.getParameter("zoneMuted"));
+						request.getParameter("mute"));
 				resp.addChildFirst(ElementUtil.getStatusSuccesElement());
 				break;
 			case setZoneCommand:
-				setZoneCommand(request.getParameter("zoneID"), request.getParameter("zoneCommand"));
+				setZoneCommand(request.getParameter("zoneID"), request.getParameter("command"));
 				resp.addChildFirst(ElementUtil.getStatusSuccesElement());
 				break;
 			case getZonePlayInfo:
@@ -182,7 +201,7 @@ public class JanosWebServlet extends HttpServlet {
 				resp.addChildFirst(ElementUtil.getStatusSuccesElement());
 				break;
 			case setZonePlayMode:
-				setZonePlayMode(request.getParameter("zoneID"), request.getParameter("zonePlayMode"));
+				setZonePlayMode(request.getParameter("zoneID"), request.getParameter("playMode"));
 				resp.addChildFirst(ElementUtil.getStatusSuccesElement());
 				break;
 			case getZoneTrackPosition:
@@ -190,7 +209,7 @@ public class JanosWebServlet extends HttpServlet {
 				resp.addChildFirst(ElementUtil.getStatusSuccesElement());
 				break;
 			case setZoneTrackPosition:
-				setZoneTrackPosition(request.getParameter("zoneID"), request.getParameter("zoneTrackPosition"));
+				setZoneTrackPosition(request.getParameter("zoneID"), request.getParameter("trackPosition"));
 				resp.addChildFirst(ElementUtil.getStatusSuccesElement());
 				break;
 			case getZoneTrack:
@@ -235,18 +254,26 @@ public class JanosWebServlet extends HttpServlet {
 				resp.addChild(ElementUtil.getStatusSuccesElement());
 				break;
 				
+			case listenForZoneGroupVolumeUpdates:
+				resp.addChild(listenForZoneGroupVolumeUpdates(request.getParameter("groupID")));
+				resp.addChildFirst(ElementUtil.getStatusSuccesElement());
+				break;
+			case listenForZoneGroupMusicUpdates:
+				resp.addChild(listenForZoneGroupMusicUpdates(request.getParameter("groupID")));
+				resp.addChildFirst(ElementUtil.getStatusSuccesElement());
+				break;
 			case getZoneGroupVolume:
 				resp.addChild(getZoneGroupVolume(request.getParameter("groupID")));
 				resp.addChildFirst(ElementUtil.getStatusSuccesElement());
 				break;
 			case setZoneGroupVolume:
 				setZoneGroupVolume(request.getParameter("groupID"),
-						request.getParameter("groupVolume"));
+						request.getParameter("volume"));
 				resp.addChildFirst(ElementUtil.getStatusSuccesElement());
 				break;
 			case setZoneGroupMuted:
 				setZoneGroupMuted(request.getParameter("groupID"),
-						request.getParameter("groupMuted"));
+						request.getParameter("mute"));
 				resp.addChildFirst(ElementUtil.getStatusSuccesElement());
 				break;
 			case getZoneGroupPlayInfo:
@@ -254,11 +281,11 @@ public class JanosWebServlet extends HttpServlet {
 				resp.addChildFirst(ElementUtil.getStatusSuccesElement());
 				break;
 			case setZoneGroupCommand:
-				setZoneGroupCommand(request.getParameter("groupID"), request.getParameter("groupCommand"));
+				setZoneGroupCommand(request.getParameter("groupID"), request.getParameter("command"));
 				resp.addChildFirst(ElementUtil.getStatusSuccesElement());
 				break;
 			case setZoneGroupPlayMode:
-				setZoneGroupPlayMode(request.getParameter("groupID"), request.getParameter("groupPlayMode"));
+				setZoneGroupPlayMode(request.getParameter("groupID"), request.getParameter("playMode"));
 				resp.addChildFirst(ElementUtil.getStatusSuccesElement());
 				break;
 			case getZoneGroupTrackPosition:
@@ -266,7 +293,7 @@ public class JanosWebServlet extends HttpServlet {
 				resp.addChildFirst(ElementUtil.getStatusSuccesElement());
 				break;
 			case setZoneGroupTrackPosition:
-				setZoneGroupTrackPosition(request.getParameter("groupID"), request.getParameter("groupTrackPosition"));
+				setZoneGroupTrackPosition(request.getParameter("groupID"), request.getParameter("trackPosition"));
 				resp.addChildFirst(ElementUtil.getStatusSuccesElement());
 				break;
 			case getZoneGroupTrack:
@@ -325,6 +352,10 @@ public class JanosWebServlet extends HttpServlet {
 		formatter.modifyResponseHeader(response);
 		formatter.write(out, resp);
 		out.close();
+		} catch (ConcurrentModificationException cme) {
+			try { Thread.sleep(1000); } catch (InterruptedException ie) {};
+			doPost(request, response);
+		}
 	}
 
 	
@@ -338,6 +369,29 @@ public class JanosWebServlet extends HttpServlet {
 	//---------------------------------------------------------------------------------
 	//Top level methods, that return Element representations of the objects involved
 	//---------------------------------------------------------------------------------
+	private Element listenForZoneVolumeUpdates(String zoneID)  throws JanosWebException, IOException, UPNPResponseException {
+		if (zoneID == null) {
+			missingParameterException("zoneID");
+		}
+		RenderingControlService rcs = getZonePlayer(zoneID).getMediaRendererDevice().getRenderingControlService();
+		UpdateListener l = new UpdateListener();
+		rcs.addListener(l);
+		Element retval = l.getVolumeChanged();
+		rcs.removeListener(l);
+		return retval;
+	}
+
+	private Element listenForZoneMusicUpdates(String zoneID)  throws JanosWebException, IOException, UPNPResponseException {
+		if (zoneID == null) {
+			missingParameterException("zoneID");
+		}
+		AVTransportService avts = getZonePlayer(zoneID).getMediaRendererDevice().getAvTransportService();
+		UpdateListener l = new UpdateListener();
+		avts.addAvTransportListener(l);
+		Element retval = l.getMusicChanged();
+		avts.removeAvTransportListener(l);
+		return retval;
+	}
 	
 	/**
 	 * Returns an Element-representation of the ZonePlayer's volume
@@ -354,10 +408,11 @@ public class JanosWebServlet extends HttpServlet {
 		ZonePlayer zp = getZonePlayer(zoneID);
 		RenderingControlService rcs = zp.getMediaRendererDevice()
 				.getRenderingControlService();
-		Element volinfo = new Element("volumeInfo");
-		volinfo.addChild(new Element("volume", rcs.getVolume() + ""));
-		volinfo.addChild(new Element("muted", rcs.getMute() ? "true" : "false"));
-		return volinfo;
+		Element zone = new Element("zone");
+		zone.addChild(new Element("zoneID", zoneID));
+		zone.addChild(new Element("volume", rcs.getVolume() + ""));
+		zone.addChild(new Element("muted", rcs.getMute() ? "true" : "false"));
+		return zone;
 	}
 
 	private void setZoneVolume(String zoneID, String volume)
@@ -377,19 +432,19 @@ public class JanosWebServlet extends HttpServlet {
 		rcs.setVolume(vol);
 	}
 
-	private void setZoneMuted(String zoneID, String zoneMuted)
+	private void setZoneMuted(String zoneID, String mute)
 			throws NumberFormatException, IOException, UPNPResponseException, JanosWebException {
 		if (zoneID == null) {
 			missingParameterException("zoneID");
 		}
-		if (zoneMuted == null) {
-			missingParameterException("zoneMuted");
+		if (mute == null) {
+			missingParameterException("mute");
 		}
 
 		ZonePlayer zp = getZonePlayer(zoneID);
 		RenderingControlService rcs = zp.getMediaRendererDevice()
 				.getRenderingControlService();
-		rcs.setMute(zoneMuted.equalsIgnoreCase("true") ? 1 : 0);
+		rcs.setMute(mute.equalsIgnoreCase("true") ? 1 : 0);
 	}
 
 	/**Get an Element-represenation of a ZonePlayer's playmode (shuffle/normal/etc.)
@@ -404,7 +459,7 @@ public class JanosWebServlet extends HttpServlet {
 		boolean playing = avts.getTransportInfo().getState().equals(TransportState.PLAYING);
 
 		Element playinfo = new Element("playInfo");
-		playinfo.addChild(new Element("isPlaying", playing ? "true" : "false"));
+		playinfo.addChild(new Element("playing", playing ? "true" : "false"));
 		playinfo.addChild(new Element("playMode", avts.getTransportSettings().getPlayMode()));
 		return playinfo;
 	}
@@ -414,15 +469,15 @@ public class JanosWebServlet extends HttpServlet {
 	 * @throws UPNPResponseException 
 	 * @throws IOException 
 	 * */
-	private void setZoneCommand(String zoneID, String zoneCommand) throws IOException, UPNPResponseException, JanosWebException {
+	private void setZoneCommand(String zoneID, String command) throws IOException, UPNPResponseException, JanosWebException {
 		if (zoneID == null) {
 			missingParameterException("zoneID");
 		}
-		if (zoneCommand == null) {
-			missingParameterException("zoneCommand");
+		if (command == null) {
+			missingParameterException("command");
 		}
 		AVTransportService ats = getZonePlayer(zoneID).getMediaRendererDevice().getAvTransportService();
-		switch (TransportAction.valueOf(zoneCommand)) {
+		switch (TransportAction.valueOf(command)) {
 		case Play: ats.play(); break; 
 		case Pause: ats.pause(); break; 
 		case Stop: ats.stop(); break; 
@@ -435,18 +490,18 @@ public class JanosWebServlet extends HttpServlet {
 	/**Set a ZonePlayer's playmode (shuffle/normal/etc.)
 	 * @param the ZonePlayer's ID
 	 * @return playmode*/
-	private void setZonePlayMode(String zoneID, String zonePlayMode) throws IOException, UPNPResponseException, JanosWebException {
+	private void setZonePlayMode(String zoneID, String playMode) throws IOException, UPNPResponseException, JanosWebException {
 		if (zoneID == null) {
 			missingParameterException("zoneID");
 		}
-		if (zonePlayMode == null) {
-			missingParameterException("zonePlayMode");
+		if (playMode == null) {
+			missingParameterException("playMode");
 		}
 		PlayMode playmode = PlayMode.NORMAL;
 		try {
-			playmode = PlayMode.valueOf(zonePlayMode);
+			playmode = PlayMode.valueOf(playMode);
 		} catch (Exception e) {
-			throw new JanosWebException("Playmode '"+zonePlayMode+"' is not supported");
+			throw new JanosWebException("Playmode '"+playMode+"' is not supported");
 		}
 		getZonePlayer(zoneID).getMediaRendererDevice().getAvTransportService().setPlayMode(playmode);
 	}
@@ -460,8 +515,8 @@ public class JanosWebServlet extends HttpServlet {
 		}
 		PositionInfo posinfo = getZonePlayer(zoneID).getMediaRendererDevice().getAvTransportService().getPositionInfo();
 		Element track = new Element("track");
-		track.addChild(new Element("trackDuration", posinfo.getTrackDuration()+""));
-		track.addChild(new Element("trackPosition", posinfo.getRelTime()+""));
+		track.addChild(new Element("duration", posinfo.getTrackDuration()+""));
+		track.addChild(new Element("position", posinfo.getRelTime()+""));
 		return track;
 	}
 	
@@ -471,15 +526,15 @@ public class JanosWebServlet extends HttpServlet {
 	 * @throws UPNPResponseException 
 	 * @throws IOException 
 	 * */
-	private void setZoneTrackPosition(String zoneID, String zoneTrackPosition) throws JanosWebException, NumberFormatException, IOException, UPNPResponseException {
+	private void setZoneTrackPosition(String zoneID, String trackPosition) throws JanosWebException, NumberFormatException, IOException, UPNPResponseException {
 		if (zoneID == null) {
 			missingParameterException("zoneID");
 		}
-		if (zoneTrackPosition == null) {
-			missingParameterException("zoneTrackPosition");
+		if (trackPosition == null) {
+			missingParameterException("trackPosition");
 		}
 		AVTransportService ats = getZonePlayer(zoneID).getMediaRendererDevice().getAvTransportService();
-		ats.seek(SeekTargetFactory.createRelTimeSeekTarget(Long.parseLong(zoneTrackPosition)));
+		ats.seek(SeekTargetFactory.createRelTimeSeekTarget(Long.parseLong(trackPosition)));
 	}
 
 	/**Get an Element-represenation of a ZonePlayer's current track
@@ -503,12 +558,15 @@ public class JanosWebServlet extends HttpServlet {
 			TrackMetaData trackmeta = posinfo.getTrackMetaData();
 			if ( trackmeta != null ) {
 				// Playing from Queue
-				track.addChild(new Element("trackArtist", trackmeta.getCreator()));
-				track.addChild(new Element("trackAlbum", trackmeta.getAlbum()));
-				track.addChild(new Element("trackTitle", trackmeta.getTitle()));
-				track.addChild(new Element("trackAlbumArt", trackmeta.getAlbumArtUrl(zp).toExternalForm()));
-				track.addChild(new Element("trackAlbumArtist", trackmeta.getAlbumArtist()));
-				track.addChild(new Element("queueIndex", posinfo.getTrackNum()-1+""));
+				track.addChild(new Element("artist", trackmeta.getCreator()));
+				track.addChild(new Element("album", trackmeta.getAlbum()));
+				track.addChild(new Element("title", trackmeta.getTitle()));
+				track.addChild(new Element("albumArt", trackmeta.getAlbumArtUrl(zp).toExternalForm()));
+				track.addChild(new Element("albumArtist", trackmeta.getAlbumArtist()));
+				track.addChild(new Element("queueIndex", posinfo.getTrackNum()+""));
+				track.addChild(new Element("duration", posinfo.getTrackDuration()+""));
+				track.addChild(new Element("position", posinfo.getRelTime()+""));
+
 
 			} else {
 				track.addChild(new Element("noMusic", "true"));
@@ -525,35 +583,43 @@ public class JanosWebServlet extends HttpServlet {
 			}
 		} else if (uri.startsWith("x-file-cifs:")) {
 			// just playing one file
-			track.addChild(new Element("trackArtist", mediainfo.getCurrentURIMetaData().getCreator()));
-			track.addChild(new Element("trackAlbum", mediainfo.getCurrentURIMetaData().getAlbum()));
-			track.addChild(new Element("trackTitle", mediainfo.getCurrentURIMetaData().getTitle()));
-			track.addChild(new Element("trackAlbumArt", mediainfo.getCurrentURIMetaData().getAlbumArtUrl(zp).toExternalForm()));
-			track.addChild(new Element("trackAlbumArtist", mediainfo.getCurrentURIMetaData().getAlbumArtist()));
+			track.addChild(new Element("artist", mediainfo.getCurrentURIMetaData().getCreator()));
+			track.addChild(new Element("album", mediainfo.getCurrentURIMetaData().getAlbum()));
+			track.addChild(new Element("title", mediainfo.getCurrentURIMetaData().getTitle()));
+			track.addChild(new Element("albumArt", mediainfo.getCurrentURIMetaData().getAlbumArtUrl(zp).toExternalForm()));
+			track.addChild(new Element("albumArtist", mediainfo.getCurrentURIMetaData().getAlbumArtist()));
+			track.addChild(new Element("duration", posinfo.getTrackDuration()+""));
+			track.addChild(new Element("position", posinfo.getRelTime()+""));
+
 
 		} else if (uri.startsWith("x-rincon-mp3radio:")) {
 			// yep, it's the radio
-			track.addChild(new Element("trackArtist", mediainfo.getCurrentURIMetaData().getCreator()));
-			track.addChild(new Element("trackAlbum", mediainfo.getCurrentURIMetaData().getAlbum()));
-			track.addChild(new Element("trackTitle", mediainfo.getCurrentURIMetaData().getTitle()));
-			track.addChild(new Element("trackAlbumArt", thishost+"/images/internetradio.png"));
-			track.addChild(new Element("trackAlbumArtist", mediainfo.getCurrentURI()));
+			track.addChild(new Element("artist", mediainfo.getCurrentURIMetaData().getCreator()));
+			track.addChild(new Element("album", mediainfo.getCurrentURIMetaData().getAlbum()));
+			track.addChild(new Element("title", mediainfo.getCurrentURIMetaData().getTitle()));
+			track.addChild(new Element("albumArt", thishost+"/images/internetradio.png"));
+			track.addChild(new Element("albumArtist", mediainfo.getCurrentURI()));
+			track.addChild(new Element("duration", posinfo.getTrackDuration()+""));
+			track.addChild(new Element("position", posinfo.getRelTime()+""));
 		} else if (uri.startsWith("x-rincon-stream:")) {
 			// line in stream
-			track.addChild(new Element("trackArtist", "N/A"));
-			track.addChild(new Element("trackAlbum", "N/A"));
-			track.addChild(new Element("trackTitle", "Local Line In"));
-			track.addChild(new Element("trackAlbumArt", thishost+"/images/linein.png"));
-			track.addChild(new Element("trackAlbumArtist", "N/A"));
+			track.addChild(new Element("artist", "N/A"));
+			track.addChild(new Element("album", "N/A"));
+			track.addChild(new Element("title", "Local Line In"));
+			track.addChild(new Element("albumArt", thishost+"/images/linein.png"));
+			track.addChild(new Element("albumArtist", "N/A"));
 		} else if (uri.startsWith("pndrradio:")) {
 			// Pandora
 			try {
 				TrackMetaData trackmeta = posinfo.getTrackMetaData();
-				track.addChild(new Element("trackArtist", "Pandora: " + trackmeta.getCreator()));
-				track.addChild(new Element("trackAlbum", "Pandora: " + trackmeta.getAlbum()));
-				track.addChild(new Element("trackTitle", "Pandora: " + trackmeta.getTitle()));
-				track.addChild(new Element("trackAlbumArt", new URL(trackmeta.getAlbumArtUri()).toExternalForm()));
-				track.addChild(new Element("trackAlbumArtist", "Pandora: " + trackmeta.getAlbumArtist()));
+				track.addChild(new Element("artist", "Pandora: " + trackmeta.getCreator()));
+				track.addChild(new Element("album", "Pandora: " + trackmeta.getAlbum()));
+				track.addChild(new Element("title", "Pandora: " + trackmeta.getTitle()));
+				track.addChild(new Element("albumArt", new URL(trackmeta.getAlbumArtUri()).toExternalForm()));
+				track.addChild(new Element("albumArtist", "Pandora: " + trackmeta.getAlbumArtist()));
+				track.addChild(new Element("duration", posinfo.getTrackDuration()+""));
+				track.addChild(new Element("position", posinfo.getRelTime()+""));
+
 			} catch (Exception e) {
 				track.addChild(new Element("noMusic", "true"));
 			}
@@ -562,11 +628,14 @@ public class JanosWebServlet extends HttpServlet {
 			// Rhapsody Station
 				try {
 					TrackMetaData trackmeta = posinfo.getTrackMetaData();
-					track.addChild(new Element("trackArtist", "Rhapsody: " + trackmeta.getCreator()));
-					track.addChild(new Element("trackAlbum", "Rhapsody: " + trackmeta.getAlbum()));
-					track.addChild(new Element("trackTitle", "Rhapsody: " + trackmeta.getTitle()));
-					track.addChild(new Element("trackAlbumArt", new URL(trackmeta.getAlbumArtUri()).toExternalForm()));
-					track.addChild(new Element("trackAlbumArtist", "Rhapsody: " + trackmeta.getAlbumArtist()));
+					track.addChild(new Element("artist", "Rhapsody: " + trackmeta.getCreator()));
+					track.addChild(new Element("album", "Rhapsody: " + trackmeta.getAlbum()));
+					track.addChild(new Element("title", "Rhapsody: " + trackmeta.getTitle()));
+					track.addChild(new Element("albumArt", new URL(trackmeta.getAlbumArtUri()).toExternalForm()));
+					track.addChild(new Element("albumArtist", "Rhapsody: " + trackmeta.getAlbumArtist()));
+					track.addChild(new Element("duration", posinfo.getTrackDuration()+""));
+					track.addChild(new Element("position", posinfo.getRelTime()+""));
+
 				} catch (Exception e) {
 					track.addChild(new Element("noMusic", "true"));
 				}
@@ -574,11 +643,13 @@ public class JanosWebServlet extends HttpServlet {
 			// last.fm Station
 			try {
 				TrackMetaData trackmeta = posinfo.getTrackMetaData();
-				track.addChild(new Element("trackArtist", "last.fm: " + trackmeta.getCreator()));
-				track.addChild(new Element("trackAlbum", "last.fm: " + trackmeta.getAlbum()));
-				track.addChild(new Element("trackTitle", "last.fm: " + trackmeta.getTitle()));
-				track.addChild(new Element("trackAlbumArt", new URL(trackmeta.getAlbumArtUri()).toExternalForm()));
-				track.addChild(new Element("trackAlbumArtist", "last.fm: " + trackmeta.getAlbumArtist()));
+				track.addChild(new Element("artist", "last.fm: " + trackmeta.getCreator()));
+				track.addChild(new Element("album", "last.fm: " + trackmeta.getAlbum()));
+				track.addChild(new Element("title", "last.fm: " + trackmeta.getTitle()));
+				track.addChild(new Element("albumArt", new URL(trackmeta.getAlbumArtUri()).toExternalForm()));
+				track.addChild(new Element("albumArtist", "last.fm: " + trackmeta.getAlbumArtist()));
+				track.addChild(new Element("duration", posinfo.getTrackDuration()+""));
+				track.addChild(new Element("position", posinfo.getRelTime()+""));
 			} catch (Exception e) {
 				track.addChild(new Element("noMusic", "true"));
 			}
@@ -587,11 +658,13 @@ public class JanosWebServlet extends HttpServlet {
 			// Local Radio
 			try {
 				TrackMetaData trackmeta = posinfo.getTrackMetaData();
-				track.addChild(new Element("trackArtist", "Radio: " + trackmeta.getCreator()));
-				track.addChild(new Element("trackAlbum", "Radio: " + trackmeta.getAlbum()));
-				track.addChild(new Element("trackTitle", "Radio: " + trackmeta.getTitle()));
-				track.addChild(new Element("trackAlbumArt", trackmeta.getAlbumArtUrl(zp).toExternalForm()));
-				track.addChild(new Element("trackAlbumArtist", "Radio: " + trackmeta.getAlbumArtist()));
+				track.addChild(new Element("artist", "Radio: " + trackmeta.getCreator()));
+				track.addChild(new Element("album", "Radio: " + trackmeta.getAlbum()));
+				track.addChild(new Element("title", "Radio: " + trackmeta.getTitle()));
+				track.addChild(new Element("albumArt", trackmeta.getAlbumArtUrl(zp).toExternalForm()));
+				track.addChild(new Element("albumArtist", "Radio: " + trackmeta.getAlbumArtist()));
+				track.addChild(new Element("duration", posinfo.getTrackDuration()+""));
+				track.addChild(new Element("position", posinfo.getRelTime()+""));
 				
 			} catch (Exception e) {
 				track.addChild(new Element("noMusic", "true"));
@@ -761,7 +834,7 @@ public class JanosWebServlet extends HttpServlet {
 			Element album = new Element("album", true);
 			album.addChild(new Element("title", title));
 			album.addChild(new Element("artist", creator));
-			album.addChild(new Element("albumart", e.getAlbumArtURL(zp).toExternalForm()));
+			album.addChild(new Element("albumArt", e.getAlbumArtURL(zp).toExternalForm()));
 			album.addChild(new Element("id", e.getId()));
 			albums.addChild(album);
 
@@ -854,14 +927,16 @@ public class JanosWebServlet extends HttpServlet {
 				String type = e.getId();
 				if (type.startsWith("A:ARTIST") || type.startsWith("A:ALBUMARTIST")) {
 					result.addChild(new Element("type", "artist"));
-					result.addChild(new Element("artist", e.getTitle()));
-					result.addChild(new Element("id", e.getId()));
+					Element artist = new Element("artist");
+					artist.addChild(new Element("name", e.getTitle()));
+					artist.addChild(new Element("id", e.getId()));
+					result.addChild(artist);
 				} else if (type.startsWith("A:ALBUM") && !type.startsWith("A:ALBUMARTIST")) {
 					result.addChild(new Element("type", "album"));
 					Element album = new Element("album");
 					album.addChild(new Element("title", e.getTitle()));
 					album.addChild(new Element("artist", e.getCreator()));
-					album.addChild(new Element("albumart", e.getAlbumArtURL(zp).toExternalForm()));
+					album.addChild(new Element("albumArt", e.getAlbumArtURL(zp).toExternalForm()));
 					album.addChild(new Element("id", e.getId()));
 					result.addChild(album);
 				} else if (type.substring(1).startsWith("://")) {
@@ -956,16 +1031,16 @@ public class JanosWebServlet extends HttpServlet {
 			if (coord != null) {
 				Element group = new Element("group", true);
 				group.addChild(new Element("groupID", zgroup.getId()));
-				group.addChild(new Element("groupIcon", getZonePlayerIcon(coord)));
-				group.addChild(new Element("groupIsPlaying", getZoneIsPlaying(coord) ? "true" : "false"));
-				Element gmembers = new Element("groupMembers");
+				group.addChild(new Element("icon", getZonePlayerIcon(coord)));
+				group.addChild(new Element("playing", getZonePlaying(coord) ? "true" : "false"));
+				Element gmembers = new Element("members");
 				for (String zoneID : zgroup.getMembers()) {
 					Element zone = new Element("zone", true);
 					zone.addChild(new Element("zoneID", zoneID));
 					ZonePlayer zp = getZonePlayer(zoneID);
-					zone.addChild(new Element("zoneName", getZonePlayerName(zp)));
-					zone.addChild(new Element("zoneIcon", getZonePlayerIcon(zp)));
-					zone.addChild(new Element("zoneIsPlaying", getZoneIsPlaying(zp) ? "true" : "false"));
+					zone.addChild(new Element("icon", getZonePlayerIcon(zp)));
+					zone.addChild(new Element("playing", getZonePlaying(zp) ? "true" : "false"));
+					zone.addChild(new Element("name", getZonePlayerName(zp)));
 					gmembers.addChild(zone);
 				}
 				group.addChild(gmembers);
@@ -975,6 +1050,15 @@ public class JanosWebServlet extends HttpServlet {
 			}
 		}
 		return groups;
+	}
+	
+	private Element listenForZoneGroupUpdates() throws JanosWebException, IOException, UPNPResponseException {
+		UpdateListener l = new UpdateListener();
+		controller.getZoneGroupStateModel().addListener(l);
+		//this is a blocking call
+		Element retval = l.getZoneChanges();
+		controller.getZoneGroupStateModel().removeListener(l);
+		return retval;
 	}
 	
 	private Element getPlayCommands() {
@@ -991,14 +1075,27 @@ public class JanosWebServlet extends HttpServlet {
 		modes.addChild(new Element("mode", "NORMAL"));
 		modes.addChild(new Element("mode", "SHUFFLE"));
 		modes.addChild(new Element("mode", "SHUFFLE_NOREPEAT"));
-		modes.addChild(new Element("mode", "REPEAT_ONE"));
 		modes.addChild(new Element("mode", "REPEAT_ALL"));
-		modes.addChild(new Element("mode", "RANDOM"));
-		modes.addChild(new Element("mode", "DIRECT_1"));
-		modes.addChild(new Element("mode", "INTRO"));
 		return modes;
 	}
 
+	
+	
+	private Element listenForZoneGroupVolumeUpdates(String groupID)  throws JanosWebException, IOException, UPNPResponseException {
+		if (groupID == null) {
+			missingParameterException("groupID");
+		}
+		return listenForZoneVolumeUpdates(getZoneGroup(groupID).getCoordinator());
+	}
+
+	private Element listenForZoneGroupMusicUpdates(String groupID)  throws JanosWebException, IOException, UPNPResponseException {
+		if (groupID == null) {
+			missingParameterException("groupID");
+		}
+		return listenForZoneMusicUpdates(getZoneGroup(groupID).getCoordinator());
+	}
+
+	
 	/**
 	 * Get an Element-representation of the ZoneGroup's volume settings
 	 * 
@@ -1025,15 +1122,15 @@ public class JanosWebServlet extends HttpServlet {
 			int volume = rcs.getVolume();
 			totalvolume += volume;
 			boolean zonemuted = rcs.getMute();
+
 			groupmuted = groupmuted && zonemuted;
+			//here I should really call zone.addChild(getZoneVolume(zoneID)), but it's not efficient to do so
 			Element zone = new Element("zone", true);
 			zone.addChild(new Element("zoneID", zoneID));
 			//zone.addChild(new Element("zoneName", getZonePlayerName(zp)));
-			//here I should really call zone.addChild(getZoneVolume(zoneID)), but it's not efficient to do so
-			Element volinfo = new Element("volumeInfo");
-			volinfo.addChild(new Element("volume", volume + ""));
-			volinfo.addChild(new Element("muted", zonemuted ? "true" : "false"));
-			zone.addChild(volinfo);
+			zone.addChild(new Element("volume", volume + ""));
+			zone.addChild(new Element("muted", zonemuted ? "true" : "false"));
+			//Element zone = getZoneVolume(zoneID);
 			zonegroup.addChild(zone);
 		}
 		zonegroup.addChildFirst(new Element("muted", groupmuted ? "true" : "false"));
@@ -1052,15 +1149,15 @@ public class JanosWebServlet extends HttpServlet {
 	 * @throws UPNPResponseException
 	 * @throws IOException
 	 */
-	private void setZoneGroupVolume(String groupID, String groupVolume)
+	private void setZoneGroupVolume(String groupID, String volume)
 			throws IOException, UPNPResponseException, JanosWebException {
 		if (groupID == null) {
 			missingParameterException("groupID");
 		}
-		if (groupVolume == null) {
-			missingParameterException("groupVolume");
+		if (volume == null) {
+			missingParameterException("volume");
 		}
-		int vol = Integer.parseInt(groupVolume);
+		int vol = Integer.parseInt(volume);
 		checkVolume(vol);
 		ZoneGroup zgroup = getZoneGroup(groupID);
 		
@@ -1074,10 +1171,10 @@ public class JanosWebServlet extends HttpServlet {
 		int idx = 0;
 		for (String zoneID : members) {
 			ZonePlayer zp = getZonePlayer(zoneID);
-			int volume = zp.getMediaRendererDevice()
+			int volum = zp.getMediaRendererDevice()
 					.getRenderingControlService().getVolume();
-			zonevolumes[idx++] = volume;
-			totalvolume += volume;
+			zonevolumes[idx++] = volum;
+			totalvolume += volum;
 		}
 		int oldgroupvolume = totalvolume / members.size();
 
@@ -1161,20 +1258,20 @@ public class JanosWebServlet extends HttpServlet {
 	}
 
 	private void setZoneGroupMuted(String groupID,
-			String groupMuted) throws IOException, UPNPResponseException,
+			String mute) throws IOException, UPNPResponseException,
 			JanosWebException {
 		if (groupID == null) {
 			missingParameterException("groupID");
 		}
-		if (groupMuted == null) {
-			missingParameterException("groupMuted");
+		if (mute == null) {
+			missingParameterException("mute");
 		}
 
 		ZoneGroup zgroup = getZoneGroup(groupID);
 
 		List<String> members = zgroup.getMembers();
 		for (String zoneID : members) {
-			setZoneMuted(zoneID, groupMuted);
+			setZoneMuted(zoneID, mute);
 		}
 	}
 
@@ -1194,27 +1291,27 @@ public class JanosWebServlet extends HttpServlet {
 	 * @throws UPNPResponseException 
 	 * @throws IOException 
 	 * */
-	private void setZoneGroupCommand(String groupID, String groupCommand) throws IOException, UPNPResponseException, JanosWebException {
+	private void setZoneGroupCommand(String groupID, String command) throws IOException, UPNPResponseException, JanosWebException {
 		if (groupID == null) {
 			missingParameterException("groupID");
 		}
-		if (groupCommand == null) {
-			missingParameterException("groupCommand");
+		if (command == null) {
+			missingParameterException("command");
 		}
-		setZoneCommand(getZoneGroup(groupID).getCoordinator(), groupCommand);
+		setZoneCommand(getZoneGroup(groupID).getCoordinator(), command);
 	}
 	
 	/**Set a ZoneGroup's playmode (shuffle/normal/etc.)
 	 * @param the ZoneGroup's ID
 	 * */
-	private void setZoneGroupPlayMode(String groupID, String groupPlayMode) throws IOException, UPNPResponseException, JanosWebException {
+	private void setZoneGroupPlayMode(String groupID, String playMode) throws IOException, UPNPResponseException, JanosWebException {
 		if (groupID == null) {
 			missingParameterException("groupID");
 		}
-		if (groupPlayMode == null) {
-			missingParameterException("groupPlayMode");
+		if (playMode == null) {
+			missingParameterException("playMode");
 		}
-		setZonePlayMode(getZoneGroup(groupID).getCoordinator(), groupPlayMode);
+		setZonePlayMode(getZoneGroup(groupID).getCoordinator(), playMode);
 	}
 
 	/**Get an Element-represenation of a ZoneGroup's current song position
@@ -1233,14 +1330,14 @@ public class JanosWebServlet extends HttpServlet {
 	 * @throws UPNPResponseException 
 	 * @throws IOException 
 	 * */
-	private void setZoneGroupTrackPosition(String groupID, String groupTrackPosition) throws JanosWebException, NumberFormatException, IOException, UPNPResponseException {
+	private void setZoneGroupTrackPosition(String groupID, String trackPosition) throws JanosWebException, NumberFormatException, IOException, UPNPResponseException {
 		if (groupID == null) {
 			missingParameterException("groupID");
 		}
-		if (groupTrackPosition == null) {
-			missingParameterException("groupTrackPosition");
+		if (trackPosition == null) {
+			missingParameterException("trackPosition");
 		}
-		setZoneTrackPosition(getZoneGroup(groupID).getCoordinator(), groupTrackPosition);
+		setZoneTrackPosition(getZoneGroup(groupID).getCoordinator(), trackPosition);
 	}
 	
 	private Element getZoneGroupTrack(String groupID) throws IOException, UPNPResponseException, JanosWebException, SAXException {
@@ -1405,7 +1502,7 @@ public class JanosWebServlet extends HttpServlet {
 	/**
 	 * @throws UPNPResponseException 
 	 * @throws IOException */
-	private boolean getZoneIsPlaying(ZonePlayer zp) throws IOException, UPNPResponseException {
+	private boolean getZonePlaying(ZonePlayer zp) throws IOException, UPNPResponseException {
 		return zp.getMediaRendererDevice().getAvTransportService().getTransportInfo().getState().equals(TransportState.PLAYING);
 	}
 	

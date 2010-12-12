@@ -1,0 +1,519 @@
+<html>
+<head>
+<title>Sonos web controller - Simple and unstyled</title>
+<style type="text/css">
+div.normaldiv {
+	border: outset;
+	border-width: 3px;
+	margin: 5px;
+}
+</style>
+<script type="text/javascript" src="../javascript/JanosWebBasic.js"></script>
+<script type="text/javascript">
+var groups;
+//group with index 0 is selected by default
+var selectedgroup = 0;
+var currentQueueIndex = 0;
+var playing = false;
+var playmode = "";
+
+function initialize() {
+	getGroups(displayGroupsAsButtons, true);
+	//group with index 0 is selected by default
+	setSelectedGroup(0);
+	listenForGroupUpdates(groupUpdateCallback, false);
+	listenForGroupVolumeUpdates(groups.group[selectedgroup].groupID, volumeUpdateCallback, false);
+	listenForGroupMusicUpdates(groups.group[selectedgroup].groupID, musicUpdateCallback, false);
+}
+
+function groupUpdateCallback(object) {
+	//Start a new listener
+	listenForGroupUpdates(groupUpdateCallback, false);
+	if (!object.response.groupUpdates.timeout) {
+		//TODO: do something more interesting instead of a total reload
+		getGroups(displayGroupsAsButtons, true);
+		setSelectedGroup(0);
+	}
+}
+
+function volumeUpdateCallback(object) {
+	//start a new listener
+	listenForGroupVolumeUpdates(groups.group[selectedgroup].groupID, volumeUpdateCallback, false);
+	if (object.response.volumeChanged) {
+		getGroupVolume(groups.group[selectedgroup].groupID, displayGroupVolume);
+	}
+}
+
+function musicUpdateCallback(object) {
+	//start a new listener
+	listenForGroupMusicUpdates(groups.group[selectedgroup].groupID, musicUpdateCallback, false);
+	if (object.response.musicChanged) {
+		//TODO: do something more interesting instead of a "total reload"
+		displaySelectedGroup();
+	}
+}
+
+//display the selected group and update what is playing, volume, queue etc.
+
+//Main "update" function, that queries for and shows the last known state of the selected group
+function displaySelectedGroup() {
+	//the group name
+	var gname = document.createElement("h4");
+	gname.appendChild(document.createTextNode(groups.group[selectedgroup].groupname));
+
+	var gimg = document.createElement("img");
+	var selgrphtml = "<h4>" + groups.group[selectedgroup].groupname + "</h4>\n";
+	//use the icon for the group that the coordinator of the group has (TODO: create a group-icon?)
+	for (z=0; z<groups.group[selectedgroup].members.zone.length; z++) {
+		if (groups.group[selectedgroup].members.zone[z].zoneID == groups.group[selectedgroup].coordinatorID) {
+			gimg.src = groups.group[selectedgroup].icon;
+			gimg.alt = "icon";
+			gimg.style.width = "50px";
+		}
+	} 
+	//display the group-name and icon inside the element with id "currentGroup"
+	var curgrp = document.getElementById("currentGroup");
+	curgrp.innerHTML = "";
+	curgrp.appendChild(gname);
+	curgrp.appendChild(gimg);
+	//update "now playing"
+	getGroupTrack(groups.group[selectedgroup].groupID, displayNowPlaying);
+	//update volume.
+	getGroupVolume(groups.group[selectedgroup].groupID, displayGroupVolume);
+	//
+	document.getElementById("showQueue").onclick = function() {getGroupQueue(groups.group[selectedgroup].groupID, 0, 1000, displayQueue);};
+	document.getElementById("searchButton").onclick = function() {getGroupSearch(groups.group[selectedgroup].groupID, 0, 1000, document.getElementById("searchString").value, displaySearch)};
+	getGroupPlayInfo(groups.group[selectedgroup].groupID, usePlayInfo);
+}
+
+
+
+
+
+
+
+
+
+
+
+
+//////////////////////////////////////////////////////////////////
+//callback functions
+//////////////////////////////////////////////////////////////////
+
+//displays the groups as buttons with names in the div with id groupSelect
+function displayGroupsAsButtons(object) {
+	var parentelement = document.getElementById("groupSelect");
+	parentelement.innerHTML = "";
+	var group;
+	//global variable: groups
+	groups = object.response.groups;
+	//for each group, fix the groupname as "zonename - zonename - zonename ...""
+	for (var g=0; g<groups.group.length; g++) {
+		group = groups.group[g];
+		groupname = "";
+		//find ech zone name
+		for (z=0; z<group.members.zone.length; z++) {
+			if (z>0) {
+				groupname += " - ";
+			}
+			zone = group.members.zone[z];
+			groupname += zone.name;
+		}
+		//enrich the groups-object with group-names.
+		groups.group[g].groupname = groupname;
+		//create the buttons on the web-page
+		var button = document.createElement("input");
+		button.id = "group"+group.groupID;
+		button.className = "groupButton";
+		button.type = "button";
+		button.index = g;
+		button.onclick = function() { setSelectedGroup(this.index); };
+		button.value = groupname;
+		parentelement.appendChild(button);
+	}
+}
+
+//Display what is playing now
+function displayNowPlaying(object) {
+	var track = object.response.track;
+	var artistelm = document.getElementById("nowArtist");
+	var albumelm = document.getElementById("nowAlbum");
+	var aartelm = document.getElementById("nowAlbumArt");
+	var trackelm = document.getElementById("nowTrack");
+	artistelm.innerHTML = "";
+	albumelm.innerHTML = "";
+	aartelm.innerHTML = "";
+	trackelm.innerHTML = "";
+	if (track.noMusic) {
+		artistelm.appendChild(document.createTextNode("Artist: "));
+		albumelm.appendChild(document.createTextNode("Album: "));
+		aartelm.appendChild(document.createTextNode(" "));
+		trackelm.appendChild(document.createTextNode("Title: "));
+	}
+	else {
+		//show what is playing
+		artistelm.appendChild(document.createTextNode("Artist: " + track.artist));
+		albumelm.appendChild(document.createTextNode("Album: " + track.album));
+		img = document.createElement("img");
+		img.src = track.albumArt;
+		img.style.width = "100px";
+		aartelm.appendChild(img);
+		trackelm.appendChild(document.createTextNode("Title: " + track.title));
+		currentQueueIndex = track.queueIndex;
+		//show duration and position of current track
+		displayTrackPos(object);
+	}
+}
+
+function usePlayInfo(object) {
+	playing = object.response.playInfo.playing;
+	playmode = object.response.playInfo.playMode;
+	if (playing) {
+		document.getElementById("buttonPlay").style.display = "none";
+		document.getElementById("buttonPause").style.display = "inline";
+	} else {
+		document.getElementById("buttonPause").style.display = "none";
+		document.getElementById("buttonPlay").style.display = "inline";
+	}
+	if (playmode == "SHUFFLE") {
+		document.getElementById("buttonShuffle").style.display = "none";
+		document.getElementById("buttonNoShuffle").style.display = "inline";
+		document.getElementById("buttonRepeat").style.display = "none";
+		document.getElementById("buttonNoRepeat").style.display = "inline";
+	}
+	else if (playmode == "SHUFFLE_NOREPEAT") {
+		document.getElementById("buttonShuffle").style.display = "none";
+		document.getElementById("buttonNoShuffle").style.display = "inline";
+		document.getElementById("buttonRepeat").style.display = "inline";
+		document.getElementById("buttonNoRepeat").style.display = "none";
+	}
+	else if (playmode == "NORMAL") {
+		document.getElementById("buttonShuffle").style.display = "inline";
+		document.getElementById("buttonNoShuffle").style.display = "none";
+		document.getElementById("buttonRepeat").style.display = "inline";
+		document.getElementById("buttonNoRepeat").style.display = "none";
+	}
+	else if (playmode == "REPEAT_ALL") {
+		document.getElementById("buttonShuffle").style.display = "inline";
+		document.getElementById("buttonNoShuffle").style.display = "none";
+		document.getElementById("buttonRepeat").style.display = "none";
+		document.getElementById("buttonNoRepeat").style.display = "inline";
+	}	
+}
+
+//this function fills out the nowPos-element with track-position information. It also
+//sets the onclick-functionality of the setposbtn
+function displayTrackPos(object) {
+	var track = object.response.track;
+	var durasec = track.duration / 1000; 
+	var minutes = Math.floor(durasec / 60); 
+	var seconds = durasec % 60;
+	var percent = Math.floor((track.position*100)/track.duration);
+	
+	if (track.duration == 0) {
+		percent = 0;
+	} else {
+		document.getElementById("setposbtn").onclick = function() {setGroupTrackPos(groups.group[selectedgroup].groupID, Math.ceil(setpos.value*track.duration/100), null, true); getGroupTrackPos(groups.group[selectedgroup].groupID, displayTrackPos);};
+	}
+	document.getElementById("setpos").value = percent;
+	var pos = document.getElementById("nowPos");
+	pos.innerHTML = "";
+	pos.appendChild(document.createTextNode("Track position: " + percent + "% of "+minutes+":"+seconds));
+}
+
+//Shows the group volume and the invidual zones' volumes. Also displays simple volume controls
+function displayGroupVolume(object) {
+	var group = object.response.group;
+
+	volcontrols = document.getElementById("volumeControls");
+	volcontrols.innerHTML = "";
+	gvoltext = document.createTextNode("Group volume: " + group.volume + (group.muted ? " - Muted" : "") + " - ");
+	volcontrols.appendChild(gvoltext);
+	createSingleValueChooser(volcontrols, "Set Volume ", groups.group[selectedgroup].groupID, group.volume, setGroupVolume);
+	
+	var trackvolHTML = "Group volume: " + group.volume + (group.muted ? " - Muted" : " ");
+	if (group.zone.length > 1) {
+		volcontrols.appendChild(document.createElement("br"));
+		for (z=0; z<group.zone.length; z++) {
+			volcontrols.appendChild(document.createElement("br"));
+			volcontrols.appendChild(document.createTextNode(getSelZoneName(group.zone[z].zoneID) + ": " + group.zone[z].volume + (group.zone[z].muted ? " - muted" : " ")));
+			volcontrols.appendChild(document.createTextNode(" - Set volume: "));
+			createSingleValueChooser(volcontrols, "Set Volume", group.zone[z].zoneID, group.zone[z].volume, setZoneVolume);
+		}
+	}
+}
+
+function displayQueue(object) {
+	var queuearea = document.getElementById("queue");
+	queuearea.innerHTML = "";
+	var queue = object.response.queue;
+	var list = document.createElement("ul");
+	for (q=0; q<queue.track.length; q++) {
+		listitem = document.createElement("li");
+		queueelement = document.createElement("p");
+		appendTrack(queueelement, queue.track[q], false);
+		listitem.appendChild(queueelement);
+		list.appendChild(listitem);
+	}
+	queuearea.appendChild(list);
+}
+
+function displaySearch(object) {
+	var resarea = document.getElementById("searchResults");
+	resarea.innerHTML="";
+	resarea.appendChild(document.createTextNode("Search results:"));
+	resarea.appendChild(document.createElement("br"));
+	var results = object.response.results;
+	var list = document.createElement("ul");
+	for (s=0; s<results.result.length; s++) {
+		listitem = document.createElement("li");
+		resultelement = document.createElement("p");
+		if (results.result[s].type == "track") {
+			appendTrack(resultelement, results.result[s].track, true);
+		}
+		else if (results.result[s].type == "artist") {
+			appendArtist(resultelement, results.result[s].artist);
+		}
+		else if (results.result[s].type == "album") {
+			appendAlbum(resultelement, results.result[s].album);
+		}
+		else {
+			resultelement.appendChild(document.createTextNode("Unknown type: "+results.result[s].type));
+		}
+		listitem.appendChild(resultelement);
+		list.appendChild(listitem);
+	}
+	resarea.appendChild(list);
+}
+
+
+
+
+//////////////////////////////////////////////////////////////////
+//action convenience functions
+//////////////////////////////////////////////////////////////////
+function play() {
+	setGroupPlay(groups.group[selectedgroup].groupID, null);
+}
+function pause() {
+	setGroupPause(groups.group[selectedgroup].groupID, null);
+}
+function stop() {
+	setGroupStop(groups.group[selectedgroup].groupID, null);
+}
+function next() {
+	setGroupNext(groups.group[selectedgroup].groupID, null);
+}
+function prev() {
+	setGroupPrevious(groups.group[selectedgroup].groupID, null);
+}
+function shuffle() {
+	if (playmode == "NORMAL") {
+		setGroupPlayMode(groups.group[selectedgroup].groupID, "SHUFFLE_NOREPEAT");
+	}
+	else if (playmode == "REPEAT_ALL") {
+		setGroupPlayMode(groups.group[selectedgroup].groupID, "SHUFFLE");
+	}
+}
+function noshuffle() {
+	alert(playmode);
+	if (playmode == "SHUFFLE_NOREPEAT")
+		setGroupPlayMode(groups.group[selectedgroup].groupID, "NORMAL");
+	else if (playmode == "SHUFFLE")
+		setGroupPlayMode(groups.group[selectedgroup].groupID, "REPEAT_ALL");
+}
+function repeat() {
+	alert(playmode);
+	if (playmode == "NORMAL")
+		setGroupPlayMode(groups.group[selectedgroup].groupID, "REPEAT_ALL");
+	else if (playmode == "SHUFFLE_NOREPEAT")
+		setGroupPlayMode(groups.group[selectedgroup].groupID, "SHUFFLE");
+}
+function norepeat() {
+	alert(playmode);
+	if (playmode == "REPEAT_ALL")
+		setGroupPlayMode(groups.group[selectedgroup].groupID, "NORMAL");
+	else if (playmode == "SHUFFLE")
+		setGroupPlayMode(groups.group[selectedgroup].groupID, "SHUFFLE_NOREPEAT");
+	alert("norepeat");
+}
+
+
+function setSelectedGroup(index) {
+	selectedgroup = index;
+	displaySelectedGroup();
+}
+function getSelZoneName(zoneID) {
+	for (z=0; z<groups.group[selectedgroup].members.zone.length; z++) {
+		if (groups.group[selectedgroup].members.zone[z].zoneID == zoneID) {
+			return groups.group[selectedgroup].members.zone[z].name;
+		}
+	}
+	return "Unknown";
+}
+
+
+
+
+
+
+
+//////////////////////////////////////////////////////////////////
+//DOM object convenience functions:
+/////////////////////////////////////////////////////////////////
+function appendTrack(parentelement, track, showqueuelink) {
+	if (track.id.substring(4) == currentQueueIndex) {
+		var bold = document.createElement("b");
+		parentelement.appendChild(bold);
+		parentelement = bold;
+	}
+	parentelement.appendChild(document.createTextNode("Artist: "+track.artist));
+	parentelement.appendChild(document.createElement("br"));
+	parentelement.appendChild(document.createTextNode("Album: "+track.album));
+	parentelement.appendChild(document.createElement("br"));
+	var image = document.createElement("img");
+	image.src = track.albumArt;
+	image.style.width = 30;
+	image.style.height = 30;
+	parentelement.appendChild(image);
+	parentelement.appendChild(document.createElement("br"));
+	parentelement.appendChild(document.createTextNode("Title: "+track.title+" "));
+	if (showqueuelink) {
+		appendQueueLink(parentelement, track.id);
+		appendQueueNextLink(parentelement, track.id);
+		appendPlayNowLink(parentelement, track.id);
+	}
+	parentelement.appendChild(document.createElement("br"));
+	parentelement.appendChild(document.createTextNode("no: "+track.no));
+}
+
+function appendArtist(parentelement, artist) {
+	//TODO: Make some generic artist-icon
+	parentelement.appendChild(document.createTextNode("Artist: "+artist.name+" "));
+	appendQueueLink(parentelement, artist.id);
+	appendQueueNextLink(parentelement, artist.id);
+	appendPlayNowLink(parentelement, artist.id);
+}
+
+function appendAlbum(parentelement, album) {
+	parentelement.appendChild(document.createTextNode("Artist: "+album.artist));
+	parentelement.appendChild(document.createElement("br"));
+	parentelement.appendChild(document.createTextNode("Album: "+album.title));
+	appendQueueLink(parentelement, album.id);
+	appendQueueNextLink(parentelement, album.id);
+	appendPlayNowLink(parentelement, album.id);
+	parentelement.appendChild(document.createElement("br"));
+	var image = document.createElement("img");
+	image.src = album.albumArt;
+	image.style.width = 30;
+	image.style.height = 30;
+	parentelement.appendChild(image);
+	parentelement.appendChild(document.createElement("br"));
+}
+
+function appendQueueLink(parentelement, id) {
+	parentelement.appendChild(document.createTextNode(" "));
+	queuelink = document.createElement("a");
+	queuelink.appendChild(document.createTextNode("Add to queue"));
+	queuelink.href = "#";
+	queuelink.onclick = function() {setGroupEnqueue(groups.group[selectedgroup].groupID, id, null);};
+	parentelement.appendChild(queuelink);
+}
+
+function appendQueueNextLink(parentelement, id) {
+	parentelement.appendChild(document.createTextNode(" "));
+	queuelink = document.createElement("a");
+	queuelink.appendChild(document.createTextNode("Queue as next"));
+	queuelink.href = "#";
+	queuelink.onclick = function() {setGroupEnqueueNext(groups.group[selectedgroup].groupID, id, null);};
+	parentelement.appendChild(queuelink);
+}
+
+function appendPlayNowLink(parentelement, id) {
+	parentelement.appendChild(document.createTextNode(" "));
+	queuelink = document.createElement("a");
+	queuelink.appendChild(document.createTextNode(" Play Now"));
+	queuelink.href = "#";
+	queuelink.onclick = function() {setGroupEnqueueNow(groups.group[selectedgroup].groupID, id, null);};
+	parentelement.appendChild(queuelink);
+}
+
+function createSingleValueChooser(parentelement, title, ID, initvalue, setfunction) {
+	var randomID=ID+Math.random();
+	var inputtext = document.createElement("input");
+	inputtext.id = "input"+randomID;
+	inputtext.type = "text";
+	inputtext.style.width = "3em";
+	inputtext.value = initvalue;
+	var inputbutton = document.createElement("input");
+	inputbutton.id = "button"+randomID;
+	inputbutton.type = "button";
+	inputbutton.value = title;
+	//TODO: set a callback function to check for errors (null is used for now)
+	inputbutton.onclick = function() {setfunction(ID, inputtext.value, null); };
+	parentelement.appendChild(inputtext);
+	parentelement.appendChild(inputbutton);
+}
+
+
+</script>
+</head>
+<body onload="initialize();">
+
+<div id="currentGroup" class="innerdiv">
+<h4>Selected group</h4>
+<img src="../images/default-sonos-icon.png" alt="icon" style="width:50px"/>
+</div>
+
+<div id="groupSelect" class="innerdiv">
+<input id="groupRINCON1" class="groupButton" type="button" onclick="setGroup(RINCON1)" value="Group 1"></input>
+<input id="groupRINCON2" class="groupButton" type="button" onclick="setGroup(RINCON2)" value="Group 2"></input>
+</div>
+
+<div id="nowPlaying" class="normaldiv">
+Now playing</br>
+<div id="nowArtist" class="innerdiv">Artist</div>
+<div id="nowAlbum" class="innerdiv">Album</div>
+<div id="nowAlbumArt" class="innerdiv"><img src="../images/default-sonos-icon.png" alt="icon" style="width:50px"/></div>
+<div id="nowTrack" class="innerdiv">Track</div>
+<div id="nowPos" class="innerdiv">Position</div>
+<div id="setPos" class="innerdiv">Set position: <input id="setpos" type="text" value="0" style="width:3em;"></input>% <input id="setposbtn" type="button" value="Set Position"></input></div>
+</div>
+<div id="volumeControls" class="normaldiv">
+Volume controls
+</div>
+<div id="playControls" class="normaldiv">
+Play controls<br/>
+<input type="button" id="buttonPrev" value="Previous" onclick="prev()"/>
+<input type="button" id="buttonPlay" value="Play" onclick="play()" />
+<input type="button" id="buttonPause" value="Pause" onclick="pause()" />
+<input type="button" id="buttonStop" value="Stop" onclick="stop()"/>
+<input type="button" id="buttonNext" value="Next" onclick="next()"/>
+<br/>
+<input type="button" id="buttonShuffle" value="Shuffle on" onclick="shuffle()" />
+<input type="button" id="buttonNoShuffle" value="Shuffle off" onclick="noshuffle()"  />
+<input type="button" id="buttonRepeat" value="Repeat" onclick="repeat()" />
+<input type="button" id="buttonNoRepeat" value="No repeat"  onclick="norepeat()" />
+</div>
+<div id="queueControls" class="normaldiv">
+Queue
+<input id="showQueue" type="button" value="Show queue" />
+<input type="button" value="Hide queue" onclick="document.getElementById('queue').innerHTML=''"/>
+<div id="queue" class="innerdiv">
+</div>
+</div>
+<div id="searchInput" class="normaldiv">
+Search for: 
+<input id="searchString" type="text"/>
+<input id="searchButton" type="button" value="Search"/>
+<input type="button" value="Hide results" onclick="document.getElementById('searchResults').innerHTML='Search results:'"/>
+</div>
+<div id="searchResults" class="normaldiv">
+Search results:
+</div>
+<br/>
+<br/>
+
+</body>
+</html>

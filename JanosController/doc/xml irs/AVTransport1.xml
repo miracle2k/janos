@@ -62,6 +62,15 @@
             <defaultValue>NORMAL</defaultValue>
         </stateVariable>
         <stateVariable sendEvents="no">
+            <name>CurrentCrossfadeMode</name>
+            <dataType>string</dataType>
+            <allowedValueList>
+                <allowedValue>0</allowedValue>
+                <allowedValue>1</allowedValue>
+            </allowedValueList>
+            <defaultValue>0</defaultValue>
+        </stateVariable>
+        <stateVariable sendEvents="no">
             <name>TransportPlaySpeed</name>
             <dataType>string</dataType>
 	    <allowedValueList>

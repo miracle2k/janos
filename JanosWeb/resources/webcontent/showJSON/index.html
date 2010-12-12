@@ -1,6 +1,6 @@
 <html>
 <head>
-<title>test</title>
+<title>Sonos web controller - Show JSON</title>
 <script type="text/javascript" src="../javascript/JanosWebBasic.js"></script>
 <script type="text/javascript" src="json2.js"></script>
 <script type="text/javascript">
@@ -18,8 +18,8 @@ function displayJSON(object) {
 function displayZonesAsOptions(object) {
 	var zoneshtml = "";
 	for (i=0; i<object.response.groups.group.length; i++) {
-		for (j=0; j<object.response.groups.group[i].groupMembers.zone.length; j++) {
-				zoneshtml += "<option value=\""+object.response.groups.group[i].groupMembers.zone[j].zoneID+"\">"+object.response.groups.group[i].groupMembers.zone[j].zoneID+"</option>\n";
+		for (j=0; j<object.response.groups.group[i].members.zone.length; j++) {
+				zoneshtml += "<option value=\""+object.response.groups.group[i].members.zone[j].zoneID+"\">"+object.response.groups.group[i].members.zone[j].zoneID+"</option>\n";
 			}
 	}
 	document.getElementById("zoneID").innerHTML=zoneshtml;
@@ -89,11 +89,22 @@ function setupInput() {
 	if (selbox.options[index].value == "getGroups") {
 		actionbutton.onclick = function(){getGroups(displayJSON)};
 	}
+	else if (selbox.options[index].value == "listenForGroupUpdates") {
+		actionbutton.onclick = function(){listenForGroupUpdates(displayJSON)};
+	}
 	else if (selbox.options[index].value == "getPlayModes") {
 		actionbutton.onclick = function(){getPlayModes(displayJSON)};
 	}
 	else if (selbox.options[index].value == "getPlayCommands") {
 		actionbutton.onclick = function(){getPlayCommands(displayJSON)};
+	}
+	else if (selbox.options[index].value == "listenForGroupVolumeUpdates") {
+		showInputGID();
+		actionbutton.onclick = function(){listenForGroupVolumeUpdates(groupID.options[groupID.options.selectedIndex].value,displayJSON)};
+	}
+	else if (selbox.options[index].value == "listenForGroupMusicUpdates") {
+		showInputGID();
+		actionbutton.onclick = function(){listenForGroupMusicUpdates(groupID.options[groupID.options.selectedIndex].value,displayJSON)};
 	}
 	else if (selbox.options[index].value == "setGroupVolume") {
 		showInputGID();
@@ -202,8 +213,11 @@ function setupInput() {
 		Functionality<br/>
 		<select id="opselect" name="opselect" onChange="setupInput()">
 			<option value="getGroups">Get Groups</option>
+			<option value="listenForGroupUpdates">Listen for Group Updates</option>
 			<option value="getPlayCommands">Get Play Commands</option>
 			<option value="getPlayModes">Get Play Modes</option>
+			<option value="listenForGroupVolumeUpdates">Listen for volume updates (Group)</option>
+			<option value="listenForGroupMusicUpdates">Listen for music updates (Group)</option>
 			<option value="getGroupVolume">Show volume (Group)</option>
 			<option value="setZoneVolume">Set volume (Single Zone)</option>
 			<option value="setGroupVolume">Set volume (Group)</option>
