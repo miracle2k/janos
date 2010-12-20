@@ -37,7 +37,7 @@ public class UpdateListener implements ZoneGroupStateModelListener, RenderingCon
 	}
 	
 	@Override
-	public void zoneGroupRemoved(ZoneGroup group, ZoneGroupStateModel source) {
+	public synchronized  void zoneGroupRemoved(ZoneGroup group, ZoneGroupStateModel source) {
 		String gid = group.getId();
 		//if a group was added and then removed, there is no reason to keep it in the added list.
 		if (null == zonesadded.remove(gid)) {
@@ -45,21 +45,24 @@ public class UpdateListener implements ZoneGroupStateModelListener, RenderingCon
 			zonesremoved.put(gid, new Long(System.currentTimeMillis()));
 		}
 		zonesupdated = true;
+		notifyAll();
 	}
 
 	@Override
-	public void zoneGroupAdded(ZoneGroup group, ZoneGroupStateModel source) {
+	public synchronized  void zoneGroupAdded(ZoneGroup group, ZoneGroupStateModel source) {
 		String gid = group.getId();
 		if (null == zonesremoved.remove(gid)) {
 			zonesadded.put(gid, new Long(System.currentTimeMillis()));
 		}
 		zonesupdated = true;	
+		notifyAll();
 	}
 
 	@Override
-	public void zoneGroupMembersChanged(ZoneGroup group, ZoneGroupStateModel source) {
+	public synchronized  void zoneGroupMembersChanged(ZoneGroup group, ZoneGroupStateModel source) {
 		zoneschanged.put(group.getId(), new Long(System.currentTimeMillis()));
 		zonesupdated = true;
+		notifyAll();
 	} 
 	
 	public boolean getZonesUpdated() {
@@ -68,102 +71,109 @@ public class UpdateListener implements ZoneGroupStateModelListener, RenderingCon
 	
 	//method that listens for updates for up to 2 minutes (blocking) before returning
 	public Element getZoneChanges() {
-		int max = 120;
-		int count = 0;
-		while (!zonesupdated && count < max) {
-			try {
-				Thread.sleep(1000);
-			} catch (InterruptedException e) { }
-			count++;
-		}
-		
-	//look for additional updates for 1 second
-		if (zonesupdated) {
-			count = 0;
-			zonesupdated = false;
-			while (!zonesupdated && count < 1) {
-				try {
-					Thread.sleep(1000);
-				} catch (InterruptedException e) { }
-				count++;
-			}
-			zonesupdated = true;
-		}
-		Element gupdates = new Element("groupUpdates");
-		if (!zonesupdated) {
-			gupdates.addChild(new Element("timeout", "true"));
-			return gupdates;
-		} else {
-			gupdates.addChild(new Element("timeout", "false"));
-		}
-		
-		Element addedgrps = new Element("zonesadded", true);
-		for (Entry<String, Long> entry : zonesadded.entrySet()) {
-			addedgrps.addChild(new Element("groupID", entry.getKey()));
-			addedgrps.addChild(new Element("time", entry.getValue()+""));
-		}
-		gupdates.addChild(addedgrps);
-		Element removedgrps = new Element("zonesremoved", true);
-		for (Entry<String, Long> entry : zonesremoved.entrySet()) {
-			removedgrps.addChild(new Element("groupID", entry.getKey()));
-			removedgrps.addChild(new Element("time", entry.getValue()+""));
-		}
-		gupdates.addChild(removedgrps);
-		Element changedgrps = new Element("zoneschanged", true);
-		for (Entry<String, Long> entry : zoneschanged.entrySet()) {
-			changedgrps.addChild(new Element("groupID", entry.getKey()));
-			changedgrps.addChild(new Element("time", entry.getValue()+""));
-		}
-		gupdates.addChild(changedgrps);
-		return gupdates;
+		return getChanges(true, false, false);
 	}
 	
 	
 	
 	@Override
-	public void valuesChanged(Set<RenderingControlEventType> events,
+	public synchronized void valuesChanged(Set<RenderingControlEventType> events,
 			RenderingControlService source) {
 		volumeupdated = true;
+		notifyAll();
 	}
 	
 	public Element getVolumeChanged() {
-		int max = 120;
-		int count = 0;
-		while (!volumeupdated && count < max) {
-			try {
-				Thread.sleep(1000);
-			} catch (InterruptedException e) { }
-			count++;
-		}
-		if (!volumeupdated) {
-			return new Element("volumeChanged", "false");
-		} else {
-			return new Element("volumeChanged", "true");
-		}
+		return getChanges(false, true, false);
 	}
 	
 	
 	
 	
-	public void valuesChanged(Set<AVTransportEventType> events,
+	public synchronized void valuesChanged(Set<AVTransportEventType> events,
 			AVTransportService source) {
 		musicupdated = true;
+		notifyAll();
 	}
 	
 	public Element getMusicChanged() {
-		int max = 120;
+		return getChanges(false, false, true);
+	}
+	
+	public Element getAllChanges() {
+		return getChanges(true, true, true);
+	}
+	
+	private synchronized Element getChanges(boolean group, boolean volume, boolean music) {
 		int count = 0;
-		while (!musicupdated && count < max) {
+		while (!(group && zonesupdated) && !(volume && volumeupdated) && !(music && musicupdated) && count < 1) {
 			try {
-				Thread.sleep(1000);
+				wait(120000);
 			} catch (InterruptedException e) { }
 			count++;
 		}
-		if (!musicupdated) {
-			return new Element("musicChanged", "false");
-		} else {
-			return new Element("musicChanged", "true");
-		}		
+		
+		Element updates = new Element("updates");
+		
+		if (group) {
+		
+			//look for additional updates for 1 second
+			if (zonesupdated) {
+				zonesupdated = false;
+				while (group && !zonesupdated && count < 1) {
+					try {
+						wait(1000);
+					} catch (InterruptedException e) { }
+					count++;
+				}
+				zonesupdated = true;
+			}
+			Element gupdates = new Element("groupUpdates");
+			if (!zonesupdated) {
+				gupdates.addChild(new Element("groupsChanged", "false"));
+			} else {
+				gupdates.addChild(new Element("groupsChanged", "true"));
+			}
+		
+			Element addedgrps = new Element("addedGroups", true);
+			for (Entry<String, Long> entry : zonesadded.entrySet()) {
+				addedgrps.addChild(new Element("groupID", entry.getKey()));
+				addedgrps.addChild(new Element("time", entry.getValue()+""));
+			}
+			gupdates.addChild(addedgrps);
+			Element removedgrps = new Element("removedGroups", true);
+			for (Entry<String, Long> entry : zonesremoved.entrySet()) {
+				removedgrps.addChild(new Element("groupID", entry.getKey()));
+				removedgrps.addChild(new Element("time", entry.getValue()+""));
+			}
+			gupdates.addChild(removedgrps);
+			Element changedgrps = new Element("changedGroups", true);
+			for (Entry<String, Long> entry : zoneschanged.entrySet()) {
+				changedgrps.addChild(new Element("groupID", entry.getKey()));
+				changedgrps.addChild(new Element("time", entry.getValue()+""));
+			}
+			gupdates.addChild(changedgrps);
+			updates.addChild(gupdates);
+		}
+		
+		if (volume) {
+			if (!volumeupdated) {
+				updates.addChild(new Element("volumeChanged", "false"));
+			} else {
+				updates.addChild(new Element("volumeChanged", "true"));
+			}
+		}
+
+		if (music) {
+			if (!musicupdated) {
+				updates.addChild(new Element("musicChanged", "false"));
+			} else {
+				updates.addChild(new Element("musicChanged", "true"));
+			}
+		}
+		return updates;
+
+		
 	}
 
 }

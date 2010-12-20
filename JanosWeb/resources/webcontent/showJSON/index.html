@@ -106,6 +106,10 @@ function setupInput() {
 		showInputGID();
 		actionbutton.onclick = function(){listenForGroupMusicUpdates(groupID.options[groupID.options.selectedIndex].value,displayJSON)};
 	}
+	else if (selbox.options[index].value == "listenForAllGroupUpdates") {
+		showInputGID();
+		actionbutton.onclick = function(){listenForAllZoneGroupUpdates(groupID.options[groupID.options.selectedIndex].value,displayJSON)};
+	}
 	else if (selbox.options[index].value == "setGroupVolume") {
 		showInputGID();
 		document.getElementById("input_volume").style.display = 'block';
@@ -146,18 +150,18 @@ function setupInput() {
 		showInputGID();
 		actionbutton.onclick = function(){getGroupPlayInfo(groupID.options[groupID.options.selectedIndex].value,displayJSON)};
 	}
-	else if (selbox.options[index].value == "getGroupTrack") {
+	else if (selbox.options[index].value == "getGroupCurrentTrack") {
 		showInputGID();
-		actionbutton.onclick = function(){getGroupTrack(groupID.options[groupID.options.selectedIndex].value,displayJSON)};
+		actionbutton.onclick = function(){getGroupCurrentTrack(groupID.options[groupID.options.selectedIndex].value,displayJSON)};
 	}
-	else if (selbox.options[index].value == "getGroupTrackPos") {
+	else if (selbox.options[index].value == "getGroupCurrentTrackPos") {
 		showInputGID();
-		actionbutton.onclick = function(){getGroupTrackPos(groupID.options[groupID.options.selectedIndex].value,displayJSON)};
+		actionbutton.onclick = function(){getGroupCurrentTrackPos(groupID.options[groupID.options.selectedIndex].value,displayJSON)};
 	}
-	else if (selbox.options[index].value == "setGroupTrackPos") {
+	else if (selbox.options[index].value == "setGroupCurrentTrackPos") {
 		showInputGID();
 		document.getElementById("input_trackpos").style.display = 'block';
-		actionbutton.onclick = function(){setGroupTrackPos(groupID.options[groupID.options.selectedIndex].value,trackpos.value,displayJSON)};
+		actionbutton.onclick = function(){setGroupCurrentTrackPos(groupID.options[groupID.options.selectedIndex].value,trackpos.value,displayJSON)};
 	}
 	else if (selbox.options[index].value == "getGroupQueue") {
 		showInputGID();
@@ -218,6 +222,7 @@ function setupInput() {
 			<option value="getPlayModes">Get Play Modes</option>
 			<option value="listenForGroupVolumeUpdates">Listen for volume updates (Group)</option>
 			<option value="listenForGroupMusicUpdates">Listen for music updates (Group)</option>
+			<option value="listenForAllGroupUpdates">Listen for all updates (Group)</option>
 			<option value="getGroupVolume">Show volume (Group)</option>
 			<option value="setZoneVolume">Set volume (Single Zone)</option>
 			<option value="setGroupVolume">Set volume (Group)</option>
@@ -226,9 +231,9 @@ function setupInput() {
 			<option value="getGroupPlayInfo">Show Play Info (Group)</option>
 			<option value="setGroupCommand">Set Command (Group)</option>
 			<option value="setGroupPlayMode">Set Play Mode (Group)</option>
-			<option value="getGroupTrackPos">Show Current TrackPos (Group)</option>
-			<option value="setGroupTrackPos">Set Current TrackPos (Group)</option>
-			<option value="getGroupTrack">Show Current Track (Group)</option>
+			<option value="getGroupCurrentTrackPos">Show Current TrackPos (Group)</option>
+			<option value="setGroupCurrentTrackPos">Set Current TrackPos (Group)</option>
+			<option value="getGroupCurrentTrack">Show Current Track (Group)</option>
 			<option value="getGroupQueue">Show Queue (Group)</option>
 			<option value="getGroupSearch">Search (Group)</option>
 			<option value="getGroupArtists">List Artists (Group)</option>

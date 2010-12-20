@@ -70,8 +70,10 @@ public class MusicLibrary implements MusicLibraryModel {
    * @param type
    * @return the handle for the search
    */
-  protected BrowseHandle loadEntries(ZonePlayer zone, String type) {
-    return zone.getMediaServerDevice().getContentDirectoryService().getAllEntriesAsync(new MusicLibraryEntryCallback(), type);
+  protected synchronized BrowseHandle loadEntries(ZonePlayer zone, String type) {
+	  BrowseHandle b = zone.getMediaServerDevice().getContentDirectoryService().getAllEntriesAsync(new MusicLibraryEntryCallback(), type);
+	  notifyAll();
+	  return b; 
   }
   
   /**
@@ -84,45 +86,47 @@ public class MusicLibrary implements MusicLibraryModel {
     removeListeners();
   }
   
-  protected void addEntries(Collection<Entry> newEntries) {
+  protected synchronized void addEntries(Collection<Entry> newEntries) {
     int oldSize = entries.size();
     entries.addAll(newEntries);
     fireEntriesAdded(oldSize, entries.size() -1);
+    notifyAll();
   }
 
   /**
    * {@inheritDoc}
    */
-  public int getSize() {
+  public synchronized int getSize() {
     return Math.max(entries.size(), reportedSize);
   }
   
-  protected void setReportedSize(int count) {
+  protected synchronized void setReportedSize(int count) {
     reportedSize = count;
     fireSizeChanged();
+    notifyAll();
   }
 
   /**
    * {@inheritDoc}
    */
-  public Entry getEntryAt(int index) {
+  public synchronized Entry getEntryAt(int index) {
     return entries.get(index);
   }
 
-  public boolean hasEntryFor(int index) {
+  public synchronized boolean hasEntryFor(int index) {
     return index < entries.size();
   }
   
-  public int indexOf(Entry entry) {
+  public synchronized int indexOf(Entry entry) {
     return entries.indexOf(entry);
   }
   
   
-  public List<Entry> getEntries() {
+  public synchronized List<Entry> getEntries() {
 	  //make this a blocking call (converting the asynchronous call to a synchronous call for use with the servlet)
 	  while (browser != null) {
 		  try {
-			  Thread.sleep(25);
+			  wait(60000);
 		  } catch (InterruptedException e) {
 		  }
 	  }
@@ -130,12 +134,12 @@ public class MusicLibrary implements MusicLibraryModel {
   }
   
   
-  public List<Entry> getEntries(int startindex, int endindex) {
+  public synchronized List<Entry> getEntries(int startindex, int endindex) {
 	  //make this a blocking call (converting the asynchronous call to a synchronous call for use with the servlet)
 	  while (!hasEntryFor(endindex-1)) {
 		  //Busy-wait with a bit of sleeping
 		  try {
-			  Thread.sleep(25);
+			  wait(60000);
 			  if (reportedSize >= 0 && endindex > reportedSize) {
 				  endindex = reportedSize;
 			  }	  
@@ -180,18 +184,21 @@ public class MusicLibrary implements MusicLibraryModel {
 
   public class MusicLibraryEntryCallback implements EntryCallback {
 
-    public void addEntries(BrowseHandle handle, Collection<Entry> entries) {
+    public synchronized void addEntries(BrowseHandle handle, Collection<Entry> entries) {
       MusicLibrary.this.addEntries(entries);
+      notifyAll();
     }
 
-    public void retrievalComplete(BrowseHandle handle, boolean completedSuccessfully) {
+    public synchronized void retrievalComplete(BrowseHandle handle, boolean completedSuccessfully) {
       if (handle == browser) {
         browser = null;
       }
+      notifyAll();
     }
 
-    public void updateCount(BrowseHandle handle, int count) {
+    public synchronized void updateCount(BrowseHandle handle, int count) {
       setReportedSize(count);
+      notifyAll();
     }
 
   }

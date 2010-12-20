@@ -4,7 +4,6 @@ import java.io.IOException;
 import java.io.PrintWriter;
 import java.lang.reflect.Method;
 import java.net.MalformedURLException;
-import java.net.URL;
 import java.util.Collections;
 import java.util.ConcurrentModificationException;
 import java.util.LinkedList;
@@ -23,17 +22,14 @@ import net.sf.janos.control.RenderingControlService;
 import net.sf.janos.control.SonosController;
 import net.sf.janos.control.ZonePlayer;
 import net.sf.janos.model.Entry;
-import net.sf.janos.model.MediaInfo;
 import net.sf.janos.model.PlayMode;
-import net.sf.janos.model.PositionInfo;
 import net.sf.janos.model.SeekTargetFactory;
-import net.sf.janos.model.TrackMetaData;
 import net.sf.janos.model.TransportAction;
 import net.sf.janos.model.TransportInfo.TransportState;
 import net.sf.janos.model.ZoneGroup;
 import net.sf.janos.web.exception.JanosWebException;
-import net.sf.janos.web.model.MusicLibrary;
 import net.sf.janos.web.model.UpdateListener;
+import net.sf.janos.web.model.ZoneData;
 import net.sf.janos.web.structure.Element;
 import net.sf.janos.web.structure.ElementUtil;
 import net.sf.janos.web.structure.Formatter;
@@ -51,6 +47,7 @@ public class JanosWebServlet extends HttpServlet {
 	private final SonosController controller;
 	private String thishost;
 	private Formatter formatter;
+	private ZoneData zd;
 
 	private enum Command {
 		getZoneGroups 
@@ -59,15 +56,17 @@ public class JanosWebServlet extends HttpServlet {
 		, getPlayModes
 		, listenForZoneGroupVolumeUpdates
 		, listenForZoneGroupMusicUpdates
+		, listenForAllZoneGroupUpdates
 		, getZoneGroupVolume 
 		, setZoneGroupVolume 
 		, setZoneGroupMuted 
 		, getZoneGroupPlayInfo
 		, setZoneGroupCommand
 		, setZoneGroupPlayMode
-		, getZoneGroupTrackPosition
-		, setZoneGroupTrackPosition
-		, getZoneGroupTrack
+		, getZoneGroupCurrentTrackPosition
+		, setZoneGroupCurrentTrackPosition
+		, getZoneGroupCurrentTrack
+		, getZoneGroupAllInfo
 		, getZoneGroupQueue
 		, getZoneGroupArtists
 		, getZoneGroupAlbums
@@ -80,15 +79,17 @@ public class JanosWebServlet extends HttpServlet {
 
 		, listenForZoneVolumeUpdates
 		, listenForZoneMusicUpdates
+		, listenForAllZoneUpdates
 		, getZoneVolume
 		, setZoneVolume 
 		, setZoneMuted
 		, getZonePlayInfo
 		, setZoneCommand
 		, setZonePlayMode
-		, getZoneTrackPosition
-		, setZoneTrackPosition
-		, getZoneTrack
+		, getZoneCurrentTrackPosition
+		, setZoneCurrentTrackPosition
+		, getZoneCurrentTrack
+		, getZoneAllInfo
 		, getZoneQueue
 		, getZoneArtists
 		, getZoneAlbums
@@ -119,7 +120,7 @@ public class JanosWebServlet extends HttpServlet {
 		} catch (Exception e) {
 			LOG.debug("Got an exception of type '"+e.getClass().getName()+"' at initialization of the servlet");
 		}
-		// this.controller.getZoneGroupStateModel().addListener(this);
+		zd = new ZoneData(controller);
 	}
 
 	public void destroy() {
@@ -156,10 +157,6 @@ public class JanosWebServlet extends HttpServlet {
 				resp.addChild(getZoneGroups());
 				resp.addChildFirst(ElementUtil.getStatusSuccesElement());
 				break;
-			case listenForZoneGroupUpdates:
-				resp.addChild(listenForZoneGroupUpdates());
-				resp.addChildFirst(ElementUtil.getStatusSuccesElement());
-				break;
 			case getPlayCommands:
 				resp.addChild(getPlayCommands());
 				resp.addChildFirst(ElementUtil.getStatusSuccesElement());
@@ -169,7 +166,11 @@ public class JanosWebServlet extends HttpServlet {
 				resp.addChildFirst(ElementUtil.getStatusSuccesElement());
 				break;
 			
-				
+			case listenForZoneGroupUpdates:
+				resp.addChild(listenForZoneGroupUpdates());
+				resp.addChildFirst(ElementUtil.getStatusSuccesElement());
+				break;
+
 			case listenForZoneVolumeUpdates:
 				resp.addChild(listenForZoneVolumeUpdates(request.getParameter("zoneID")));
 				resp.addChildFirst(ElementUtil.getStatusSuccesElement());
@@ -178,6 +179,26 @@ public class JanosWebServlet extends HttpServlet {
 				resp.addChild(listenForZoneMusicUpdates(request.getParameter("zoneID")));
 				resp.addChildFirst(ElementUtil.getStatusSuccesElement());
 				break;
+			case listenForAllZoneUpdates:
+				resp.addChild(listenForAllZoneUpdates(request.getParameter("zoneID")));
+				resp.addChildFirst(ElementUtil.getStatusSuccesElement());
+				break;
+
+			case listenForZoneGroupVolumeUpdates:
+				resp.addChild(listenForZoneGroupVolumeUpdates(request.getParameter("groupID")));
+				resp.addChildFirst(ElementUtil.getStatusSuccesElement());
+				break;
+			case listenForZoneGroupMusicUpdates:
+				resp.addChild(listenForZoneGroupMusicUpdates(request.getParameter("groupID")));
+				resp.addChildFirst(ElementUtil.getStatusSuccesElement());
+				break;
+			case listenForAllZoneGroupUpdates:
+				resp.addChild(listenForAllZoneGroupUpdates(request.getParameter("groupID")));
+				resp.addChildFirst(ElementUtil.getStatusSuccesElement());
+				break;
+
+				
+				
 			case getZoneVolume:
 				resp.addChild(getZoneVolume(request.getParameter("zoneID")));
 				resp.addChildFirst(ElementUtil.getStatusSuccesElement());
@@ -204,18 +225,23 @@ public class JanosWebServlet extends HttpServlet {
 				setZonePlayMode(request.getParameter("zoneID"), request.getParameter("playMode"));
 				resp.addChildFirst(ElementUtil.getStatusSuccesElement());
 				break;
-			case getZoneTrackPosition:
-				resp.addChild(getZoneTrackPosition(request.getParameter("zoneID")));
+			case getZoneCurrentTrackPosition:
+				resp.addChild(getZoneCurrentTrackPosition(request.getParameter("zoneID")));
 				resp.addChildFirst(ElementUtil.getStatusSuccesElement());
 				break;
-			case setZoneTrackPosition:
-				setZoneTrackPosition(request.getParameter("zoneID"), request.getParameter("trackPosition"));
+			case setZoneCurrentTrackPosition:
+				setZoneCurrentTrackPosition(request.getParameter("zoneID"), request.getParameter("trackPosition"));
 				resp.addChildFirst(ElementUtil.getStatusSuccesElement());
 				break;
-			case getZoneTrack:
-				resp.addChild(getZoneTrack(request.getParameter("zoneID")));
+			case getZoneCurrentTrack:
+				resp.addChild(getZoneCurrentTrack(request.getParameter("zoneID")));
 				resp.addChildFirst(ElementUtil.getStatusSuccesElement());
 				break;
+			case getZoneAllInfo:
+				resp.addChild(getZoneAllInfo(request.getParameter("zoneID")));
+				resp.addChildFirst(ElementUtil.getStatusSuccesElement());
+				break;
+				
 			case getZoneQueue:
 				//resp.addChild(getZoneQueue(request.getParameter("zoneID"), request.getParameter("startIndex"), request.getParameter("numEntries")));
 				resp.addChild(getZoneQueue2(request.getParameter("zoneID"), request.getParameter("startIndex"), request.getParameter("numEntries")));
@@ -254,14 +280,6 @@ public class JanosWebServlet extends HttpServlet {
 				resp.addChild(ElementUtil.getStatusSuccesElement());
 				break;
 				
-			case listenForZoneGroupVolumeUpdates:
-				resp.addChild(listenForZoneGroupVolumeUpdates(request.getParameter("groupID")));
-				resp.addChildFirst(ElementUtil.getStatusSuccesElement());
-				break;
-			case listenForZoneGroupMusicUpdates:
-				resp.addChild(listenForZoneGroupMusicUpdates(request.getParameter("groupID")));
-				resp.addChildFirst(ElementUtil.getStatusSuccesElement());
-				break;
 			case getZoneGroupVolume:
 				resp.addChild(getZoneGroupVolume(request.getParameter("groupID")));
 				resp.addChildFirst(ElementUtil.getStatusSuccesElement());
@@ -288,16 +306,20 @@ public class JanosWebServlet extends HttpServlet {
 				setZoneGroupPlayMode(request.getParameter("groupID"), request.getParameter("playMode"));
 				resp.addChildFirst(ElementUtil.getStatusSuccesElement());
 				break;
-			case getZoneGroupTrackPosition:
-				resp.addChild(getZoneGroupTrackPosition(request.getParameter("groupID")));
+			case getZoneGroupCurrentTrackPosition:
+				resp.addChild(getZoneGroupCurrentTrackPosition(request.getParameter("groupID")));
 				resp.addChildFirst(ElementUtil.getStatusSuccesElement());
 				break;
-			case setZoneGroupTrackPosition:
+			case setZoneGroupCurrentTrackPosition:
 				setZoneGroupTrackPosition(request.getParameter("groupID"), request.getParameter("trackPosition"));
 				resp.addChildFirst(ElementUtil.getStatusSuccesElement());
 				break;
-			case getZoneGroupTrack:
-				resp.addChild(getZoneGroupTrack(request.getParameter("groupID")));
+			case getZoneGroupCurrentTrack:
+				resp.addChild(getZoneGroupCurrentTrack(request.getParameter("groupID")));
+				resp.addChildFirst(ElementUtil.getStatusSuccesElement());
+				break;
+			case getZoneGroupAllInfo:
+				resp.addChild(getZoneGroupAllInfo(request.getParameter("groupID")));
 				resp.addChildFirst(ElementUtil.getStatusSuccesElement());
 				break;
 			case getZoneGroupQueue:
@@ -369,647 +391,17 @@ public class JanosWebServlet extends HttpServlet {
 	//---------------------------------------------------------------------------------
 	//Top level methods, that return Element representations of the objects involved
 	//---------------------------------------------------------------------------------
-	private Element listenForZoneVolumeUpdates(String zoneID)  throws JanosWebException, IOException, UPNPResponseException {
-		if (zoneID == null) {
-			missingParameterException("zoneID");
-		}
-		RenderingControlService rcs = getZonePlayer(zoneID).getMediaRendererDevice().getRenderingControlService();
-		UpdateListener l = new UpdateListener();
-		rcs.addListener(l);
-		Element retval = l.getVolumeChanged();
-		rcs.removeListener(l);
-		return retval;
-	}
-
-	private Element listenForZoneMusicUpdates(String zoneID)  throws JanosWebException, IOException, UPNPResponseException {
-		if (zoneID == null) {
-			missingParameterException("zoneID");
-		}
-		AVTransportService avts = getZonePlayer(zoneID).getMediaRendererDevice().getAvTransportService();
-		UpdateListener l = new UpdateListener();
-		avts.addAvTransportListener(l);
-		Element retval = l.getMusicChanged();
-		avts.removeAvTransportListener(l);
-		return retval;
-	}
 	
-	/**
-	 * Returns an Element-representation of the ZonePlayer's volume
-	 * 
-	 * @param zoneID
-	 * @return an Element representation of a ZonePlayer and it's volume
-	 * @throws JanosWebException 
-	 */
-	private Element getZoneVolume(String zoneID)
-			throws IOException, UPNPResponseException, JanosWebException {
-		if (zoneID == null) {
-			missingParameterException("zoneID");
-		}
-		ZonePlayer zp = getZonePlayer(zoneID);
-		RenderingControlService rcs = zp.getMediaRendererDevice()
-				.getRenderingControlService();
-		Element zone = new Element("zone");
-		zone.addChild(new Element("zoneID", zoneID));
-		zone.addChild(new Element("volume", rcs.getVolume() + ""));
-		zone.addChild(new Element("muted", rcs.getMute() ? "true" : "false"));
-		return zone;
-	}
-
-	private void setZoneVolume(String zoneID, String volume)
-			throws NumberFormatException, IOException, UPNPResponseException, JanosWebException {
-		if (zoneID == null) {
-			missingParameterException("zoneID");
-		}
-		if (volume == null) {
-			missingParameterException("volume");
-			
-		}
-		int vol = Integer.parseInt(volume);
-		checkVolume(vol);
-		ZonePlayer zp = getZonePlayer(zoneID);
-		RenderingControlService rcs = zp.getMediaRendererDevice()
-				.getRenderingControlService();
-		rcs.setVolume(vol);
-	}
-
-	private void setZoneMuted(String zoneID, String mute)
-			throws NumberFormatException, IOException, UPNPResponseException, JanosWebException {
-		if (zoneID == null) {
-			missingParameterException("zoneID");
-		}
-		if (mute == null) {
-			missingParameterException("mute");
-		}
-
-		ZonePlayer zp = getZonePlayer(zoneID);
-		RenderingControlService rcs = zp.getMediaRendererDevice()
-				.getRenderingControlService();
-		rcs.setMute(mute.equalsIgnoreCase("true") ? 1 : 0);
-	}
-
-	/**Get an Element-represenation of a ZonePlayer's playmode (shuffle/normal/etc.)
-	 * @param the ZonePlayer's ID
-	 * @return playmode*/
-	private Element getZonePlayInfo(String zoneID) throws IOException, UPNPResponseException, JanosWebException {
-		if (zoneID == null) {
-			missingParameterException("zoneID");
-		}
-		ZonePlayer zp = getZonePlayer(zoneID);
-		AVTransportService avts = zp.getMediaRendererDevice().getAvTransportService();
-		boolean playing = avts.getTransportInfo().getState().equals(TransportState.PLAYING);
-
-		Element playinfo = new Element("playInfo");
-		playinfo.addChild(new Element("playing", playing ? "true" : "false"));
-		playinfo.addChild(new Element("playMode", avts.getTransportSettings().getPlayMode()));
-		return playinfo;
-	}
-
-	/**Make a zoneplayer perform a play/stop/pause/previous/next-command
-	 * @throws JanosWebException 
-	 * @throws UPNPResponseException 
-	 * @throws IOException 
-	 * */
-	private void setZoneCommand(String zoneID, String command) throws IOException, UPNPResponseException, JanosWebException {
-		if (zoneID == null) {
-			missingParameterException("zoneID");
-		}
-		if (command == null) {
-			missingParameterException("command");
-		}
-		AVTransportService ats = getZonePlayer(zoneID).getMediaRendererDevice().getAvTransportService();
-		switch (TransportAction.valueOf(command)) {
-		case Play: ats.play(); break; 
-		case Pause: ats.pause(); break; 
-		case Stop: ats.stop(); break; 
-		case Next: ats.next(); break; 
-		case Previous: ats.previous(); break; 
-		}
-	}
-
-
-	/**Set a ZonePlayer's playmode (shuffle/normal/etc.)
-	 * @param the ZonePlayer's ID
-	 * @return playmode*/
-	private void setZonePlayMode(String zoneID, String playMode) throws IOException, UPNPResponseException, JanosWebException {
-		if (zoneID == null) {
-			missingParameterException("zoneID");
-		}
-		if (playMode == null) {
-			missingParameterException("playMode");
-		}
-		PlayMode playmode = PlayMode.NORMAL;
-		try {
-			playmode = PlayMode.valueOf(playMode);
-		} catch (Exception e) {
-			throw new JanosWebException("Playmode '"+playMode+"' is not supported");
-		}
-		getZonePlayer(zoneID).getMediaRendererDevice().getAvTransportService().setPlayMode(playmode);
-	}
-	
-	/**Get an Element-represenation of a ZonePlayer's current track position
-	 * @param the ZonePlayer's ID
-	 * @return song position*/
-	private Element getZoneTrackPosition(String zoneID) throws IOException, UPNPResponseException, JanosWebException {
-		if (zoneID == null) {
-			missingParameterException("zoneID");
-		}
-		PositionInfo posinfo = getZonePlayer(zoneID).getMediaRendererDevice().getAvTransportService().getPositionInfo();
-		Element track = new Element("track");
-		track.addChild(new Element("duration", posinfo.getTrackDuration()+""));
-		track.addChild(new Element("position", posinfo.getRelTime()+""));
-		return track;
-	}
-	
-	/**Make a zoneplayer skip to a position in a track
-	 * @throws JanosWebException 
-	 * @throws NumberFormatException 
-	 * @throws UPNPResponseException 
-	 * @throws IOException 
-	 * */
-	private void setZoneTrackPosition(String zoneID, String trackPosition) throws JanosWebException, NumberFormatException, IOException, UPNPResponseException {
-		if (zoneID == null) {
-			missingParameterException("zoneID");
-		}
-		if (trackPosition == null) {
-			missingParameterException("trackPosition");
-		}
-		AVTransportService ats = getZonePlayer(zoneID).getMediaRendererDevice().getAvTransportService();
-		ats.seek(SeekTargetFactory.createRelTimeSeekTarget(Long.parseLong(trackPosition)));
-	}
-
-	/**Get an Element-represenation of a ZonePlayer's current track
-	 * @param the ZonePlayer's ID
-	 * @return song position
-	 * @throws SAXException */
-	private Element getZoneTrack(String zoneID) throws IOException, UPNPResponseException, JanosWebException, SAXException {
-		if (zoneID == null) {
-			missingParameterException("zoneID");
-		}
-		ZonePlayer zp = getZonePlayer(zoneID);
-		PositionInfo posinfo = zp.getMediaRendererDevice().getAvTransportService().getPositionInfo();
-		MediaInfo mediainfo = zp.getMediaRendererDevice().getAvTransportService().getMediaInfo();
-		String uri = mediainfo.getCurrentURI();
-		
-		Element track = new Element("track");
-
-		if (uri == null || posinfo == null) {
-			track.addChild(new Element("noMusic", "true"));
-		} else if (uri.startsWith("x-rincon-queue:")) {
-			TrackMetaData trackmeta = posinfo.getTrackMetaData();
-			if ( trackmeta != null ) {
-				// Playing from Queue
-				track.addChild(new Element("artist", trackmeta.getCreator()));
-				track.addChild(new Element("album", trackmeta.getAlbum()));
-				track.addChild(new Element("title", trackmeta.getTitle()));
-				track.addChild(new Element("albumArt", trackmeta.getAlbumArtUrl(zp).toExternalForm()));
-				track.addChild(new Element("albumArtist", trackmeta.getAlbumArtist()));
-				track.addChild(new Element("queueIndex", posinfo.getTrackNum()+""));
-				track.addChild(new Element("duration", posinfo.getTrackDuration()+""));
-				track.addChild(new Element("position", posinfo.getRelTime()+""));
-
-
-			} else {
-				track.addChild(new Element("noMusic", "true"));
-			}
-		} else if (uri.startsWith("x-rincon:")){
-			// This means that we are handling a ZonePlayer that is not the coordinator of its group
-			// Fix it, by finding the coordinator and showing its details ;)
-			String coordID = getZoneGroupFromMember(zoneID).getCoordinator();
-			//Avoid endless recursion
-			if (zoneID.equals(coordID)) {
-				track.addChild(new Element("music", "unknown2"));
-			} else {
-				return getZoneTrack(coordID);
-			}
-		} else if (uri.startsWith("x-file-cifs:")) {
-			// just playing one file
-			track.addChild(new Element("artist", mediainfo.getCurrentURIMetaData().getCreator()));
-			track.addChild(new Element("album", mediainfo.getCurrentURIMetaData().getAlbum()));
-			track.addChild(new Element("title", mediainfo.getCurrentURIMetaData().getTitle()));
-			track.addChild(new Element("albumArt", mediainfo.getCurrentURIMetaData().getAlbumArtUrl(zp).toExternalForm()));
-			track.addChild(new Element("albumArtist", mediainfo.getCurrentURIMetaData().getAlbumArtist()));
-			track.addChild(new Element("duration", posinfo.getTrackDuration()+""));
-			track.addChild(new Element("position", posinfo.getRelTime()+""));
-
-
-		} else if (uri.startsWith("x-rincon-mp3radio:")) {
-			// yep, it's the radio
-			track.addChild(new Element("artist", mediainfo.getCurrentURIMetaData().getCreator()));
-			track.addChild(new Element("album", mediainfo.getCurrentURIMetaData().getAlbum()));
-			track.addChild(new Element("title", mediainfo.getCurrentURIMetaData().getTitle()));
-			track.addChild(new Element("albumArt", thishost+"/images/internetradio.png"));
-			track.addChild(new Element("albumArtist", mediainfo.getCurrentURI()));
-			track.addChild(new Element("duration", posinfo.getTrackDuration()+""));
-			track.addChild(new Element("position", posinfo.getRelTime()+""));
-		} else if (uri.startsWith("x-rincon-stream:")) {
-			// line in stream
-			track.addChild(new Element("artist", "N/A"));
-			track.addChild(new Element("album", "N/A"));
-			track.addChild(new Element("title", "Local Line In"));
-			track.addChild(new Element("albumArt", thishost+"/images/linein.png"));
-			track.addChild(new Element("albumArtist", "N/A"));
-		} else if (uri.startsWith("pndrradio:")) {
-			// Pandora
-			try {
-				TrackMetaData trackmeta = posinfo.getTrackMetaData();
-				track.addChild(new Element("artist", "Pandora: " + trackmeta.getCreator()));
-				track.addChild(new Element("album", "Pandora: " + trackmeta.getAlbum()));
-				track.addChild(new Element("title", "Pandora: " + trackmeta.getTitle()));
-				track.addChild(new Element("albumArt", new URL(trackmeta.getAlbumArtUri()).toExternalForm()));
-				track.addChild(new Element("albumArtist", "Pandora: " + trackmeta.getAlbumArtist()));
-				track.addChild(new Element("duration", posinfo.getTrackDuration()+""));
-				track.addChild(new Element("position", posinfo.getRelTime()+""));
-
-			} catch (Exception e) {
-				track.addChild(new Element("noMusic", "true"));
-			}
-
-		} else if (uri.startsWith("rdradio:station:")) {
-			// Rhapsody Station
-				try {
-					TrackMetaData trackmeta = posinfo.getTrackMetaData();
-					track.addChild(new Element("artist", "Rhapsody: " + trackmeta.getCreator()));
-					track.addChild(new Element("album", "Rhapsody: " + trackmeta.getAlbum()));
-					track.addChild(new Element("title", "Rhapsody: " + trackmeta.getTitle()));
-					track.addChild(new Element("albumArt", new URL(trackmeta.getAlbumArtUri()).toExternalForm()));
-					track.addChild(new Element("albumArtist", "Rhapsody: " + trackmeta.getAlbumArtist()));
-					track.addChild(new Element("duration", posinfo.getTrackDuration()+""));
-					track.addChild(new Element("position", posinfo.getRelTime()+""));
-
-				} catch (Exception e) {
-					track.addChild(new Element("noMusic", "true"));
-				}
-		} else if (uri.startsWith("lastfm:")) {
-			// last.fm Station
-			try {
-				TrackMetaData trackmeta = posinfo.getTrackMetaData();
-				track.addChild(new Element("artist", "last.fm: " + trackmeta.getCreator()));
-				track.addChild(new Element("album", "last.fm: " + trackmeta.getAlbum()));
-				track.addChild(new Element("title", "last.fm: " + trackmeta.getTitle()));
-				track.addChild(new Element("albumArt", new URL(trackmeta.getAlbumArtUri()).toExternalForm()));
-				track.addChild(new Element("albumArtist", "last.fm: " + trackmeta.getAlbumArtist()));
-				track.addChild(new Element("duration", posinfo.getTrackDuration()+""));
-				track.addChild(new Element("position", posinfo.getRelTime()+""));
-			} catch (Exception e) {
-				track.addChild(new Element("noMusic", "true"));
-			}
-
-		} else if (uri.startsWith("x-sonosapi-stream:")) {
-			// Local Radio
-			try {
-				TrackMetaData trackmeta = posinfo.getTrackMetaData();
-				track.addChild(new Element("artist", "Radio: " + trackmeta.getCreator()));
-				track.addChild(new Element("album", "Radio: " + trackmeta.getAlbum()));
-				track.addChild(new Element("title", "Radio: " + trackmeta.getTitle()));
-				track.addChild(new Element("albumArt", trackmeta.getAlbumArtUrl(zp).toExternalForm()));
-				track.addChild(new Element("albumArtist", "Radio: " + trackmeta.getAlbumArtist()));
-				track.addChild(new Element("duration", posinfo.getTrackDuration()+""));
-				track.addChild(new Element("position", posinfo.getRelTime()+""));
-				
-			} catch (Exception e) {
-				track.addChild(new Element("noMusic", "true"));
-			}
-
-		} else {
-			if (LOG.isWarnEnabled() && mediainfo != null ) {
-				LOG.warn("Couldn't find type of " + uri);
-				track.addChild(new Element("music", "unknown"));
-			}
-		}
-		return track;
-	}
-	
-	/**Get an Element-represenation of a ZonePlayer's queue
-	 * @param the ZonePlayer's ID
-	 * @param startIndex starting index of the queue. null is treated as "0"
-	 * @param numEntries number of entries from the starting index. null is treated as Integer.MAX_VALUE 
-	 * @return queue*/
-	private Element getZoneQueue(String zoneID, String startIndex, String numEntries) throws IOException, UPNPResponseException, JanosWebException {
-		if (zoneID == null) {
-			missingParameterException("zoneID");
-		}
-		int startidx = 0;
-		int length = Integer.MAX_VALUE;
-		if (startIndex != null) {
-			startidx = Integer.parseInt(startIndex);
-		}
-		if (numEntries != null) {
-			length = Integer.parseInt(numEntries);
-		}
-		ZonePlayer zp = getZonePlayer(zoneID);
-		Element queue = new Element("queue");
-		for (Entry e : zp.getMediaServerDevice().getContentDirectoryService().getQueue(startidx, length)) {
-			Element track = new Element("track", true);
-			track.addChild(new Element("artist", e.getCreator()));
-			track.addChild(new Element("album", e.getAlbum()));
-			track.addChild(new Element("title", e.getTitle()));
-			track.addChild(new Element("albumArt", e.getAlbumArtURL(zp).toExternalForm()));
-			track.addChild(new Element("no", e.getOriginalTrackNumber()+""));
-			track.addChild(new Element("id", e.getId()));
-			queue.addChild(track);
-		}
-		return queue;
-	}
-	
-	/**Get an Element-represenation of a ZonePlayer's queue
-	 * @param the ZonePlayer's ID
-	 * @param startIndex starting index of the queue. null is treated as "0"
-	 * @param numEntries number of entries from the starting index. null is treated as Integer.MAX_VALUE 
-	 * @return queue*/
-	private Element getZoneQueue2(String zoneID, String startIndex, String numEntries) throws IOException, UPNPResponseException, JanosWebException {
-		if (zoneID == null) {
-			missingParameterException("zoneID");
-		}
-		int readidx = 0;
-		int length = Integer.MAX_VALUE;
-		if (startIndex != null) {
-			readidx = Integer.parseInt(startIndex);
-		}
-		if (numEntries != null) {
-			length = Integer.parseInt(numEntries);
-		}
-		
-		ZonePlayer zp = getZonePlayer(zoneID);
-		MusicLibrary musiclib = new MusicLibrary(zp, new Entry("Q:0", null, null, null, null, null, null, null));
-
-		Element queue = new Element("queue");
-			for (Entry e : musiclib.getEntries(readidx, readidx+length)) {
-				Element track = new Element("track", true);
-				track.addChild(new Element("artist", e.getCreator()));
-				track.addChild(new Element("album", e.getAlbum()));
-				track.addChild(new Element("title", e.getTitle()));
-				track.addChild(new Element("albumArt", e.getAlbumArtURL(zp).toExternalForm()));
-				track.addChild(new Element("no", e.getOriginalTrackNumber()+""));
-				track.addChild(new Element("id", e.getId()));
-				queue.addChild(track);
-			}
-		return queue;
-	}
+	//*************************************************
+	//     ___  ____  ____  ____  ____  ____  ____ 
+	//    / __)(  __)(_  _)(_  _)(  __)(  _ \/ ___)
+	//   ( (_ \ ) _)   )(    )(   ) _)  )   /\___ \
+	//    \___/(____) (__)  (__) (____)(__\_)(____/
+	//
+	//*************************************************
 
 	
-
 	
-	/**Get an Element-represenation of a ZonePlayer's list of artists
-	 * @param the ZonePlayer's ID
-	 * @param startIndex starting index of the list of artists. null is treated as "0"
-	 * @param numEntries number of entries from the starting index. null is treated as Integer.MAX_VALUE 
-	 * @return queue*/
-	private Element getZoneArtists(String zoneID, String startIndex, String numEntries) throws IOException, UPNPResponseException, JanosWebException {
-		if (zoneID == null) {
-			missingParameterException("zoneID");
-		}
-		int readidx = 0;
-		int length = Integer.MAX_VALUE;
-		if (startIndex != null) {
-			readidx = Integer.parseInt(startIndex);
-		}
-		if (numEntries != null) {
-			length = Integer.parseInt(numEntries);
-		}
-		
-		ZonePlayer zp = getZonePlayer(zoneID);
-		MusicLibrary musiclib = new MusicLibrary(zp, new Entry("A:ARTIST", null, null, null, null, null, null, null));
-		Element artists = new Element("artists");
-		for (Entry e : musiclib.getEntries(readidx, readidx+length)) {
-			Element artist = new Element("artist", true);
-			artist.addChild(new Element("name", e.getTitle()));
-			artist.addChild(new Element("id", e.getId()));
-			artists.addChild(artist);
-		}
-		return artists;
-
-/*
-        //Commenting out old version, that used the synchronous call to get albums.
-		int buffer = 1000;
-		while (length > 0) {
-			List<Entry> entrylist = zp.getMediaServerDevice().getContentDirectoryService().getArtists(readidx, Math.min(Math.min(buffer, length), Integer.MAX_VALUE - readidx));
-			for (Entry e : entrylist) {
-				artists.addChild(new Element("artist", ElementUtil.createSafeContentString(e.getTitle())));
-			}
-			//Don't continue calling if there are no more entries after this call
-			//this is useful if the input for number of elements is way higher than the total number of entries.
-			if (entrylist.size() < buffer) {
-				break;
-			}
-			length -= buffer;
-			readidx += buffer;
-		}
-		return artists;
-*/		
-	}
-	
-	/**Get an Element-represenation of a ZonePlayer's list of albums
-	 * @param the ZonePlayer's ID
-	 * @param startIndex starting index of the list of albums. null is treated as "0"
-	 * @param numEntries number of entries from the starting index. null is treated as Integer.MAX_VALUE 
-	 * @return queue*/
-	private Element getZoneAlbums(String zoneID, String startIndex, String numEntries, String artist) throws IOException, UPNPResponseException, JanosWebException {
-		if (zoneID == null) {
-			missingParameterException("zoneID");
-		}
-		int readidx = 0;
-		int length = Integer.MAX_VALUE;
-		if (startIndex != null) {
-			readidx = Integer.parseInt(startIndex);
-		}
-		if (numEntries != null) {
-			length = Integer.parseInt(numEntries);
-		}
-		
-		ZonePlayer zp = getZonePlayer(zoneID);
-		MusicLibrary musiclib;
-		if (artist == null) {
-			musiclib = new MusicLibrary(zp, new Entry("A:ALBUM", null, null, null, null, null, null, null));
-		} else {
-			musiclib = new MusicLibrary(zp, new Entry("A:ARTIST/"+artist, null, null, null, null, null, null, null));
-		}
-		Element albums = new Element("albums");
-		for (Entry e: musiclib.getEntries(readidx, readidx+length)) {
-			String title =  e.getTitle();
-			String creator = e.getCreator();
-			//Don't add the "all" meta-album
-			if (creator == null || title==null || title.equals("All") && creator.equals("")) {
-				continue;
-			}
-			Element album = new Element("album", true);
-			album.addChild(new Element("title", title));
-			album.addChild(new Element("artist", creator));
-			album.addChild(new Element("albumArt", e.getAlbumArtURL(zp).toExternalForm()));
-			album.addChild(new Element("id", e.getId()));
-			albums.addChild(album);
-
-		}
-		return albums;
-	}
-
-	/**Get an Element-represenation of a ZonePlayer's list of tracks
-	 * @param the ZonePlayer's ID
-	 * @param startIndex starting index of the list of tracks. null is treated as "0"
-	 * @param numEntries number of entries from the starting index. null is treated as Integer.MAX_VALUE 
-	 * @return queue*/
-	private Element getZoneTracks(String zoneID, String startIndex, String numEntries, String artist, String album) throws IOException, UPNPResponseException, JanosWebException {
-		if (zoneID == null) {
-			missingParameterException("zoneID");
-		}
-		int readidx = 0;
-		int length = Integer.MAX_VALUE;
-		if (startIndex != null) {
-			readidx = Integer.parseInt(startIndex);
-		}
-		if (numEntries != null) {
-			length = Integer.parseInt(numEntries);
-		}
-		
-		ZonePlayer zp = getZonePlayer(zoneID);
-		MusicLibrary musiclib;
-		if (artist != null && album == null) {
-			musiclib = new MusicLibrary(zp, new Entry("A:ARTIST/"+artist+"/", null, null, null, null, null, null, null));
-		} else if (artist != null && album != null) {
-			musiclib = new MusicLibrary(zp, new Entry("A:ARTIST/"+artist+"/"+album, null, null, null, null, null, null, null));
-		} else if (artist == null && album != null) {
-			musiclib = new MusicLibrary(zp, new Entry("A:ALBUM/"+album, null, null, null, null, null, null, null));
-		} else { //if (artist == null && album == null)
-			musiclib = new MusicLibrary(zp, new Entry("A:TRACKS", null, null, null, null, null, null, null));
-		}
-
-		Element tracks = new Element("tracks");
-			for (Entry e : musiclib.getEntries(readidx, readidx+length)) {
-				Element track = new Element("track", true);
-				track.addChild(new Element("artist", e.getCreator()));
-				track.addChild(new Element("album", e.getAlbum()));
-				track.addChild(new Element("title", e.getTitle()));
-				track.addChild(new Element("albumArt", e.getAlbumArtURL(zp).toExternalForm()));
-				track.addChild(new Element("no", e.getOriginalTrackNumber()+""));
-				track.addChild(new Element("id", e.getId()));
-				tracks.addChild(track);
-			}
-		return tracks;
-	}
-
-	/**Get an Element-represenation of a ZonePlayer's list of tracks
-	 * @param the ZonePlayer's ID
-	 * @param startIndex starting index of the list of tracks. null is treated as "0"
-	 * @param numEntries number of entries from the starting index. null is treated as Integer.MAX_VALUE 
-	 * @return queue*/
-	private Element getZoneSearch(String zoneID, String startIndex, String numEntries, String searchData) throws IOException, UPNPResponseException, JanosWebException {
-		if (zoneID == null) {
-			missingParameterException("zoneID");
-		}
-		if (searchData == null) {
-			missingParameterException("searchData");
-		}
-		int readidx = 0;
-		int length = Integer.MAX_VALUE;
-		if (startIndex != null) {
-			readidx = Integer.parseInt(startIndex);
-		}
-		if (numEntries != null) {
-			length = Integer.parseInt(numEntries);
-		}
-		
-		ZonePlayer zp = getZonePlayer(zoneID);
-		MusicLibrary artistmusiclib = new MusicLibrary(zp, new Entry("A:ARTIST:"+searchData, null, null, null, null, null, null, null));
-		MusicLibrary albumartistmusiclib = new MusicLibrary(zp, new Entry("A:ALBUMARTIST:"+searchData, null, null, null, null, null, null, null));
-		MusicLibrary albummusiclib = new MusicLibrary(zp, new Entry("A:ALBUM:"+searchData, null, null, null, null, null, null, null));
-		MusicLibrary trackmusiclib = new MusicLibrary(zp, new Entry("A:TRACKS:"+searchData, null, null, null, null, null, null, null));
-
-		List<Entry> entries = artistmusiclib.getEntries();
-		entries.addAll(albumartistmusiclib.getEntries());
-		entries.addAll(albummusiclib.getEntries());
-		entries.addAll(trackmusiclib.getEntries());
-		//No results after the last entry
-		if (readidx > entries.size() - 1)
-			return new Element("results");
-		
-		Element results = new Element("results");
-			for (Entry e : entries.subList(readidx, Math.min(readidx+length, entries.size()-1))) {
-				Element result = new Element("result", true);
-				String type = e.getId();
-				if (type.startsWith("A:ARTIST") || type.startsWith("A:ALBUMARTIST")) {
-					result.addChild(new Element("type", "artist"));
-					Element artist = new Element("artist");
-					artist.addChild(new Element("name", e.getTitle()));
-					artist.addChild(new Element("id", e.getId()));
-					result.addChild(artist);
-				} else if (type.startsWith("A:ALBUM") && !type.startsWith("A:ALBUMARTIST")) {
-					result.addChild(new Element("type", "album"));
-					Element album = new Element("album");
-					album.addChild(new Element("title", e.getTitle()));
-					album.addChild(new Element("artist", e.getCreator()));
-					album.addChild(new Element("albumArt", e.getAlbumArtURL(zp).toExternalForm()));
-					album.addChild(new Element("id", e.getId()));
-					result.addChild(album);
-				} else if (type.substring(1).startsWith("://")) {
-					result.addChild(new Element("type", "track"));
-					Element track = new Element("track");
-					track.addChild(new Element("artist", e.getCreator()));
-					track.addChild(new Element("album", e.getAlbum()));
-					track.addChild(new Element("title", e.getTitle()));
-					track.addChild(new Element("albumArt", e.getAlbumArtURL(zp).toExternalForm()));
-					track.addChild(new Element("no", e.getOriginalTrackNumber()+""));
-					track.addChild(new Element("id", e.getId()));
-					result.addChild(track);
-				}
-				results.addChild(result);
-			}
-		return results;
-	}
-	
-	/**Set a ZonePlayer's current track
-	 * @param the ZonePlayer's ID
-	 * */
-	private void setZoneEnqueue(String zoneID, String itemID, Integer position) throws IOException, UPNPResponseException, JanosWebException {
-		if (zoneID == null) {
-			missingParameterException("zoneID");
-		}
-		if (itemID == null) {
-			missingParameterException("itemID");
-		}
-		String upnpclass, res; //parentid
-		//parentid = null;
-		upnpclass = null;
-		res = null;
-		if (itemID.startsWith("A:ARTIST")) {
-			//parentid = "A:ARTIST";
-			upnpclass = "object.container.person.musicArtist";
-			res = "x-rincon-playlist:"+zoneID+"#"+itemID;
-		} else if (itemID.startsWith("A:ALBUM")) {
-			//parentid = "A:ALBUM";
-			upnpclass = "object.container.person.musicAlbum";
-			res = "x-rincon-playlist:"+zoneID+"#"+itemID;
-		} else if (itemID.substring(1).startsWith("://")) {
-			//parentid = "A:TRACKS";
-			upnpclass = "object.container.person.musicTrack";
-			res = "x-file-cifs"+itemID.substring(1);
-		} else {
-			upnpclass = "object.container";
-			res = "x-rincon-playlist:";
-		}
-		//getZonePlayer(zoneID).enqueueEntry(new Entry(itemID, null, parentid, null, null, null, upnpclass, res));
-		if (position == null) {
-			getZonePlayer(zoneID).getMediaRendererDevice().getAvTransportService().addToQueue(new Entry(itemID, null, null, null, null, null, upnpclass, res));
-		} else {
-			int currentTrackNum = getZonePlayer(zoneID).getMediaRendererDevice().getAvTransportService().getPositionInfo().getTrackNum();
-			int pos = position.intValue();
-			if (pos > 0) {
-				getZonePlayer(zoneID).getMediaRendererDevice().getAvTransportService().addToQueue(new Entry(itemID, null, null, null, null, null, upnpclass, res), currentTrackNum+pos-1);
-			} else { //if pos is zero or below, enqueue track as next track and skip to track
-				AVTransportService serv = getZonePlayer(zoneID).getMediaRendererDevice().getAvTransportService();
-				serv.addToQueue(new Entry(itemID, null, null, null, null, null, upnpclass, res), currentTrackNum);
-				serv.next();
-			}
-		}
-	}
-
-	/**Clear a zonePlayer's queue
-	 * @param the ZonePlayer's ID*/
-	private void setZoneClearQueue(String zoneID) throws IOException, UPNPResponseException, JanosWebException {
-		if (zoneID == null) {
-			missingParameterException("zoneID");
-		}
-		getZonePlayer(zoneID).getMediaRendererDevice().getAvTransportService().clearQueue();
-	}
-
 	/**
 	 * Get an Element-representaion of the ZoneGroups
 	 * 
@@ -1052,15 +444,6 @@ public class JanosWebServlet extends HttpServlet {
 		return groups;
 	}
 	
-	private Element listenForZoneGroupUpdates() throws JanosWebException, IOException, UPNPResponseException {
-		UpdateListener l = new UpdateListener();
-		controller.getZoneGroupStateModel().addListener(l);
-		//this is a blocking call
-		Element retval = l.getZoneChanges();
-		controller.getZoneGroupStateModel().removeListener(l);
-		return retval;
-	}
-	
 	private Element getPlayCommands() {
 		Element coms = new Element("playCommands");
 		coms.addChild(new Element("command", "Play"));
@@ -1080,21 +463,22 @@ public class JanosWebServlet extends HttpServlet {
 	}
 
 	
+
 	
-	private Element listenForZoneGroupVolumeUpdates(String groupID)  throws JanosWebException, IOException, UPNPResponseException {
-		if (groupID == null) {
-			missingParameterException("groupID");
-		}
-		return listenForZoneVolumeUpdates(getZoneGroup(groupID).getCoordinator());
+	
+	/**
+	 * Returns an Element-representation of the ZonePlayer's volume
+	 * 
+	 * @param zoneID
+	 * @return an Element representation of a ZonePlayer and it's volume
+	 * @throws JanosWebException 
+	 */
+	private Element getZoneVolume(String zoneID)
+			throws IOException, UPNPResponseException, JanosWebException {
+		Element zone = getZoneElement(zoneID, false);
+		zd.getZoneVolume(zoneID, zone);
+		return zone;
 	}
-
-	private Element listenForZoneGroupMusicUpdates(String groupID)  throws JanosWebException, IOException, UPNPResponseException {
-		if (groupID == null) {
-			missingParameterException("groupID");
-		}
-		return listenForZoneMusicUpdates(getZoneGroup(groupID).getCoordinator());
-	}
-
 	
 	/**
 	 * Get an Element-representation of the ZoneGroup's volume settings
@@ -1105,38 +489,290 @@ public class JanosWebServlet extends HttpServlet {
 	 * @throws UPNPResponseException
 	 * @throws IOException
 	 */
-	private Element getZoneGroupVolume(String groupID)
-			throws JanosWebException, IOException, UPNPResponseException {
+	
+	//TODO: move content to other class
+	private Element getZoneGroupVolume(String groupID) throws JanosWebException, IOException, UPNPResponseException {
+		Element zonegroup = getZoneGroupElement(groupID, false);
+		zd.getZoneGroupVolume(groupID, zonegroup);
+		return zonegroup;
+	}
+
+	/**Get an Element-representation of a ZonePlayer's playmode (shuffle/normal/etc.) and playstate (playing or not)
+	 * @param the ZonePlayer's ID
+	 * */
+	private Element getZonePlayInfo(String zoneID) throws IOException, UPNPResponseException, JanosWebException {
+		Element zone = getZoneElement(zoneID, false);
+		zd.getZonePlayInfo(zoneID, zone);
+		return zone;
+	}
+	
+	/**Get an Element-representation of a ZoneGroup's playmode (shuffle/normal/etc.) and playstate (playing or not)
+	 * @param groupID the ZoneGroup's ID
+	 * */
+	private Element getZoneGroupPlayInfo(String groupID) throws IOException, UPNPResponseException, JanosWebException {
+		Element zonegroup = getZoneGroupElement(groupID, false);
+		zd.getZonePlayInfo(getZoneGroup(groupID).getCoordinator(), zonegroup);
+		return zonegroup;
+	}
+
+
+	/**Get an Element-representation of a ZonePlayer's current track position
+	 * @param the ZonePlayer's ID
+	 * @return song position*/
+	private Element getZoneCurrentTrackPosition(String zoneID) throws IOException, UPNPResponseException, JanosWebException {
+		Element zone = getZoneElement(zoneID, false);
+		zd.getZoneCurrentTrackPosition(zoneID, zone);
+		return zone;
+	}
+
+	/**Get an Element-representation of a ZoneGroup's current song position
+	 * @param groupID the ZoneGroup's ID
+	 * @return track position*/
+	private Element getZoneGroupCurrentTrackPosition(String groupID) throws IOException, UPNPResponseException, JanosWebException {
+		Element zonegroup = getZoneGroupElement(groupID, false);
+		zd.getZoneCurrentTrackPosition(getZoneGroup(groupID).getCoordinator(), zonegroup);
+		return zonegroup;
+	}
+
+	
+	/**Get an Element-representation of a ZonePlayer's current track
+	 * @param the ZonePlayer's ID
+	 * @return song position
+	 * @throws SAXException */
+	private Element getZoneCurrentTrack(String zoneID) throws IOException, UPNPResponseException, JanosWebException, SAXException {
+		Element zone = getZoneElement(zoneID, false);
+		zd.getZoneCurrentTrack(zoneID, zone, thishost);
+		return zone;
+	}
+	private Element getZoneGroupCurrentTrack(String groupID) throws IOException, UPNPResponseException, JanosWebException, SAXException {
+		Element zonegroup = getZoneGroupElement(groupID, false);
+		zd.getZoneCurrentTrack(getZoneGroup(groupID).getCoordinator(), zonegroup, thishost);
+		return zonegroup;
+	}
+	
+	private Element getZoneAllInfo(String zoneID) throws IOException, UPNPResponseException, JanosWebException, SAXException {
+		Element zone = getZoneElement(zoneID, false);
+		zd.getZoneVolume(zoneID, zone);
+		zd.getZonePlayInfo(zoneID, zone);
+		zd.getZoneCurrentTrack(zoneID, zone, thishost);
+		return zone;
+	}
+	
+	private Element getZoneGroupAllInfo(String groupID) throws IOException, UPNPResponseException, JanosWebException, SAXException {
+		Element zonegroup = getZoneGroupElement(groupID, false);
+		String coordinatorID = getZoneGroup(groupID).getCoordinator();
+		zd.getZoneGroupVolume(groupID, zonegroup);
+		zd.getZonePlayInfo(coordinatorID, zonegroup);
+		zd.getZoneCurrentTrack(coordinatorID, zonegroup, thishost);
+		return zonegroup;
+	}
+	
+	/**Get an Element-representation of a ZonePlayer's queue
+	 * @param the ZonePlayer's ID
+	 * @param startIndex starting index of the queue. null is treated as "0"
+	 * @param numEntries number of entries from the starting index. null is treated as Integer.MAX_VALUE 
+	 * @return queue*/
+	private Element getZoneQueue2(String zoneID, String startIndex, String numEntries) throws IOException, UPNPResponseException, JanosWebException {
+		Element zone = getZoneElement(zoneID, false);
+		zd.getZoneQueue(zoneID, startIndex, numEntries, zone);
+		return zone;
+	}
+
+	private Element getZoneGroupQueue(String groupID, String startIndex, String numEntries) throws IOException, UPNPResponseException, JanosWebException {
+		Element zonegroup = getZoneGroupElement(groupID, false);
+		zd.getZoneQueue(getZoneGroup(groupID).getCoordinator(), startIndex, numEntries, zonegroup);
+		return zonegroup;
+	}
+	
+	/**Get an Element-representation of a ZonePlayer's list of artists
+	 * @param the ZonePlayer's ID
+	 * @param startIndex starting index of the list of artists. null is treated as "0"
+	 * @param numEntries number of entries from the starting index. null is treated as Integer.MAX_VALUE 
+	 * @return */
+	private Element getZoneArtists(String zoneID, String startIndex, String numEntries) throws IOException, UPNPResponseException, JanosWebException {
+		Element zone = getZoneElement(zoneID, false);
+		zd.getZoneArtists(zoneID, startIndex, numEntries, zone);
+		return zone;
+	}
+
+	private Element getZoneGroupArtists(String groupID, String startIndex, String numEntries) throws IOException, UPNPResponseException, JanosWebException {
+		Element zonegroup = getZoneGroupElement(groupID, false);
+		zd.getZoneArtists(getZoneGroup(groupID).getCoordinator(), startIndex, numEntries, zonegroup);
+		return zonegroup;
+	}
+	
+	/**Get an Element-representation of a ZonePlayer's list of albums
+	 * @param the ZonePlayer's ID
+	 * @param startIndex starting index of the list of albums. null is treated as "0"
+	 * @param numEntries number of entries from the starting index. null is treated as Integer.MAX_VALUE 
+	 * @return */
+	private Element getZoneAlbums(String zoneID, String startIndex, String numEntries, String artist) throws IOException, UPNPResponseException, JanosWebException {
+		Element zone = getZoneElement(zoneID, false);
+		zd.getZoneAlbums(zoneID, startIndex, numEntries, artist, zone);
+		return zone;
+	}
+
+	private Element getZoneGroupAlbums(String groupID, String startIndex, String numEntries, String artist) throws IOException, UPNPResponseException, JanosWebException {
+		Element zonegroup = getZoneGroupElement(groupID, false);
+		zd.getZoneAlbums(getZoneGroup(groupID).getCoordinator(), startIndex, numEntries, artist, zonegroup);
+		return zonegroup;
+	}
+
+
+	/**Get an Element-representation of a ZonePlayer's list of tracks
+	 * @param the ZonePlayer's ID
+	 * @param startIndex starting index of the list of tracks. null is treated as "0"
+	 * @param numEntries number of entries from the starting index. null is treated as Integer.MAX_VALUE 
+	 * @return queue*/
+	private Element getZoneTracks(String zoneID, String startIndex, String numEntries, String artist, String album) throws IOException, UPNPResponseException, JanosWebException {
+		Element zone = getZoneElement(zoneID, false);
+		zd.getZoneTracks(zoneID, startIndex, numEntries, artist, album, zone);
+		return zone;
+	}
+	
+	private Element getZoneGroupTracks(String groupID, String startIndex, String numEntries, String artist, String album) throws IOException, UPNPResponseException, JanosWebException {
+		Element zonegroup = getZoneGroupElement(groupID, false);
+		zd.getZoneTracks(getZoneGroup(groupID).getCoordinator(), startIndex, numEntries, artist, album, zonegroup);
+		return zonegroup;
+	}
+
+	/**Get an Element-representation of a ZonePlayer's 
+	 * @param the ZonePlayer's ID
+	 * @param startIndex starting index of the list of tracks. null is treated as "0"
+	 * @param numEntries number of entries from the starting index. null is treated as Integer.MAX_VALUE 
+	 * @return queue*/
+	private Element getZoneSearch(String zoneID, String startIndex, String numEntries, String searchData) throws IOException, UPNPResponseException, JanosWebException {
+		Element zone = getZoneElement(zoneID, false);
+		if (searchData == null) {
+			missingParameterException("searchData");
+		}
+		zd.getZoneSearch(zoneID, startIndex, numEntries, searchData, zone);
+		return zone;
+	}
+	
+	private Element getZoneGroupSearch(String groupID, String startIndex, String numEntries, String searchData) throws IOException, UPNPResponseException, JanosWebException {
+		Element zonegroup = getZoneGroupElement(groupID, false);
+		if (searchData == null) {
+			missingParameterException("searchData");
+		}
+		zd.getZoneSearch(groupID, startIndex, numEntries, searchData, zonegroup);
+		return zonegroup;
+	}
+
+
+	
+	
+	
+	//***************************************************************
+	//    __    __  ____  ____  ____  __ _  ____  ____  ____ 
+	//   (  )  (  )/ ___)(_  _)(  __)(  ( \(  __)(  _ \/ ___)
+	//   / (_/\ )( \___ \  )(   ) _) /    / ) _)  )   /\___ \
+	//   \____/(__)(____/ (__) (____)\_)__)(____)(__\_)(____/
+	// (a kind of getter but asynchronous (or kinda asynchronous))
+	//***************************************************************
+	
+	//TODO: do like the getter methods: move to other class
+	
+	private Element listenForZoneGroupUpdates() throws JanosWebException, IOException, UPNPResponseException {
+		UpdateListener l = new UpdateListener();
+		controller.getZoneGroupStateModel().addListener(l);
+		//this is a blocking call
+		Element retval = l.getZoneChanges();
+		controller.getZoneGroupStateModel().removeListener(l);
+		return retval;
+	}
+	
+	private Element listenForZoneVolumeUpdates(String zoneID)  throws JanosWebException, IOException, UPNPResponseException {
+		if (zoneID == null) {
+			missingParameterException("zoneID");
+		}
+		RenderingControlService rcs = getZonePlayer(zoneID).getMediaRendererDevice().getRenderingControlService();
+		UpdateListener l = new UpdateListener();
+		rcs.addListener(l);
+		Element retval = l.getVolumeChanged();
+		rcs.removeListener(l);
+		return retval;
+	}
+
+	private Element listenForZoneGroupVolumeUpdates(String groupID)  throws JanosWebException, IOException, UPNPResponseException {
 		if (groupID == null) {
 			missingParameterException("groupID");
 		}
-		ZoneGroup zgroup = getZoneGroup(groupID);
-		int totalvolume = 0;
-		boolean groupmuted = true;
-		List<String> members = zgroup.getMembers();
-		Element zonegroup = new Element("group");
-		for (String zoneID : members) {
-			ZonePlayer zp = getZonePlayer(zoneID);
-			RenderingControlService rcs = zp.getMediaRendererDevice()
-			.getRenderingControlService();
-			int volume = rcs.getVolume();
-			totalvolume += volume;
-			boolean zonemuted = rcs.getMute();
+		return listenForZoneVolumeUpdates(getZoneGroup(groupID).getCoordinator());
+	}
 
-			groupmuted = groupmuted && zonemuted;
-			//here I should really call zone.addChild(getZoneVolume(zoneID)), but it's not efficient to do so
-			Element zone = new Element("zone", true);
-			zone.addChild(new Element("zoneID", zoneID));
-			//zone.addChild(new Element("zoneName", getZonePlayerName(zp)));
-			zone.addChild(new Element("volume", volume + ""));
-			zone.addChild(new Element("muted", zonemuted ? "true" : "false"));
-			//Element zone = getZoneVolume(zoneID);
-			zonegroup.addChild(zone);
+	private Element listenForZoneMusicUpdates(String zoneID)  throws JanosWebException, IOException, UPNPResponseException {
+		if (zoneID == null) {
+			missingParameterException("zoneID");
 		}
-		zonegroup.addChildFirst(new Element("muted", groupmuted ? "true" : "false"));
-		zonegroup.addChildFirst(new Element("volume", totalvolume / members.size() + ""));
-		zonegroup.addChildFirst(new Element("groupID", groupID));
-		return zonegroup;
+		AVTransportService avts = getZonePlayer(zoneID).getMediaRendererDevice().getAvTransportService();
+		UpdateListener l = new UpdateListener();
+		avts.addAvTransportListener(l);
+		Element retval = l.getMusicChanged();
+		avts.removeAvTransportListener(l);
+		return retval;
+	}
+	
+	private Element listenForZoneGroupMusicUpdates(String groupID)  throws JanosWebException, IOException, UPNPResponseException {
+		if (groupID == null) {
+			missingParameterException("groupID");
+		}
+		return listenForZoneMusicUpdates(getZoneGroup(groupID).getCoordinator());
+	}
+
+	private Element listenForAllZoneUpdates(String zoneID) throws JanosWebException, IOException, UPNPResponseException {
+		if (zoneID == null) {
+			missingParameterException("zoneID");
+		}
+		MediaRendererDevice mrd = getZonePlayer(zoneID).getMediaRendererDevice();
+		RenderingControlService rcs = mrd.getRenderingControlService();
+		AVTransportService avts = mrd.getAvTransportService();
+		UpdateListener l = new UpdateListener();
+		avts.addAvTransportListener(l);
+		rcs.addListener(l);
+		controller.getZoneGroupStateModel().addListener(l);
+		//this is a blocking call
+		Element retval = l.getAllChanges();
+		controller.getZoneGroupStateModel().removeListener(l);
+		rcs.removeListener(l);
+		avts.removeAvTransportListener(l);
+		return retval;
+	}
+
+	private Element listenForAllZoneGroupUpdates(String groupID)  throws JanosWebException, IOException, UPNPResponseException {
+		if (groupID == null) {
+			missingParameterException("groupID");
+		}
+		return listenForAllZoneUpdates(getZoneGroup(groupID).getCoordinator());
+	}
+
+	
+	
+	
+	//*************************************************
+	//    ____  ____  ____  ____  ____  ____  ____ 
+	//   / ___)(  __)(_  _)(_  _)(  __)(  _ \/ ___)
+	//   \___ \ ) _)   )(    )(   ) _)  )   /\___ \
+	//   (____/(____) (__)  (__) (____)(__\_)(____/
+	//
+	//*************************************************
+
+	//TODO: Move functionality implementation away from servlet class
+	
+	private void setZoneVolume(String zoneID, String volume) throws NumberFormatException, IOException, UPNPResponseException, JanosWebException {
+		if (zoneID == null) {
+			missingParameterException("zoneID");
+		}
+		if (volume == null) {
+			missingParameterException("volume");
+
+		}
+		int vol = Integer.parseInt(volume);
+		checkVolume(vol);
+		ZonePlayer zp = getZonePlayer(zoneID);
+		RenderingControlService rcs = zp.getMediaRendererDevice()
+		.getRenderingControlService();
+		rcs.setVolume(vol);
 	}
 
 	/**
@@ -1257,9 +893,22 @@ public class JanosWebServlet extends HttpServlet {
 		}
 	}
 
-	private void setZoneGroupMuted(String groupID,
-			String mute) throws IOException, UPNPResponseException,
-			JanosWebException {
+	private void setZoneMuted(String zoneID, String mute) throws IOException, UPNPResponseException, JanosWebException {
+		if (zoneID == null) {
+			missingParameterException("zoneID");
+		}
+		if (mute == null) {
+			missingParameterException("mute");
+		}
+
+		ZonePlayer zp = getZonePlayer(zoneID);
+		RenderingControlService rcs = zp.getMediaRendererDevice()
+		.getRenderingControlService();
+		rcs.setMute(mute.equalsIgnoreCase("true") ? 1 : 0);
+	}
+
+	
+	private void setZoneGroupMuted(String groupID, String mute) throws IOException, UPNPResponseException,	JanosWebException {
 		if (groupID == null) {
 			missingParameterException("groupID");
 		}
@@ -1275,15 +924,26 @@ public class JanosWebServlet extends HttpServlet {
 		}
 	}
 
-	/**Get an Element-represenation of a ZoneGroup's playstate (playing or not)
-	 * @param groupID the ZoneGroup's ID
-	 * @return playstate*/
-	private Element getZoneGroupPlayInfo(String groupID) throws IOException, UPNPResponseException, JanosWebException {
-		if (groupID == null) {
-			missingParameterException("groupID");
+	/**Make a zone player perform a play/stop/pause/previous/next-command
+	 * @throws JanosWebException 
+	 * @throws UPNPResponseException 
+	 * @throws IOException 
+	 * */
+	private void setZoneCommand(String zoneID, String command) throws IOException, UPNPResponseException, JanosWebException {
+		if (zoneID == null) {
+			missingParameterException("zoneID");
 		}
-		String coordinator = getZoneGroup(groupID).getCoordinator();
-		return getZonePlayInfo(coordinator);
+		if (command == null) {
+			missingParameterException("command");
+		}
+		AVTransportService ats = getZonePlayer(zoneID).getMediaRendererDevice().getAvTransportService();
+		switch (TransportAction.valueOf(command)) {
+		case Play: ats.play(); break; 
+		case Pause: ats.pause(); break; 
+		case Stop: ats.stop(); break; 
+		case Next: ats.next(); break; 
+		case Previous: ats.previous(); break; 
+		}
 	}
 
 	/**Make a zone group perform a play/stop/pause/previous/next-command
@@ -1301,6 +961,27 @@ public class JanosWebServlet extends HttpServlet {
 		setZoneCommand(getZoneGroup(groupID).getCoordinator(), command);
 	}
 	
+
+	/**Set a ZonePlayer's playmode (shuffle/normal/etc.)
+	 * @param the ZonePlayer's ID
+	 * @return playmode*/
+	private void setZonePlayMode(String zoneID, String playMode) throws IOException, UPNPResponseException, JanosWebException {
+		if (zoneID == null) {
+			missingParameterException("zoneID");
+		}
+		if (playMode == null) {
+			missingParameterException("playMode");
+		}
+		PlayMode playmode = PlayMode.NORMAL;
+		try {
+			playmode = PlayMode.valueOf(playMode);
+		} catch (Exception e) {
+			throw new JanosWebException("Playmode '"+playMode+"' is not supported");
+		}
+		getZonePlayer(zoneID).getMediaRendererDevice().getAvTransportService().setPlayMode(playmode);
+	}
+
+
 	/**Set a ZoneGroup's playmode (shuffle/normal/etc.)
 	 * @param the ZoneGroup's ID
 	 * */
@@ -1314,15 +995,25 @@ public class JanosWebServlet extends HttpServlet {
 		setZonePlayMode(getZoneGroup(groupID).getCoordinator(), playMode);
 	}
 
-	/**Get an Element-represenation of a ZoneGroup's current song position
-	 * @param groupID the ZoneGroup's ID
-	 * @return track position*/
-	private Element getZoneGroupTrackPosition(String groupID) throws IOException, UPNPResponseException, JanosWebException {
-		if (groupID == null) {
-			missingParameterException("groupID");
+	
+	/**Make a zone player skip to a position in a track
+	 * @throws JanosWebException 
+	 * @throws NumberFormatException 
+	 * @throws UPNPResponseException 
+	 * @throws IOException 
+	 * */
+	private void setZoneCurrentTrackPosition(String zoneID, String trackPosition) throws JanosWebException, NumberFormatException, IOException, UPNPResponseException {
+		if (zoneID == null) {
+			missingParameterException("zoneID");
 		}
-		return getZoneTrackPosition(getZoneGroup(groupID).getCoordinator());
+		if (trackPosition == null) {
+			missingParameterException("trackPosition");
+		}
+		AVTransportService ats = getZonePlayer(zoneID).getMediaRendererDevice().getAvTransportService();
+		ats.seek(SeekTargetFactory.createRelTimeSeekTarget(Long.parseLong(trackPosition)));
 	}
+
+
 	
 	/**Make a zone group skip to a position in a song
 	 * @throws JanosWebException 
@@ -1337,53 +1028,54 @@ public class JanosWebServlet extends HttpServlet {
 		if (trackPosition == null) {
 			missingParameterException("trackPosition");
 		}
-		setZoneTrackPosition(getZoneGroup(groupID).getCoordinator(), trackPosition);
-	}
-	
-	private Element getZoneGroupTrack(String groupID) throws IOException, UPNPResponseException, JanosWebException, SAXException {
-		if (groupID == null) {
-			missingParameterException("groupID");
-		}
-		return getZoneTrack(getZoneGroup(groupID).getCoordinator());
-	}
-
-	private Element getZoneGroupQueue(String groupID, String startIndex, String numEntries) throws IOException, UPNPResponseException, JanosWebException {
-		if (groupID == null) {
-			missingParameterException("groupID");
-		}
-		return getZoneQueue2(getZoneGroup(groupID).getCoordinator(), startIndex, numEntries);
-	}
-
-	private Element getZoneGroupArtists(String groupID, String startIndex, String numEntries) throws IOException, UPNPResponseException, JanosWebException {
-		if (groupID == null) {
-			missingParameterException("groupID");
-		}
-		return getZoneArtists(getZoneGroup(groupID).getCoordinator(), startIndex, numEntries);
-	}
-
-	private Element getZoneGroupAlbums(String groupID, String startIndex, String numEntries, String artist) throws IOException, UPNPResponseException, JanosWebException {
-		if (groupID == null) {
-			missingParameterException("groupID");
-		}
-		return getZoneAlbums(getZoneGroup(groupID).getCoordinator(), startIndex, numEntries, artist);
-	}
-	
-	private Element getZoneGroupTracks(String groupID, String startIndex, String numEntries, String artist, String album) throws IOException, UPNPResponseException, JanosWebException {
-		if (groupID == null) {
-			missingParameterException("groupID");
-		}
-		return getZoneTracks(getZoneGroup(groupID).getCoordinator(), startIndex, numEntries, artist, album);
+		setZoneCurrentTrackPosition(getZoneGroup(groupID).getCoordinator(), trackPosition);
 	}
 	
 	
-	private Element getZoneGroupSearch(String groupID, String startIndex, String numEntries, String searchData) throws IOException, UPNPResponseException, JanosWebException {
-		if (groupID == null) {
-			missingParameterException("groupID");
+	/**Set a ZonePlayer's current track
+	 * @param the ZonePlayer's ID
+	 * */
+	private void setZoneEnqueue(String zoneID, String itemID, Integer position) throws IOException, UPNPResponseException, JanosWebException {
+		if (zoneID == null) {
+			missingParameterException("zoneID");
 		}
-		if (searchData == null) {
-			missingParameterException("searchData");
+		if (itemID == null) {
+			missingParameterException("itemID");
 		}
-		return getZoneSearch(getZoneGroup(groupID).getCoordinator(), startIndex, numEntries, searchData);
+		String upnpclass, res; //parentid
+		//parentid = null;
+		upnpclass = null;
+		res = null;
+		if (itemID.startsWith("A:ARTIST")) {
+			//parentid = "A:ARTIST";
+			upnpclass = "object.container.person.musicArtist";
+			res = "x-rincon-playlist:"+zoneID+"#"+itemID;
+		} else if (itemID.startsWith("A:ALBUM")) {
+			//parentid = "A:ALBUM";
+			upnpclass = "object.container.person.musicAlbum";
+			res = "x-rincon-playlist:"+zoneID+"#"+itemID;
+		} else if (itemID.substring(1).startsWith("://")) {
+			//parentid = "A:TRACKS";
+			upnpclass = "object.container.person.musicTrack";
+			res = "x-file-cifs"+itemID.substring(1);
+		} else {
+			upnpclass = "object.container";
+			res = "x-rincon-playlist:";
+		}
+		//getZonePlayer(zoneID).enqueueEntry(new Entry(itemID, null, parentid, null, null, null, upnpclass, res));
+		if (position == null) {
+			getZonePlayer(zoneID).getMediaRendererDevice().getAvTransportService().addToQueue(new Entry(itemID, null, null, null, null, null, upnpclass, res));
+		} else {
+			int currentTrackNum = getZonePlayer(zoneID).getMediaRendererDevice().getAvTransportService().getPositionInfo().getTrackNum();
+			int pos = position.intValue();
+			if (pos > 0) {
+				getZonePlayer(zoneID).getMediaRendererDevice().getAvTransportService().addToQueue(new Entry(itemID, null, null, null, null, null, upnpclass, res), currentTrackNum+pos-1);
+			} else { //if pos is zero or below, enqueue track as next track and skip to track
+				AVTransportService serv = getZonePlayer(zoneID).getMediaRendererDevice().getAvTransportService();
+				serv.addToQueue(new Entry(itemID, null, null, null, null, null, upnpclass, res), currentTrackNum);
+				serv.next();
+			}
+		}
 	}
 
 	private void setZoneGroupEnqueue(String groupID, String itemID, Integer position) throws JanosWebException, NumberFormatException, IOException, UPNPResponseException {
@@ -1396,12 +1088,39 @@ public class JanosWebServlet extends HttpServlet {
 		setZoneEnqueue(getZoneGroup(groupID).getCoordinator(), itemID, position);
 	}
 
+
+	/**Clear a zonePlayer's queue
+	 * @param the ZonePlayer's ID*/
+	private void setZoneClearQueue(String zoneID) throws IOException, UPNPResponseException, JanosWebException {
+		if (zoneID == null) {
+			missingParameterException("zoneID");
+		}
+		getZonePlayer(zoneID).getMediaRendererDevice().getAvTransportService().clearQueue();
+	}
+
 	private void setZoneGroupClearQueue(String groupID) throws JanosWebException, NumberFormatException, IOException, UPNPResponseException {
 		if (groupID == null) {
 			missingParameterException("groupID");
 		}
 		setZoneClearQueue(getZoneGroup(groupID).getCoordinator());
 	}
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
 	
 	
 	//---------------------------------------------------------------------------------
@@ -1437,21 +1156,6 @@ public class JanosWebServlet extends HttpServlet {
 	}
 	
 	
-	/**Convenience method for finding the ZoneGroup that a given ZonePlayer belongs to
-	 * @param zoneID, the ID of the ZonePlayer
-	 * @return the ZoneGroup that the ZonePlayer is member of.
-	 * */
-	private ZoneGroup getZoneGroupFromMember(String zoneID) throws JanosWebException {
-		ZonePlayer zp = getZonePlayer(zoneID);
-		for (ZoneGroup zg : zp.getZoneGroupTopologyService().getGroupState().getGroups()) {
-			for (String member : zg.getMembers()) {
-				if (member.equals(zoneID)) {
-					return zg;
-				}
-			}
-		}
-		return null;
-	}
 	
 	/**Convenience method for checking if the volume is out of bounds
 	 * @param volume the input volume
@@ -1529,6 +1233,25 @@ public class JanosWebServlet extends HttpServlet {
 	}
 	
 
+	private Element getZoneElement(String zoneID, boolean isSibling) throws JanosWebException {
+		if (zoneID == null) {
+			missingParameterException("zoneID");
+		}
+		Element zone = new Element("zone", isSibling);
+		zone.addChild(new Element("zoneID", zoneID));
+		return zone;
+	}
+	
+	private Element getZoneGroupElement(String groupID, boolean isSibling) throws JanosWebException {
+		if (groupID == null) {
+			missingParameterException("groupID");
+		}
+		Element group = new Element("zoneGroup", isSibling);
+		group.addChild(new Element("groupID", groupID));
+		return group;
+	}
+	
+	
 	
 	//Method and helper methods for generating the a small help for the servlet interface
 	//NOTE: Only method names included in the Command will be listed by this method.
