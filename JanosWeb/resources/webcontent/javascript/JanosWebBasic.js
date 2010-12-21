@@ -178,6 +178,12 @@ function getGroupCurrentTrack(groupID, callbackfunction, sync) {
 	displayReply("getZoneGroupCurrentTrack", "groupID="+groupID, callbackfunction, sync);
 }
 
+//http://host:port/janosWeb?cmd=getZoneGroupAllInfo&groupID=RINCON_00000000000000000:00
+function getGroupAllInfo(groupID, callbackfunction, sync) {
+	displayReply("getZoneGroupAllInfo", "groupID="+groupID, callbackfunction, sync);
+}
+
+
 //http://host:port/janosWeb?cmd=getZoneGroupQueue&groupID=RINCON_00000000000000000:00&startIndex=3&numEntries=10
 function getGroupQueue(groupID, startidx, numentries, callbackfunction, sync) {
 	displayReply("getZoneGroupQueue", "groupID="+groupID+"&startIndex="+startidx+"&numEntries="+numentries, callbackfunction, sync);
@@ -309,6 +315,12 @@ function setZoneCurrentTrackPos(zoneID, trackpos, callbackfunction) {
 function getZoneCurrentTrack(zoneID, callbackfunction, sync) {
 	displayReply("getZoneCurrentTrack", "zoneID="+zoneID, callbackfunction);
 }
+
+//http://host:port/janosWeb?cmd=getZoneAllInfo&zoneID=RINCON_00000000000000000
+function getZoneAllInfo(zoneID, callbackfunction, sync) {
+	displayReply("getZoneAllInfo", "zoneID="+zoneID, callbackfunction);
+}
+
 
 //http://host:port/janosWeb?cmd=getZoneQueue&zoneID=RINCON_00000000000000000&startIndex=3&numEntries=10
 function getZoneQueue(zoneID, startidx, numentries, callbackfunction, sync) {

@@ -136,7 +136,7 @@ function displayGroupsAsButtons(object) {
 
 //Display what is playing now
 function displayNowPlaying(object) {
-	var track = object.response.track;
+	var track = object.response.zoneGroup.currentTrack;
 	var artistelm = document.getElementById("nowArtist");
 	var albumelm = document.getElementById("nowAlbum");
 	var aartelm = document.getElementById("nowAlbumArt");
@@ -167,8 +167,8 @@ function displayNowPlaying(object) {
 }
 
 function usePlayInfo(object) {
-	playing = object.response.playInfo.playing;
-	playmode = object.response.playInfo.playMode;
+	playing = object.response.zoneGroup.playing;
+	playmode = object.response.zoneGroup.playMode;
 	if (playing) {
 		document.getElementById("buttonPlay").style.display = "none";
 		document.getElementById("buttonPause").style.display = "inline";
@@ -205,7 +205,7 @@ function usePlayInfo(object) {
 //this function fills out the nowPos-element with track-position information. It also
 //sets the onclick-functionality of the setposbtn
 function displayTrackPos(object) {
-	var track = object.response.track;
+	var track = object.response.zoneGroup.currentTrack;
 	var durasec = track.duration / 1000; 
 	var minutes = Math.floor(durasec / 60); 
 	var seconds = durasec % 60;
@@ -224,7 +224,7 @@ function displayTrackPos(object) {
 
 //Shows the group volume and the invidual zones' volumes. Also displays simple volume controls
 function displayGroupVolume(object) {
-	var group = object.response.group;
+	var group = object.response.zoneGroup;
 
 	volcontrols = document.getElementById("volumeControls");
 	volcontrols.innerHTML = "";
@@ -247,7 +247,7 @@ function displayGroupVolume(object) {
 function displayQueue(object) {
 	var queuearea = document.getElementById("queue");
 	queuearea.innerHTML = "";
-	var queue = object.response.queue;
+	var queue = object.response.zoneGroup.queue;
 	var list = document.createElement("ul");
 	for (q=0; q<queue.track.length; q++) {
 		listitem = document.createElement("li");
@@ -264,7 +264,7 @@ function displaySearch(object) {
 	resarea.innerHTML="";
 	resarea.appendChild(document.createTextNode("Search results:"));
 	resarea.appendChild(document.createElement("br"));
-	var results = object.response.results;
+	var results = object.response.zoneGroup.results;
 	var list = document.createElement("ul");
 	for (s=0; s<results.result.length; s++) {
 		listitem = document.createElement("li");

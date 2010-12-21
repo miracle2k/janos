@@ -24,11 +24,11 @@ import net.sf.janos.web.exception.JanosWebException;
 import net.sf.janos.web.servlets.JanosWebServlet;
 import net.sf.janos.web.structure.Element;
 
-public class ZoneData {
+public class GetRequestHandler {
 	private SonosController controller;
 	private static final Log LOG = LogFactory.getLog(JanosWebServlet.class);
 	
-	public ZoneData(SonosController controller) {
+	public GetRequestHandler(SonosController controller) {
 		this.controller = controller;
 	}
 	

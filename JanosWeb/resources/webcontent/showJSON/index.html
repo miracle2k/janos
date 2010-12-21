@@ -163,6 +163,10 @@ function setupInput() {
 		document.getElementById("input_trackpos").style.display = 'block';
 		actionbutton.onclick = function(){setGroupCurrentTrackPos(groupID.options[groupID.options.selectedIndex].value,trackpos.value,displayJSON)};
 	}
+	else if (selbox.options[index].value == "getGroupAllInfo") {
+		showInputGID();
+		actionbutton.onclick = function(){getGroupAllInfo(groupID.options[groupID.options.selectedIndex].value,displayJSON)};
+	}
 	else if (selbox.options[index].value == "getGroupQueue") {
 		showInputGID();
 		showIdxNum();
@@ -234,6 +238,7 @@ function setupInput() {
 			<option value="getGroupCurrentTrackPos">Show Current TrackPos (Group)</option>
 			<option value="setGroupCurrentTrackPos">Set Current TrackPos (Group)</option>
 			<option value="getGroupCurrentTrack">Show Current Track (Group)</option>
+			<option value="getGroupAllInfo">Show All Info(Group)</option>
 			<option value="getGroupQueue">Show Queue (Group)</option>
 			<option value="getGroupSearch">Search (Group)</option>
 			<option value="getGroupArtists">List Artists (Group)</option>

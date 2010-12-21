@@ -29,7 +29,7 @@ import net.sf.janos.model.TransportInfo.TransportState;
 import net.sf.janos.model.ZoneGroup;
 import net.sf.janos.web.exception.JanosWebException;
 import net.sf.janos.web.model.UpdateListener;
-import net.sf.janos.web.model.ZoneData;
+import net.sf.janos.web.model.GetRequestHandler;
 import net.sf.janos.web.structure.Element;
 import net.sf.janos.web.structure.ElementUtil;
 import net.sf.janos.web.structure.Formatter;
@@ -47,7 +47,7 @@ public class JanosWebServlet extends HttpServlet {
 	private final SonosController controller;
 	private String thishost;
 	private Formatter formatter;
-	private ZoneData zd;
+	private GetRequestHandler zd;
 
 	private enum Command {
 		getZoneGroups 
@@ -120,7 +120,7 @@ public class JanosWebServlet extends HttpServlet {
 		} catch (Exception e) {
 			LOG.debug("Got an exception of type '"+e.getClass().getName()+"' at initialization of the servlet");
 		}
-		zd = new ZoneData(controller);
+		zd = new GetRequestHandler(controller);
 	}
 
 	public void destroy() {
@@ -490,7 +490,6 @@ public class JanosWebServlet extends HttpServlet {
 	 * @throws IOException
 	 */
 	
-	//TODO: move content to other class
 	private Element getZoneGroupVolume(String groupID) throws JanosWebException, IOException, UPNPResponseException {
 		Element zonegroup = getZoneGroupElement(groupID, false);
 		zd.getZoneGroupVolume(groupID, zonegroup);
@@ -655,7 +654,7 @@ public class JanosWebServlet extends HttpServlet {
 		if (searchData == null) {
 			missingParameterException("searchData");
 		}
-		zd.getZoneSearch(groupID, startIndex, numEntries, searchData, zonegroup);
+		zd.getZoneSearch(getZoneGroup(groupID).getCoordinator(), startIndex, numEntries, searchData, zonegroup);
 		return zonegroup;
 	}
 
@@ -671,7 +670,7 @@ public class JanosWebServlet extends HttpServlet {
 	// (a kind of getter but asynchronous (or kinda asynchronous))
 	//***************************************************************
 	
-	//TODO: do like the getter methods: move to other class
+	//TODO: do like the getter methods: move to other class: ListenRequestHandler?
 	
 	private Element listenForZoneGroupUpdates() throws JanosWebException, IOException, UPNPResponseException {
 		UpdateListener l = new UpdateListener();
@@ -757,7 +756,7 @@ public class JanosWebServlet extends HttpServlet {
 	//
 	//*************************************************
 
-	//TODO: Move functionality implementation away from servlet class
+	//TODO: Move functionality implementation away from servlet class into a SetRequestHandler
 	
 	private void setZoneVolume(String zoneID, String volume) throws NumberFormatException, IOException, UPNPResponseException, JanosWebException {
 		if (zoneID == null) {
