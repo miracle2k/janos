@@ -7,7 +7,7 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 
 public class ZoneGroupStateModel {
-  private static final Log LOG = LogFactory.getLog(ZoneGroupStateModel.class);
+	private static final Log LOG = LogFactory.getLog(ZoneGroupStateModel.class);
 	private ZoneGroupState oldGroupState = new ZoneGroupState(new ArrayList<ZoneGroup>());
 	private final List<ZoneGroupStateModelListener> listeners = new ArrayList<ZoneGroupStateModelListener>();
 
@@ -41,7 +41,7 @@ public class ZoneGroupStateModel {
 			for (ZoneGroup oldGroup: oldGroupState.getGroups()) {
 				if (oldGroup.equals(newGroup)) {
 					if ( (!oldGroup.getMembers().containsAll(newGroup.getMembers())) ||
-						 (!newGroup.getMembers().containsAll(oldGroup.getMembers()))) {
+							(!newGroup.getMembers().containsAll(oldGroup.getMembers()))) {
 						fireGroupMembershipChanged(newGroup);
 					}
 				}
@@ -53,30 +53,41 @@ public class ZoneGroupStateModel {
 
 	protected void fireGroupRemoved(ZoneGroup group) {
 		LOG.info("REMOVING GROUP: " + group.getId());
-		for (ZoneGroupStateModelListener l : listeners) {
-			l.zoneGroupRemoved(group, this);
+		synchronized(listeners) {
+
+			for (ZoneGroupStateModelListener l : listeners) {
+				l.zoneGroupRemoved(group, this);
+			}
 		}
 	}
 
 	protected void fireGroupAdded(ZoneGroup group) {
-	  LOG.info("ADDING GROUP: " + group.getId());
-		for (ZoneGroupStateModelListener l : listeners) {
-			l.zoneGroupAdded(group, this);
+		LOG.info("ADDING GROUP: " + group.getId());
+		synchronized(listeners) {
+			for (ZoneGroupStateModelListener l : listeners) {
+				l.zoneGroupAdded(group, this);
+			}
 		}
 	}
 
 	protected void fireGroupMembershipChanged(ZoneGroup group) {
-	  LOG.info("CHANGING GROUP: " + group.getId());
-		for (ZoneGroupStateModelListener l : listeners) {
-			l.zoneGroupMembersChanged(group, this);
+		LOG.info("CHANGING GROUP: " + group.getId());
+		synchronized(listeners) {
+			for (ZoneGroupStateModelListener l : listeners) {
+				l.zoneGroupMembersChanged(group, this);
+			}
 		}
 	}
 
 	public void addListener(ZoneGroupStateModelListener l) {
-		listeners.add(l);
+		synchronized(listeners) {
+			listeners.add(l);
+		}
 	}
 
 	public void removeListener(ZoneGroupStateModelListener l) {
-		listeners.remove(l);
+		synchronized(listeners) {
+			listeners.remove(l);
+		}
 	}
 }

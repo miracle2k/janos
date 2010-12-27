@@ -1136,6 +1136,7 @@ public class JanosWebServlet extends HttpServlet {
 	private List<ZoneGroup> getGroups() {
 		List<ZonePlayer> zps = controller.getZonePlayerModel().getAllZones();
 		if (zps.size() > 0) {
+			
 			List<ZoneGroup> groups = zps.get(0).getZoneGroupTopologyService().getGroupState().getGroups();
 			for (ZoneGroup group : groups) {
 				if (group.getMembers().size() > 0) {

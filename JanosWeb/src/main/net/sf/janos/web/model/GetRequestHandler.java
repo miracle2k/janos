@@ -27,13 +27,13 @@ import net.sf.janos.web.structure.Element;
 public class GetRequestHandler {
 	private SonosController controller;
 	private static final Log LOG = LogFactory.getLog(JanosWebServlet.class);
-	
+
 	public GetRequestHandler(SonosController controller) {
 		this.controller = controller;
 	}
-	
-	
-	
+
+
+
 	public void getZoneVolume(String zoneID, Element parent)
 	throws IOException, UPNPResponseException, JanosWebException {
 		ZonePlayer zp = getZonePlayer(zoneID);
@@ -41,7 +41,7 @@ public class GetRequestHandler {
 		parent.addChild(new Element("volume", rcs.getVolume() + ""));
 		parent.addChild(new Element("muted", rcs.getMute() ? "true" : "false"));
 	}
-	
+
 	public void getZoneGroupVolume(String groupID, Element parent) throws JanosWebException, IOException, UPNPResponseException {
 		ZoneGroup zgroup = getZoneGroup(groupID);
 		int totalvolume = 0;
@@ -69,7 +69,7 @@ public class GetRequestHandler {
 		parent.addChildFirst(new Element("volume", totalvolume / members.size() + ""));
 	}
 
-	
+
 	public void getZonePlayInfo(String zoneID, Element parent) throws IOException, UPNPResponseException, JanosWebException {
 		ZonePlayer zp = getZonePlayer(zoneID);
 		AVTransportService avts = zp.getMediaRendererDevice().getAvTransportService();
@@ -85,13 +85,13 @@ public class GetRequestHandler {
 		track.addChild(new Element("position", posinfo.getRelTime()+""));
 		parent.addChild(track);
 	}
-	
+
 	public void getZoneCurrentTrack(String zoneID, Element parent, String thishost) throws IOException ,UPNPResponseException, JanosWebException, SAXException {
 		ZonePlayer zp = getZonePlayer(zoneID);
 		PositionInfo posinfo = zp.getMediaRendererDevice().getAvTransportService().getPositionInfo();
 		MediaInfo mediainfo = zp.getMediaRendererDevice().getAvTransportService().getMediaInfo();
 		String uri = mediainfo.getCurrentURI();
-		
+
 		Element track = new Element("currentTrack");
 
 		if (uri == null || posinfo == null) {
@@ -105,7 +105,7 @@ public class GetRequestHandler {
 				track.addChild(new Element("title", trackmeta.getTitle()));
 				URL aart = trackmeta.getAlbumArtUrl(zp);
 				if (aart == null) {
-					aart = new URL(thishost+"/images/noart.jpg");
+					aart = new URL(thishost+"/images/cd.gif");
 				}
 				track.addChild(new Element("albumArt", aart.toExternalForm()));
 				track.addChild(new Element("albumArtist", trackmeta.getAlbumArtist()));
@@ -172,19 +172,19 @@ public class GetRequestHandler {
 
 		} else if (uri.startsWith("rdradio:station:")) {
 			// Rhapsody Station
-				try {
-					TrackMetaData trackmeta = posinfo.getTrackMetaData();
-					track.addChild(new Element("artist", "Rhapsody: " + trackmeta.getCreator()));
-					track.addChild(new Element("album", "Rhapsody: " + trackmeta.getAlbum()));
-					track.addChild(new Element("title", "Rhapsody: " + trackmeta.getTitle()));
-					track.addChild(new Element("albumArt", new URL(trackmeta.getAlbumArtUri()).toExternalForm()));
-					track.addChild(new Element("albumArtist", "Rhapsody: " + trackmeta.getAlbumArtist()));
-					track.addChild(new Element("duration", posinfo.getTrackDuration()+""));
-					track.addChild(new Element("position", posinfo.getRelTime()+""));
+			try {
+				TrackMetaData trackmeta = posinfo.getTrackMetaData();
+				track.addChild(new Element("artist", "Rhapsody: " + trackmeta.getCreator()));
+				track.addChild(new Element("album", "Rhapsody: " + trackmeta.getAlbum()));
+				track.addChild(new Element("title", "Rhapsody: " + trackmeta.getTitle()));
+				track.addChild(new Element("albumArt", new URL(trackmeta.getAlbumArtUri()).toExternalForm()));
+				track.addChild(new Element("albumArtist", "Rhapsody: " + trackmeta.getAlbumArtist()));
+				track.addChild(new Element("duration", posinfo.getTrackDuration()+""));
+				track.addChild(new Element("position", posinfo.getRelTime()+""));
 
-				} catch (Exception e) {
-					track.addChild(new Element("noMusic", "true"));
-				}
+			} catch (Exception e) {
+				track.addChild(new Element("noMusic", "true"));
+			}
 		} else if (uri.startsWith("lastfm:")) {
 			// last.fm Station
 			try {
@@ -211,7 +211,7 @@ public class GetRequestHandler {
 				track.addChild(new Element("albumArtist", "Radio: " + trackmeta.getAlbumArtist()));
 				track.addChild(new Element("duration", posinfo.getTrackDuration()+""));
 				track.addChild(new Element("position", posinfo.getRelTime()+""));
-				
+
 			} catch (Exception e) {
 				track.addChild(new Element("noMusic", "true"));
 			}
@@ -224,8 +224,8 @@ public class GetRequestHandler {
 		}
 		parent.addChild(track);
 	}
-	
-	
+
+
 	public void getZoneQueue(String zoneID, String startIndex, String numEntries, Element parent) throws IOException, UPNPResponseException, JanosWebException {
 		int readidx = 0;
 		int length = Integer.MAX_VALUE;
@@ -235,7 +235,7 @@ public class GetRequestHandler {
 		if (numEntries != null) {
 			length = Integer.parseInt(numEntries);
 		}
-	
+
 		ZonePlayer zp = getZonePlayer(zoneID);
 		MusicLibrary musiclib = new MusicLibrary(zp, new Entry("Q:0", null, null, null, null, null, null, null));
 
@@ -252,8 +252,8 @@ public class GetRequestHandler {
 		}
 		parent.addChild(queue);
 	}
-	
-	
+
+
 	public void getZoneArtists(String zoneID, String startIndex, String numEntries, Element parent) throws IOException, UPNPResponseException, JanosWebException {
 		int readidx = 0;
 		int length = Integer.MAX_VALUE;
@@ -263,7 +263,7 @@ public class GetRequestHandler {
 		if (numEntries != null) {
 			length = Integer.parseInt(numEntries);
 		}
-	
+
 		ZonePlayer zp = getZonePlayer(zoneID);
 		MusicLibrary musiclib = new MusicLibrary(zp, new Entry("A:ARTIST", null, null, null, null, null, null, null));
 		Element artists = new Element("artists");
@@ -275,7 +275,7 @@ public class GetRequestHandler {
 		}
 		parent.addChild(artists);
 	}
-	
+
 	public void getZoneAlbums(String zoneID, String startIndex, String numEntries, String artist, Element parent) throws IOException, UPNPResponseException, JanosWebException {
 		int readidx = 0;
 		int length = Integer.MAX_VALUE;
@@ -285,7 +285,7 @@ public class GetRequestHandler {
 		if (numEntries != null) {
 			length = Integer.parseInt(numEntries);
 		}
-		
+
 		ZonePlayer zp = getZonePlayer(zoneID);
 		MusicLibrary musiclib;
 		if (artist == null) {
@@ -321,7 +321,7 @@ public class GetRequestHandler {
 		if (numEntries != null) {
 			length = Integer.parseInt(numEntries);
 		}
-		
+
 		ZonePlayer zp = getZonePlayer(zoneID);
 		MusicLibrary musiclib;
 		if (artist != null && album == null) {
@@ -335,16 +335,16 @@ public class GetRequestHandler {
 		}
 
 		Element tracks = new Element("tracks");
-			for (Entry e : musiclib.getEntries(readidx, readidx+length)) {
-				Element track = new Element("track", true);
-				track.addChild(new Element("artist", e.getCreator()));
-				track.addChild(new Element("album", e.getAlbum()));
-				track.addChild(new Element("title", e.getTitle()));
-				track.addChild(new Element("albumArt", e.getAlbumArtURL(zp).toExternalForm()));
-				track.addChild(new Element("no", e.getOriginalTrackNumber()+""));
-				track.addChild(new Element("id", e.getId()));
-				tracks.addChild(track);
-			}
+		for (Entry e : musiclib.getEntries(readidx, readidx+length)) {
+			Element track = new Element("track", true);
+			track.addChild(new Element("artist", e.getCreator()));
+			track.addChild(new Element("album", e.getAlbum()));
+			track.addChild(new Element("title", e.getTitle()));
+			track.addChild(new Element("albumArt", e.getAlbumArtURL(zp).toExternalForm()));
+			track.addChild(new Element("no", e.getOriginalTrackNumber()+""));
+			track.addChild(new Element("id", e.getId()));
+			tracks.addChild(track);
+		}
 		parent.addChild(tracks);
 	}
 
@@ -357,7 +357,7 @@ public class GetRequestHandler {
 		if (numEntries != null) {
 			length = Integer.parseInt(numEntries);
 		}
-		
+
 		ZonePlayer zp = getZonePlayer(zoneID);
 		MusicLibrary artistmusiclib = new MusicLibrary(zp, new Entry("A:ARTIST:"+searchData, null, null, null, null, null, null, null));
 		MusicLibrary albumartistmusiclib = new MusicLibrary(zp, new Entry("A:ALBUMARTIST:"+searchData, null, null, null, null, null, null, null));
@@ -371,44 +371,44 @@ public class GetRequestHandler {
 		//No results after the last entry
 		if (readidx > entries.size() - 1)
 			parent.addChild(new Element("results"));
-		
+
 		Element results = new Element("results");
-			for (Entry e : entries.subList(readidx, Math.min(readidx+length, entries.size()-1))) {
-				Element result = new Element("result", true);
-				String type = e.getId();
-				if (type.startsWith("A:ARTIST") || type.startsWith("A:ALBUMARTIST")) {
-					result.addChild(new Element("type", "artist"));
-					Element artist = new Element("artist");
-					artist.addChild(new Element("name", e.getTitle()));
-					artist.addChild(new Element("id", e.getId()));
-					result.addChild(artist);
-				} else if (type.startsWith("A:ALBUM") && !type.startsWith("A:ALBUMARTIST")) {
-					result.addChild(new Element("type", "album"));
-					Element album = new Element("album");
-					album.addChild(new Element("title", e.getTitle()));
-					album.addChild(new Element("artist", e.getCreator()));
-					album.addChild(new Element("albumArt", e.getAlbumArtURL(zp).toExternalForm()));
-					album.addChild(new Element("id", e.getId()));
-					result.addChild(album);
-				} else if (type.substring(1).startsWith("://")) {
-					result.addChild(new Element("type", "track"));
-					Element track = new Element("track");
-					track.addChild(new Element("artist", e.getCreator()));
-					track.addChild(new Element("album", e.getAlbum()));
-					track.addChild(new Element("title", e.getTitle()));
-					track.addChild(new Element("albumArt", e.getAlbumArtURL(zp).toExternalForm()));
-					track.addChild(new Element("no", e.getOriginalTrackNumber()+""));
-					track.addChild(new Element("id", e.getId()));
-					result.addChild(track);
-				}
-				results.addChild(result);
+		for (Entry e : entries.subList(readidx, Math.min(readidx+length, entries.size()-1))) {
+			Element result = new Element("result", true);
+			String type = e.getId();
+			if (type.startsWith("A:ARTIST") || type.startsWith("A:ALBUMARTIST")) {
+				result.addChild(new Element("type", "artist"));
+				Element artist = new Element("artist");
+				artist.addChild(new Element("name", e.getTitle()));
+				artist.addChild(new Element("id", e.getId()));
+				result.addChild(artist);
+			} else if (type.startsWith("A:ALBUM") && !type.startsWith("A:ALBUMARTIST")) {
+				result.addChild(new Element("type", "album"));
+				Element album = new Element("album");
+				album.addChild(new Element("title", e.getTitle()));
+				album.addChild(new Element("artist", e.getCreator()));
+				album.addChild(new Element("albumArt", e.getAlbumArtURL(zp).toExternalForm()));
+				album.addChild(new Element("id", e.getId()));
+				result.addChild(album);
+			} else if (type.substring(1).startsWith("://")) {
+				result.addChild(new Element("type", "track"));
+				Element track = new Element("track");
+				track.addChild(new Element("artist", e.getCreator()));
+				track.addChild(new Element("album", e.getAlbum()));
+				track.addChild(new Element("title", e.getTitle()));
+				track.addChild(new Element("albumArt", e.getAlbumArtURL(zp).toExternalForm()));
+				track.addChild(new Element("no", e.getOriginalTrackNumber()+""));
+				track.addChild(new Element("id", e.getId()));
+				result.addChild(track);
 			}
+			results.addChild(result);
+		}
 		parent.addChild(results);
 	}
-	
-	
-	
-	
+
+
+
+
 	/**Convenience method for getting the ZonePlayer with the given zoneID
 	 * @param zoneID the ID of the ZonePlayer
 	 * @returns the ZonePlayer with ID equal to zoneID
@@ -420,14 +420,15 @@ public class GetRequestHandler {
 		}
 		return zp;
 	}
-	
+
 	/**Convenience method for finding the ZoneGroup that a given ZonePlayer belongs to
 	 * @param zoneID, the ID of the ZonePlayer
 	 * @return the ZoneGroup that the ZonePlayer is member of.
 	 * */
 	private ZoneGroup getZoneGroupFromMember(String zoneID) throws JanosWebException {
 		ZonePlayer zp = getZonePlayer(zoneID);
-		for (ZoneGroup zg : zp.getZoneGroupTopologyService().getGroupState().getGroups()) {
+		List<ZoneGroup> groups = zp.getZoneGroupTopologyService().getGroupState().getGroups();
+		for (ZoneGroup zg : groups) {
 			for (String member : zg.getMembers()) {
 				if (member.equals(zoneID)) {
 					return zg;
@@ -436,7 +437,7 @@ public class GetRequestHandler {
 		}
 		return null;
 	}
-	
+
 	/**
 	 * Get the total list of ZoneGroups visible to this application via
 	 * SonosController
@@ -463,9 +464,9 @@ public class GetRequestHandler {
 			return new LinkedList<ZoneGroup>();
 		}
 	}
-	
 
-	
+
+
 	/**
 	 * Get the ZoneGroup with the given ID
 	 * 

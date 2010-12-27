@@ -15,9 +15,9 @@
  */
 package net.sf.janos.model;
 
-import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
+import java.util.concurrent.CopyOnWriteArrayList;
 
 /**
  * An immutable data transfer object containing each of the known zone groups.
@@ -29,10 +29,11 @@ public class ZoneGroupState {
 
   private final List<ZoneGroup> zoneGroups;
   public ZoneGroupState(Collection<ZoneGroup> groups) {
-    this.zoneGroups = new ArrayList<ZoneGroup>(groups);
+	  
+    this.zoneGroups = new CopyOnWriteArrayList<ZoneGroup>(groups);
   }
   
-  public List<ZoneGroup> getGroups() {
+  public synchronized List<ZoneGroup> getGroups() {
     return zoneGroups;
   }
   

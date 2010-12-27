@@ -106,7 +106,7 @@ function listenForGroupMusicUpdates(groupID, callbackfunction, sync) {
 }
 
 //http://host:port/janosWeb?cmd=listenForAllZoneGroupUpdates&groupID=RINCON_00000000000000000:00
-function listenForAllZoneGroupUpdates(groupID, callbackfunction, sync) {
+function listenForAllGroupUpdates(groupID, callbackfunction, sync) {
 	displayReply("listenForAllZoneGroupUpdates", "groupID="+groupID, callbackfunction, sync);
 }
 
