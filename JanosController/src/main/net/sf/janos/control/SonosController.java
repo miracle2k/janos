@@ -202,6 +202,7 @@ public class SonosController implements ZoneGroupTopologyListener {
    * @throws IllegalArgumentException if <code>dev</code> is not a sonos device
    */
   private void addZonePlayer(final UPNPRootDevice dev) {
+	  synchronized(zonePlayers) {
     zonePlayerDiscoveries.put(dev.getUDN().substring(5), System.currentTimeMillis());
     
     // Check if we've already got this zone player
@@ -234,6 +235,7 @@ public class SonosController implements ZoneGroupTopologyListener {
     } catch (Exception e) {
       LOG.error("Couldn't add zone" + dev.getDeviceType() + " " + dev.getModelDescription() + " " + dev.getModelName() + " " + dev.getModelNumber(), e);
     }
+	  }
   }
   
   /**
@@ -241,6 +243,7 @@ public class SonosController implements ZoneGroupTopologyListener {
    * @param udn
    */
   private void removeZonePlayer(final String udn) {
+	  synchronized(zonePlayers) {
     ZonePlayer zp = zonePlayers.getById(udn);
     if (zp != null) {
       LOG.info("Removing ZonePlayer " + udn + " " + zp.getRootDevice().getModelDescription());
@@ -252,13 +255,16 @@ public class SonosController implements ZoneGroupTopologyListener {
       }
       zp.dispose();
     }
+	  }
   }
   
   /**
    * @return the ZonePlayerModel
    */
   public ZonePlayerModel getZonePlayerModel() {
-    return zonePlayers;
+	  synchronized(zonePlayers) {
+		  return zonePlayers;
+	  }
   }
   
   /**
@@ -301,8 +307,10 @@ public class SonosController implements ZoneGroupTopologyListener {
     DiscoveryAdvertisement.getInstance().unRegisterEvent(DiscoveryAdvertisement.EVENT_SSDP_ALIVE, ZonePlayerConstants.SONOS_DEVICE_TYPE, discoveryHandler);
     DiscoveryAdvertisement.getInstance().unRegisterEvent(DiscoveryAdvertisement.EVENT_SSDP_BYE_BYE, ZonePlayerConstants.SONOS_DEVICE_TYPE, discoveryHandler);
     DiscoveryListener.getInstance().unRegisterResultsHandler(discoveryHandler, ZonePlayerConstants.SONOS_DEVICE_TYPE);
+    synchronized(zonePlayers) {
     for (ZonePlayer zp : zonePlayers.getAllZones()) {
       zp.dispose();
+    }
     }
   }
 

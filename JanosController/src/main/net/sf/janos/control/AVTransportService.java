@@ -734,7 +734,7 @@ public class AVTransportService extends AbstractService implements ServiceEventH
   }
   
   public void handleStateVariableEvent(String varName, String newValue) {
-    LOG.info("recieved AVTransport notification: " + varName + "=" + newValue);
+    LOG.debug("recieved AVTransport notification: " + varName + "=" + newValue);
     try {
       Map<AVTransportEventType, String> changes = ResultParser.parseAVTransportEvent(newValue);
       state.putAll(changes);

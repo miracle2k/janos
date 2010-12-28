@@ -16,66 +16,67 @@ public class ZoneGroupStateModel {
 
 	public void handleGroupUpdate(ZoneGroupState newGroupState) {
 
-		// First, look for groups that have been removed.  These
-		// are defined as groups which are in oldGroupState but not
-		// in newGroupState
-		for (ZoneGroup oldGroup: oldGroupState.getGroups()) {
-			if (!newGroupState.getGroups().contains(oldGroup)) {
-				fireGroupRemoved(oldGroup);
-			}
-		}
+		synchronized(listeners) {
+			//1 Save the old group state
+			ZoneGroupState ozgstate = oldGroupState;
+			
+			//2 update the group state;
+			oldGroupState = newGroupState;
 
-		// Now, Look for groups that have been added.  These are defined
-		// as groups who are present in newGroupState but not in 
-		// oldGroupState
-		for (ZoneGroup newGroup: newGroupState.getGroups()) {
-			if (!oldGroupState.getGroups().contains(newGroup)) {
-				fireGroupAdded(newGroup);
+			//3 fire changes
+			
+			// First, look for groups that have been removed.  These
+			// are defined as groups which are in oldGroupState but not
+			// in newGroupState
+			for (ZoneGroup oldGroup: ozgstate.getGroups()) {
+				if (!newGroupState.getGroups().contains(oldGroup)) {
+					fireGroupRemoved(oldGroup);
+				}
 			}
-		}
 
-		// Now, look for groups who have had group membership changes.  These are
-		// defined as groups which are present on both lists but whose elements
-		// are not equal
-		for (ZoneGroup newGroup: newGroupState.getGroups()) {
-			for (ZoneGroup oldGroup: oldGroupState.getGroups()) {
-				if (oldGroup.equals(newGroup)) {
-					if ( (!oldGroup.getMembers().containsAll(newGroup.getMembers())) ||
-							(!newGroup.getMembers().containsAll(oldGroup.getMembers()))) {
-						fireGroupMembershipChanged(newGroup);
+			// Now, Look for groups that have been added.  These are defined
+			// as groups who are present in newGroupState but not in 
+			// oldGroupState
+			for (ZoneGroup newGroup: newGroupState.getGroups()) {
+				if (!ozgstate.getGroups().contains(newGroup)) {
+					fireGroupAdded(newGroup);
+				}
+			}
+
+			// Now, look for groups who have had group membership changes.  These are
+			// defined as groups which are present on both lists but whose elements
+			// are not equal
+			for (ZoneGroup newGroup: newGroupState.getGroups()) {
+				for (ZoneGroup oldGroup: ozgstate.getGroups()) {
+					if (oldGroup.equals(newGroup)) {
+						if ( (!oldGroup.getMembers().containsAll(newGroup.getMembers())) ||
+								(!newGroup.getMembers().containsAll(oldGroup.getMembers()))) {
+							fireGroupMembershipChanged(newGroup);
+						}
 					}
 				}
 			}
 		}
-
-		oldGroupState = newGroupState;
 	}
 
 	protected void fireGroupRemoved(ZoneGroup group) {
 		LOG.info("REMOVING GROUP: " + group.getId());
-		synchronized(listeners) {
-
-			for (ZoneGroupStateModelListener l : listeners) {
-				l.zoneGroupRemoved(group, this);
-			}
+		for (ZoneGroupStateModelListener l : listeners) {
+			l.zoneGroupRemoved(group, this);
 		}
 	}
 
 	protected void fireGroupAdded(ZoneGroup group) {
 		LOG.info("ADDING GROUP: " + group.getId());
-		synchronized(listeners) {
-			for (ZoneGroupStateModelListener l : listeners) {
-				l.zoneGroupAdded(group, this);
-			}
-		}
+		for (ZoneGroupStateModelListener l : listeners) {
+			l.zoneGroupAdded(group, this);
+		}	
 	}
 
 	protected void fireGroupMembershipChanged(ZoneGroup group) {
 		LOG.info("CHANGING GROUP: " + group.getId());
-		synchronized(listeners) {
-			for (ZoneGroupStateModelListener l : listeners) {
-				l.zoneGroupMembersChanged(group, this);
-			}
+		for (ZoneGroupStateModelListener l : listeners) {
+			l.zoneGroupMembersChanged(group, this);
 		}
 	}
 
